@@ -49,6 +49,7 @@ protocol, librotenado, not here.
 
 - **Licence:** AGPL-3.0-or-later, an SPDX header in every source file; files that cannot carry one are listed in
   `REUSE.toml`. Code that belongs in the protocol goes to librotenado (MIT) – written there, never copied from here.
+  The brand is changed in [spezado/brand](https://github.com/spezado/brand) and copied to `brand/`, never edited here.
 - **Everything included:** no feature behind a payment, licence key or unlock; law modules are free software only.
 - **No telemetry:** only connections that are technically needed or that users start themselves.
 - **Events are the truth:** never change or delete a booking – reverse it. What does not fit goes to the review list.

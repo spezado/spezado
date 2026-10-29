@@ -66,7 +66,9 @@ The workspace lives in spezado's folder in your data directory, or wherever `--d
 
 ## Licence
 
-[GNU Affero General Public License v3.0 or later](LICENSE). Contributions with a
+[GNU Affero General Public License v3.0 or later](LICENSE), except the description of the API, `api/openapi.json`
+(MIT), and the copies of the brand in `brand/` – the artwork under CC BY-ND 4.0, Domitian under OFL-1.1, from
+[spezado/brand](https://github.com/spezado/brand); spezado's name and brand belong to falkOSS. Contributions with a
 [DCO](https://developercertificate.org) sign-off (`git commit -s`), no CLA – see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 © 2026 falkOSS – Falcon Lake Open Source Software gUG (haftungsbeschränkt) i. G. and the spezado contributors
