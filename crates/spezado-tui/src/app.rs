@@ -583,7 +583,7 @@ impl App<'_> {
             }
             KeyCode::Char('v') if self.tab == Tab::Overview && self.view.relay.is_some() => {
                 let Some(books) = self.books.clone() else { return };
-                match self.workspace.invite(&books) {
+                match self.workspace.invite(&books, librotenado::Rights::Manage) {
                     Ok(invitation) => {
                         let lines = vec![invitation, String::new(), self.t(Text::InvitationHelp).to_owned()];
                         self.mode = Mode::Notice(Text::Invitation, lines);

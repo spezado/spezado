@@ -5,9 +5,10 @@
 use axum::{
     Json, Router,
     extract::{Path, State},
-    routing::{get, post},
+    routing::{delete, get, post},
 };
 use librotenado::BooksId;
+use librotenado::Rights;
 use spezado_app::SyncReport;
 
 use crate::{Api, ApiError, dto};
@@ -19,6 +20,7 @@ pub fn routes() -> Router<Api> {
         .route("/books/{books}/sync/start", post(sync_start))
         .route("/books/{books}/sync/invitations", post(sync_invite))
         .route("/books/{books}/sync/devices", get(sync_devices))
+        .route("/books/{books}/sync/devices/{member}", delete(sync_remove))
         .route("/sync/join", post(sync_join))
         .route("/sync/recover", post(sync_recover))
 }
@@ -73,14 +75,49 @@ pub(crate) async fn sync_start(
     .await
 }
 
-/// An invitation for another of the person's devices, good for a day.
+/// An invitation for another device, good for a day: the person's own (`manage`), or someone else's with the
+/// rights given.
 #[utoipa::path(post, path = "/api/v1/books/{books}/sync/invitations", params(("books" = String, Path)),
-    responses((status = 200, body = dto::SyncInvitation), (status = 422, body = dto::Problem)))]
+    request_body = dto::SyncInvite, responses((status = 200, body = dto::SyncInvitation), (status = 422, body = dto::Problem)))]
 pub(crate) async fn sync_invite(
     State(api): State<Api>,
     Path(books): Path<String>,
+    body: Option<Json<dto::SyncInvite>>,
 ) -> Result<Json<dto::SyncInvitation>, ApiError> {
-    api.run(move |workspace| Ok(Json(dto::SyncInvitation { invitation: workspace.invite(&books_id(&books)?)? }))).await
+    let rights = rights(body.and_then(|Json(b)| b.rights).as_deref().unwrap_or("manage"))?;
+    api.run(move |workspace| {
+        Ok(Json(dto::SyncInvitation { invitation: workspace.invite(&books_id(&books)?, rights)? }))
+    })
+    .await
+}
+
+fn rights(text: &str) -> Result<Rights, ApiError> {
+    match text {
+        "read" => Ok(Rights::Read),
+        "write" => Ok(Rights::Write),
+        "manage" => Ok(Rights::Manage),
+        _ => Err(ApiError::bad("rights are read, write or manage")),
+    }
+}
+
+fn rights_text(rights: Rights) -> &'static str {
+    match rights {
+        Rights::Read => "read",
+        Rights::Write => "write",
+        Rights::Manage => "manage",
+    }
+}
+
+/// Removes a device or person from the books, by identity, device name or name; the key changes.
+#[utoipa::path(delete, path = "/api/v1/books/{books}/sync/devices/{member}",
+    params(("books" = String, Path), ("member" = String, Path)),
+    responses((status = 200, body = dto::Removed), (status = 422, body = dto::Problem)))]
+pub(crate) async fn sync_remove(
+    State(api): State<Api>,
+    Path((books, member)): Path<(String, String)>,
+) -> Result<Json<dto::Removed>, ApiError> {
+    api.run(move |workspace| Ok(Json(dto::Removed { name: workspace.remove_member(&books_id(&books)?, &member)? })))
+        .await
 }
 
 /// The devices of the books, as their relay lists them.
@@ -95,7 +132,14 @@ pub(crate) async fn sync_devices(
         Ok(Json(
             members
                 .into_iter()
-                .map(|m| dto::SyncDevice { name: m.name, device: m.device, recovery: m.recovery, me: m.me })
+                .map(|m| dto::SyncDevice {
+                    id: m.id,
+                    name: m.name,
+                    device: m.device,
+                    rights: rights_text(m.rights).into(),
+                    recovery: m.recovery,
+                    me: m.me,
+                })
                 .collect(),
         ))
     })

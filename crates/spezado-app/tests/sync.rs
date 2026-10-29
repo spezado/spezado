@@ -124,7 +124,7 @@ fn own_devices_share_books_through_a_relay() {
     assert!(laptop.start_sync(&books, &relay, None).is_err(), "only once");
 
     // The phone joins by invitation: it waits until the laptop has added it, then receives everything.
-    let invitation = laptop.invite(&books).unwrap();
+    let invitation = laptop.invite(&books, librotenado::Rights::Manage).unwrap();
     let mut phone = device(&phone_dir, "phone");
     assert_eq!(phone.join(&invitation, Some("Phone")).unwrap(), books);
     assert!(phone.sync(&books).unwrap().waiting);
@@ -169,4 +169,52 @@ fn own_devices_share_books_through_a_relay() {
     tablet.recover(&relay, &books, &code, Some("Tablet")).unwrap();
     assert_eq!(events(&tablet, &books), events(&laptop, &books));
     assert_eq!(tablet.review(&books).unwrap(), laptop.review(&books).unwrap(), "{:?}", laptop.review(&books).unwrap());
+}
+
+#[test]
+fn books_are_shared_with_rights_and_members_removed() {
+    let (relay_dir, owner_dir, adviser_dir, bookkeeper_dir) =
+        (Scratch::new("relay2"), Scratch::new("owner"), Scratch::new("adviser"), Scratch::new("bookkeeper"));
+    let relay = relay(&relay_dir);
+    let mut owner = device(&owner_dir, "laptop");
+    let ada: librotenado::PartyId = new_id();
+    let configuration = serde_json::from_value(serde_json::json!({
+        "owner": ada.as_str(), "from": "2026-01-01", "currency": "EUR", "year_start": 1, "chart": "de-skr03",
+        "accounting": "de-cash-basis", "vat": {"scheme": "de-regular", "basis": "cash", "period": "quarter"},
+    }))
+    .unwrap();
+    let person = Person { id: ada.clone(), name: "Ada".into(), tax_ids: vec![], roles: vec![], contact: None };
+    let books = owner.set_up(Party::Person(person), configuration).unwrap();
+    owner.start_sync(&books, &relay, Some("Laptop")).unwrap();
+
+    // A tax adviser may read, a bookkeeper may write.
+    let mut adviser = device(&adviser_dir, "adviser");
+    adviser.join(&owner.invite(&books, librotenado::Rights::Read).unwrap(), Some("Steuerberaterin")).unwrap();
+    let mut bookkeeper = device(&bookkeeper_dir, "bookkeeper");
+    bookkeeper.join(&owner.invite(&books, librotenado::Rights::Write).unwrap(), Some("Buchhalter")).unwrap();
+    assert_eq!(owner.sync(&books).unwrap().added.len(), 2);
+    adviser.sync(&books).unwrap();
+    bookkeeper.sync(&books).unwrap();
+    assert_eq!(adviser.sync_rights(&books).unwrap(), Some(librotenado::Rights::Read));
+    let close = |to: &str| spezado_core::Command::Close {
+        owner: ada.clone(),
+        to: to.parse().unwrap(),
+        software: Default::default(),
+    };
+    assert!(matches!(adviser.execute(&books, close("2026-01-31")), Err(spezado_app::AppError::ReadOnly(_))));
+    assert!(adviser.invite(&books, librotenado::Rights::Read).is_err(), "only who manages invites");
+    bookkeeper.execute(&books, close("2026-01-31")).unwrap();
+    bookkeeper.sync(&books).unwrap();
+    assert_eq!(owner.sync(&books).unwrap().received, 1);
+
+    // The adviser is removed: the key changes, and nothing new reaches her.
+    assert_eq!(owner.remove_member(&books, "Steuerberaterin").unwrap(), "Steuerberaterin");
+    assert!(owner.remove_member(&books, "Laptop").is_err(), "not itself");
+    owner.execute(&books, close("2026-02-28")).unwrap();
+    owner.sync(&books).unwrap();
+    assert!(adviser.sync(&books).is_err(), "removed");
+    assert_eq!(bookkeeper.sync(&books).unwrap().received, 1, "the others read on with the new key");
+    assert_eq!(events(&bookkeeper, &books), events(&owner, &books));
+    let rights: Vec<_> = owner.sync_members(&books).unwrap().into_iter().map(|m| (m.name, m.rights)).collect();
+    assert!(rights.contains(&("Buchhalter".into(), librotenado::Rights::Write)), "{rights:?}");
 }

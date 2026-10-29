@@ -12,6 +12,7 @@
   let invitation = $state<string | null>(null);
   let report = $state<Schemas["SyncReport"] | null>(null);
   let busy = $state(false);
+  let rights = $state("manage");
   let failure = $state<string | null>(null);
 
   $effect(() => {
@@ -50,10 +51,18 @@
     app.version++;
   }
 
+  async function remove(device: Schemas["SyncDevice"]) {
+    if (!app.books || !confirm(`${t("removeConfirm")} ${device.name}`)) return;
+    failure = null;
+    const result = await api.DELETE("/api/v1/books/{books}/sync/devices/{member}", { params: { path: { books: app.books, member: device.id } } });
+    if (!result.response.ok) return void (failure = problem(result.error, result.response));
+    app.version++;
+  }
+
   async function invite() {
     if (!app.books) return;
     failure = null;
-    const result = await api.POST("/api/v1/books/{books}/sync/invitations", { params: { path: { books: app.books } } });
+    const result = await api.POST("/api/v1/books/{books}/sync/invitations", { params: { path: { books: app.books } }, body: { rights } });
     if (!result.response.ok) return void (failure = problem(result.error, result.response));
     invitation = result.data!.invitation;
   }
@@ -79,7 +88,11 @@
     <p>{t("syncedThrough")} <span class="mono">{relay}</span></p>
     <ul>
       {#each devices as device (device.name + (device.device ?? ""))}
-        <li>{device.recovery ? t("recoveryCode") : device.name}{device.me ? ` (${t("thisDevice")})` : ""}</li>
+        <li>
+          {device.recovery ? t("recoveryCode") : device.name}{device.me ? ` (${t("thisDevice")})` : ""}
+          {#if !device.recovery}<span class="muted">· {t(`rights_${device.rights as "read" | "write" | "manage"}`)}</span>{/if}
+          {#if !device.me && !device.recovery}<button class="quiet" onclick={() => remove(device)}>{t("remove")}</button>{/if}
+        </li>
       {/each}
     </ul>
     {#if report}
@@ -92,6 +105,13 @@
       </div>
     {/if}
     <div class="row-actions">
+      <label>{t("inviteRights")}
+        <select bind:value={rights}>
+          <option value="manage">{t("rights_manage")}</option>
+          <option value="write">{t("rights_write")}</option>
+          <option value="read">{t("rights_read")}</option>
+        </select>
+      </label>
       <button class="quiet" onclick={invite}>{t("inviteDevice")}</button>
       <button onclick={now} disabled={busy}>{t("syncNow")}</button>
     </div>

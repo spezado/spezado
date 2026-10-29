@@ -155,8 +155,17 @@ enum SyncAction {
         #[arg(long)]
         name: Option<String>,
     },
-    /// Prints an invitation for another of your devices, good for a day.
-    Invite,
+    /// Prints an invitation for another device, good for a day: one of yours, or someone else's with less rights.
+    Invite {
+        /// What the invited device may do: read, write or manage (your own devices).
+        #[arg(long, default_value = "manage")]
+        rights: String,
+    },
+    /// Removes a device or person from the books, by its name or device name; the key of the books changes.
+    Remove {
+        /// The name or device name.
+        who: String,
+    },
     /// Asks to join books with an invitation; they arrive once the inviting device has synchronised.
     Join {
         /// The invitation.
@@ -391,9 +400,15 @@ fn sync(workspace: &mut Workspace, books: Option<BooksId>, action: Option<SyncAc
             println!("    spezado --books {books} sync recover {relay} <code>");
             println!("Without it and without a device, the books are lost. spezado shows it only now.");
         }
-        Some(SyncAction::Invite) => {
+        Some(SyncAction::Invite { rights }) => {
             let books = choose_books(workspace, books)?;
-            println!("{}", workspace.invite(&books)?);
+            let rights = match rights.as_str() {
+                "read" => librotenado::Rights::Read,
+                "write" => librotenado::Rights::Write,
+                "manage" => librotenado::Rights::Manage,
+                _ => bail!("rights are read, write or manage"),
+            };
+            println!("{}", workspace.invite(&books, rights)?);
             println!();
             println!("On the other device: spezado sync join <invitation> – then run spezado sync here.");
         }
@@ -407,12 +422,19 @@ fn sync(workspace: &mut Workspace, books: Option<BooksId>, action: Option<SyncAc
             let report = workspace.recover(&relay, &books, &code, name.as_deref())?;
             println!("The books {books} are back on this device: {} received.", report.received);
         }
+        Some(SyncAction::Remove { who }) => {
+            let books = choose_books(workspace, books)?;
+            let name = workspace.remove_member(&books, &who)?;
+            println!(
+                "Removed {name}. The books have a new key, which it does not get; what it read, it may have kept."
+            );
+        }
         Some(SyncAction::Devices) => {
             let books = choose_books(workspace, books)?;
             for member in workspace.sync_members(&books)? {
                 let what = if member.recovery { "recovery code".to_owned() } else { member.device.unwrap_or_default() };
                 let me = if member.me { " (this device)" } else { "" };
-                println!("{:<20} {what}{me}", member.name);
+                println!("{:<20} {:<8} {what}{me}", member.name, format!("{:?}", member.rights).to_lowercase());
             }
         }
     }

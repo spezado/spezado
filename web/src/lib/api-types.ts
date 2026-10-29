@@ -527,6 +527,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/books/{books}/sync/devices/{member}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Removes a device or person from the books, by identity, device name or name; the key changes. */
+        delete: operations["sync_remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/books/{books}/sync/invitations": {
         parameters: {
             query?: never;
@@ -536,7 +553,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** An invitation for another of the person's devices, good for a day. */
+        /**
+         * An invitation for another device, good for a day: the person's own (`manage`), or someone else's with the
+         *     rights given.
+         */
         post: operations["sync_invite"];
         delete?: never;
         options?: never;
@@ -1142,6 +1162,11 @@ export interface components {
             /** @description Its name in the language asked for. */
             name: string;
         };
+        /** @description A member removed. */
+        Removed: {
+            /** @description Its name. */
+            name: string;
+        };
         /** @description A report of the year. */
         ReportItem: {
             /** @description When an advance VAT return is due. */
@@ -1223,17 +1248,26 @@ export interface components {
         SyncDevice: {
             /** @description The device name it writes under; none for the recovery code. */
             device?: string | null;
+            /** @description Its identity, to remove it by. */
+            id: string;
             /** @description Whether it is this device. */
             me: boolean;
             /** @description What people call it. */
             name: string;
             /** @description Whether it is the recovery code. */
             recovery: boolean;
+            /** @description What it may do: `read`, `write` or `manage`. */
+            rights: string;
         };
         /** @description An invitation for another device, good for a day. */
         SyncInvitation: {
             /** @description The text to carry to the other device. */
             invitation: string;
+        };
+        /** @description What an invited device may do. */
+        SyncInvite: {
+            /** @description `read`, `write` or `manage` – the person's own devices; `manage` when none. */
+            rights?: string | null;
         };
         /** @description Joining books with an invitation. */
         SyncJoin: {
@@ -2374,6 +2408,36 @@ export interface operations {
             };
         };
     };
+    sync_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                books: string;
+                member: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Removed"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     sync_invite: {
         parameters: {
             query?: never;
@@ -2383,7 +2447,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SyncInvite"];
+            };
+        };
         responses: {
             200: {
                 headers: {

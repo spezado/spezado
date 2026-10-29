@@ -1725,12 +1725,59 @@
         }
       }
     },
+    "/api/v1/books/{books}/sync/devices/{member}": {
+      "delete": {
+        "tags": [
+          "crate::sync"
+        ],
+        "summary": "Removes a device or person from the books, by identity, device name or name; the key changes.",
+        "operationId": "sync_remove",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "member",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Removed"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/books/{books}/sync/invitations": {
       "post": {
         "tags": [
           "crate::sync"
         ],
-        "summary": "An invitation for another of the person's devices, good for a day.",
+        "summary": "An invitation for another device, good for a day: the person's own (`manage`), or someone else's with the\nrights given.",
         "operationId": "sync_invite",
         "parameters": [
           {
@@ -1742,6 +1789,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncInvite"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {
@@ -3310,6 +3367,19 @@
           }
         }
       },
+      "Removed": {
+        "type": "object",
+        "description": "A member removed.",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Its name."
+          }
+        }
+      },
       "ReportItem": {
         "type": "object",
         "description": "A report of the year.",
@@ -3511,6 +3581,8 @@
         "type": "object",
         "description": "A device of synchronised books.",
         "required": [
+          "id",
+          "rights",
           "name",
           "recovery",
           "me"
@@ -3523,6 +3595,10 @@
             ],
             "description": "The device name it writes under; none for the recovery code."
           },
+          "id": {
+            "type": "string",
+            "description": "Its identity, to remove it by."
+          },
           "me": {
             "type": "boolean",
             "description": "Whether it is this device."
@@ -3534,6 +3610,10 @@
           "recovery": {
             "type": "boolean",
             "description": "Whether it is the recovery code."
+          },
+          "rights": {
+            "type": "string",
+            "description": "What it may do: `read`, `write` or `manage`."
           }
         }
       },
@@ -3547,6 +3627,19 @@
           "invitation": {
             "type": "string",
             "description": "The text to carry to the other device."
+          }
+        }
+      },
+      "SyncInvite": {
+        "type": "object",
+        "description": "What an invited device may do.",
+        "properties": {
+          "rights": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`read`, `write` or `manage` – the person's own devices; `manage` when none."
           }
         }
       },

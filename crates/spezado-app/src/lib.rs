@@ -115,6 +115,9 @@ pub enum AppError {
     /// Synchronising through a relay failed.
     #[error("{0}")]
     Sync(String),
+    /// Books this device may only read.
+    #[error("this device may only read the books {0}")]
+    ReadOnly(BooksId),
     /// Writing a file.
     #[error("{path}: {error}")]
     Write {
@@ -253,6 +256,11 @@ impl Workspace {
     /// Executes commands, in one set of books or several, in order: each is checked against the books as the ones
     /// before it left them. All are written, or – if one is refused – none. Returns the events written.
     pub fn execute_all(&mut self, commands: Vec<(BooksId, Command)>) -> Result<Vec<EventHash>, AppError> {
+        for (id, _) in &commands {
+            if self.sync_rights(id)? == Some(librotenado::Rights::Read) {
+                return Err(AppError::ReadOnly(id.clone()));
+            }
+        }
         let mut working: BTreeMap<BooksId, Books> = BTreeMap::new();
         let mut rows = Vec::new();
         let mut hashes = Vec::new();

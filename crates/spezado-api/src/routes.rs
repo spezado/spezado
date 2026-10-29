@@ -69,6 +69,7 @@ use crate::{Api, ApiError, dto};
         crate::sync::sync_start,
         crate::sync::sync_invite,
         crate::sync::sync_devices,
+        crate::sync::sync_remove,
         crate::sync::sync_join,
         crate::sync::sync_recover
     ),

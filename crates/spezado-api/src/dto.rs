@@ -760,9 +760,28 @@ pub struct SyncInvitation {
     pub invitation: String,
 }
 
+/// What an invited device may do.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct SyncInvite {
+    /// `read`, `write` or `manage` – the person's own devices; `manage` when none.
+    #[serde(default)]
+    pub rights: Option<String>,
+}
+
+/// A member removed.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct Removed {
+    /// Its name.
+    pub name: String,
+}
+
 /// A device of synchronised books.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SyncDevice {
+    /// Its identity, to remove it by.
+    pub id: String,
+    /// What it may do: `read`, `write` or `manage`.
+    pub rights: String,
     /// What people call it.
     pub name: String,
     /// The device name it writes under; none for the recovery code.
