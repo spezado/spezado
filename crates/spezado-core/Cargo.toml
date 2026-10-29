@@ -14,7 +14,7 @@ workspace = true
 
 [dependencies]
 librotenado.workspace = true
-thiserror = "2.0.21"
+thiserror = "=2.0.21"
 
 [dev-dependencies]
-serde_json = "1.0.154"
+serde_json = "=1.0.154"

@@ -13,22 +13,22 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-anyhow = "1.0.104"
-clap = { version = "4.6.7", features = ["derive"] }
-dirs = "7.0.0"
-gethostname = "1"
+anyhow = "=1.0.104"
+clap = { version = "=4.6.7", features = ["derive"] }
+dirs = "=7.0.0"
+gethostname = "=1.1.0"
 librotenado.workspace = true
-png = { version = "0.18.1", optional = true }
-qrcode = { version = "0.14.1", default-features = false }
-serde_json = "1.0.154"
+png = { version = "=0.18.1", optional = true }
+qrcode = { version = "=0.14.1", default-features = false }
+serde_json = "=1.0.154"
 spezado-api.workspace = true
 spezado-app.workspace = true
 spezado-core.workspace = true
 spezado-relay.workspace = true
 spezado-tui.workspace = true
-tao = { version = "0.37.2", optional = true }
-tokio = { version = "1.54.1", features = ["macros", "signal", "sync"] }
-tray-icon = { version = "0.26.1", optional = true }
+tao = { version = "=0.37.1", optional = true }
+tokio = { version = "=1.53.3", features = ["macros", "signal", "sync"] }
+tray-icon = { version = "=0.26.1", optional = true }
 
 [features]
 # `spezado tray`: the server with an icon in the menu bar or the system tray. Needs GTK on Linux, so the release builds

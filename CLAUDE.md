@@ -97,7 +97,8 @@ README. Change the brand there and copy; never edit the copies.
 ## Rules
 
 - `cargo fmt`, `cargo clippy --all-targets` (no warnings) and `cargo test` before every commit; keep
-  `docs/spec.md` in step with what is decided.
+  `docs/spec.md` in step with what is decided. After changing dependencies: exact versions at least 14 days old
+  (`scripts/check-age.py`, pnpm's `minimumReleaseAge`) and `cargo deny check`.
 - English in code, docs and commits; commits signed off (`git commit -s`).
 - No personal data in tracked files (names, paths like `/Users/…`, hostnames, keys).
 - Claims need a source; unverified statements are marked **OPEN**. Legal and tax content is a draft, not advice.

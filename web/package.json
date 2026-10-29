@@ -14,15 +14,15 @@
     "build": "vite build"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "^7.3.1",
-    "@tsconfig/svelte": "^5.0.8",
-    "openapi-typescript": "^7.13.0",
-    "svelte": "^5.57.3",
-    "svelte-check": "^4.7.7",
-    "typescript": "^6.0.3",
-    "vite": "^8.3.5"
+    "@sveltejs/vite-plugin-svelte": "7.3.1",
+    "@tsconfig/svelte": "5.0.8",
+    "openapi-typescript": "7.13.0",
+    "svelte": "5.57.2",
+    "svelte-check": "4.7.6",
+    "typescript": "6.0.3",
+    "vite": "8.3.4"
   },
   "dependencies": {
-    "openapi-fetch": "^0.17.0"
+    "openapi-fetch": "0.17.0"
   }
 }

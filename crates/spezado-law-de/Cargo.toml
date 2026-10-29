@@ -17,4 +17,4 @@ librotenado.workspace = true
 spezado-law.workspace = true
 
 [dev-dependencies]
-serde_json = "1.0.154"
+serde_json = "=1.0.154"

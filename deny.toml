@@ -1,0 +1,58 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# cargo-deny: what the dependencies may be (CI, job `dependencies`). Known vulnerabilities fail the build, licences
+# must be compatible with the AGPL, crates come only from crates.io – and librotenado from its repository. A finding that does not affect spezado is ignored
+# below with a reason, never silently.
+
+[graph]
+all-features = true
+
+[advisories]
+# Unmaintained crates are reported, but only direct dependencies fail the build.
+unmaintained = "workspace"
+ignore = [
+  # rustybuzz shapes the text of invoice PDFs, through krilla 0.8 and for measuring lines; there is no safe upgrade.
+  # OPEN: moving to harfrust, the alternative the advisory names, once krilla does.
+  { id = "RUSTSEC-2026-0206", reason = "krilla 0.8 depends on rustybuzz; harfrust once krilla moves (OPEN)" },
+]
+
+[licenses]
+confidence-threshold = 0.93
+# Compatible with the AGPL-3.0: permissive licences, weak copyleft (MPL-2.0, LGPL-2.1+) and the AGPL itself. A
+# project under MIT removes the copyleft ones that do not fit it.
+allow = [
+  "0BSD",
+  "AGPL-3.0-only",
+  "AGPL-3.0-or-later",
+  "Apache-2.0",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "BSL-1.0",
+  "CC0-1.0",
+  "CDLA-Permissive-2.0",
+  "ISC",
+  "LGPL-2.1-or-later",
+  "MIT",
+  "MIT-0",
+  "MPL-2.0",
+  "Unicode-3.0",
+  "Unlicense",
+  "Zlib",
+]
+
+# Apache-2.0 with an exception that only grants more: a build dependency of GTK for the system tray on Linux.
+[[licenses.exceptions]]
+crate = "target-lexicon"
+allow = ["Apache-2.0 WITH LLVM-exception"]
+
+[bans]
+multiple-versions = "allow"
+wildcards = "deny"
+# Workspace crates refer to each other by path.
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+# The protocol library, by its tag (Cargo.toml).
+allow-git = ["https://github.com/librotenado/librotenado"]

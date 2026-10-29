@@ -14,5 +14,5 @@ workspace = true
 
 [dependencies]
 librotenado.workspace = true
-rusqlite = { version = "0.41.1", features = ["bundled"] }
-thiserror = "2.0.21"
+rusqlite = { version = "=0.40.2", features = ["bundled"] }
+thiserror = "=2.0.21"

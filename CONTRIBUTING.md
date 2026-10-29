@@ -20,6 +20,8 @@ fetches from its repository (`Cargo.toml`). To work on both at once, point the d
 cargo fmt --check
 cargo clippy --all-targets    # no warnings
 cargo test
+cargo deny check              # dependencies: advisories, licences, sources
+scripts/check-age.py          # after changing Cargo.lock: no crate younger than 14 days
 cargo run -- --dir /tmp/spezado init
 cargo run -- --dir /tmp/spezado set-up --name "Ada" --from 2026-01-01 --accounting de-cash-basis --vat de-regular --chart de-skr03
 cargo run -- --dir /tmp/spezado book --date 2026-02-10 --text "Paper" 4930=12.40 1200=-12.40
@@ -31,6 +33,9 @@ The web app in `web/` needs Node 26 and pnpm:
 cd web && pnpm install && pnpm api && pnpm check && pnpm build   # then cargo build embeds web/dist
 pnpm dev                                                         # while `cargo run -- serve` runs
 ```
+
+Dependencies have exact versions, each the newest that is at least 14 days old: `scripts/check-age.py --fix` for
+Cargo, `minimumReleaseAge` in `web/pnpm-workspace.yaml` for pnpm. A fix for a security advisory may be younger.
 
 ## Where things go
 

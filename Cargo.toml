@@ -12,6 +12,8 @@ repository = "https://github.com/spezado/spezado"
 publish = false
 
 [workspace.dependencies]
+# Each crate names its other dependencies with exact versions, each the newest that is at least 14 days old
+# (scripts/check-age.py); a fix for a security advisory may be younger.
 # The protocol (MIT), by its tag.
 librotenado = { git = "https://github.com/librotenado/librotenado", tag = "v0.7.1" }
 spezado-api = { path = "crates/spezado-api" }
@@ -30,3 +32,6 @@ missing_debug_implementations = "warn"
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }
 
+
+[patch."https://github.com/librotenado/librotenado"]
+librotenado = { path = "../../librotenado/librotenado/crates/librotenado" }

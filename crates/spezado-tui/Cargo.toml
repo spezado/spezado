@@ -15,12 +15,12 @@ workspace = true
 [dependencies]
 spezado-core.workspace = true
 librotenado.workspace = true
-ratatui = "0.30.2"
+ratatui = "=0.30.2"
 spezado-app.workspace = true
-thiserror = "2.0.21"
-serde_json = "1.0.154"
+thiserror = "=2.0.21"
+serde_json = "=1.0.154"
 
 [dev-dependencies]
-axum = "0.8.9"
+axum = "=0.8.9"
 spezado-relay.workspace = true
-tokio = { version = "1.54.1", features = ["rt-multi-thread", "net"] }
+tokio = { version = "=1.53.3", features = ["rt-multi-thread", "net"] }
