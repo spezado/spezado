@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # A release for a tag v*: the binary with the web app embedded, built per platform, packed with the licences, and
-# published as a GitHub release with checksums and the notes of CHANGELOG.md. Only the GitHub CLI of the runners is
-# used beyond the actions of the CI, pinned by commit.
+# published as a GitHub release with checksums and the notes of CHANGELOG.md; for servers, the Linux binaries as a
+# container image on ghcr.io (deploy/Dockerfile). Only the GitHub CLI and Docker of the runners are used beyond the
+# actions of the CI, pinned by commit.
 name: Release
 
 on:
@@ -90,8 +91,45 @@ jobs:
           if command -v sha256sum > /dev/null; then sha256sum "$archive" > "$archive.sha256"; else shasum -a 256 "$archive" > "$archive.sha256"; fi
           gh release upload "$TAG" "$archive" "$archive.sha256"
 
-  publish:
+  image:
     needs: build
+    runs-on: ubuntu-latest
+    # Write: the release is still a draft, which only those who may write can see.
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: The Linux binaries of this release, checked against their checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"
+          for pair in amd64:x86_64-unknown-linux-gnu arm64:aarch64-unknown-linux-gnu; do
+            arch="${pair%%:*}"; name="spezado-$version-${pair#*:}"
+            gh release download "$TAG" --pattern "$name.tar.gz" --pattern "$name.tar.gz.sha256"
+            sha256sum -c "$name.tar.gz.sha256"
+            tar -xzf "$name.tar.gz"
+            cp "$name/spezado" "deploy/spezado-$arch"
+          done
+          cp -R LICENSE LICENSES README.md deploy/
+          mkdir deploy/data
+      - name: Build for amd64 and arm64 and push to ghcr.io
+        env:
+          TAG: ${{ github.ref_name }}
+          ACTOR: ${{ github.actor }}
+          TOKEN: ${{ github.token }}
+        run: |
+          version="${TAG#v}"
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          echo "$TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
+          docker buildx create --use
+          docker buildx build deploy --platform linux/amd64,linux/arm64 --build-arg VERSION="$version" \
+            --tag "$image:$version" --tag "$image:latest" --push
+
+  publish:
+    needs: [build, image]
     runs-on: ubuntu-latest
     steps:
       - name: Publish the draft

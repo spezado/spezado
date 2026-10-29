@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# A relay with Docker Compose: `docker compose up -d` next to this file. It listens on this machine only – put a
+# reverse proxy that speaks TLS in front of it (docs: Synchronisation, Running a relay). Set SPEZADO_VERSION to the
+# release to run; the relay keeps its data in the volume `relay`.
+services:
+  relay:
+    image: ghcr.io/spezado/spezado:${SPEZADO_VERSION:?set SPEZADO_VERSION to the version of a release}
+    command: ["relay", "--data", "/data", "--listen", "0.0.0.0:8049"]
+    ports:
+      - "127.0.0.1:8049:8049"
+    volumes:
+      - relay:/data
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  relay:

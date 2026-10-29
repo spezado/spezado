@@ -99,6 +99,15 @@ A relay is the same program:
 spezado relay --data /var/lib/spezado-relay --listen 127.0.0.1:8049
 ```
 
+Or as a container – every release after 0.3.0 is also an image for Linux on amd64 and arm64,
+`ghcr.io/spezado/spezado`, which runs the relay unless told otherwise. With
+[deploy/compose.yaml](https://github.com/spezado/spezado/blob/main/deploy/compose.yaml) next to you and the version
+of a release:
+
+```sh
+SPEZADO_VERSION=0.4.0 docker compose up -d   # the version of the release to run
+```
+
 It speaks HTTP and is meant to run behind a reverse proxy that speaks TLS, at the root of its address. With
 [Caddy](https://caddyserver.com/docs/quick-starts/reverse-proxy), which fetches certificates by itself:
 
