@@ -21,4 +21,5 @@ serde_json = "1.0.154"
 spezado-api.workspace = true
 spezado-app.workspace = true
 spezado-core.workspace = true
+spezado-relay.workspace = true
 spezado-tui.workspace = true

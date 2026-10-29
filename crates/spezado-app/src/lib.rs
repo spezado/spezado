@@ -28,11 +28,13 @@ mod invoice_pdf;
 mod invoicing;
 mod opening;
 mod review;
+mod sync;
 mod workflows;
 
 pub use bank::{ImportedStatements, OpenEntry, Source, Suggestion};
 pub use invoicing::{Customer, INVOICE_TAX_CODES, InvoiceFormat, InvoiceProfile, NewInvoice, NewLine, WrittenInvoice};
 pub use spezado_law_de::STATES as GERMAN_STATES;
+pub use sync::{SyncMember, SyncReport, parse_invitation};
 pub use workflows::{AccountChoice, ReadDocument, SimpleEntry, VatReturnDue, today};
 
 /// Why the workspace refused or failed.
@@ -110,6 +112,9 @@ pub enum AppError {
     /// Opening balances that cannot be booked.
     #[error("{0}")]
     Opening(String),
+    /// Synchronising through a relay failed.
+    #[error("{0}")]
+    Sync(String),
     /// Writing a file.
     #[error("{path}: {error}")]
     Write {

@@ -53,7 +53,13 @@ CREATE TABLE IF NOT EXISTS events (
     canonical BLOB NOT NULL,
     PRIMARY KEY (books, hash)
 ) STRICT;
-PRAGMA user_version = 1;
+CREATE TABLE IF NOT EXISTS sent (
+    books TEXT NOT NULL,
+    kind TEXT NOT NULL,           -- 'event' or 'original'
+    id TEXT NOT NULL,             -- its hash
+    PRIMARY KEY (books, kind, id)
+) STRICT;
+PRAGMA user_version = 2;
 ";
 
 /// The store of a workspace: a directory with `spezado.sqlite` and `originals/`.
@@ -156,6 +162,22 @@ impl Store {
             Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(None),
             Err(error) => Err(error.into()),
         }
+    }
+
+    /// The hashes of what was sent to the relay of a set of books: `kind` is `event` or `original`.
+    pub fn sent(&self, books: &BooksId, kind: &str) -> Result<std::collections::BTreeSet<String>, StoreError> {
+        let mut statement = self.connection.prepare("SELECT id FROM sent WHERE books = ?1 AND kind = ?2")?;
+        let rows = statement.query_map(params![books.as_str(), kind], |row| row.get::<_, String>(0))?;
+        Ok(rows.collect::<Result<_, _>>()?)
+    }
+
+    /// Notes that something was sent to the relay.
+    pub fn mark_sent(&self, books: &BooksId, kind: &str, id: &str) -> Result<(), StoreError> {
+        self.connection.execute(
+            "INSERT OR IGNORE INTO sent (books, kind, id) VALUES (?1, ?2, ?3)",
+            params![books.as_str(), kind, id],
+        )?;
+        Ok(())
     }
 
     fn original_path(&self, hash: &ContentHash) -> PathBuf {

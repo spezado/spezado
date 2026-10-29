@@ -127,6 +127,56 @@ enum Commands {
     },
     /// Writes the description of the API in OpenAPI to standard output.
     Openapi,
+    /// Synchronises books with other devices through a relay, end-to-end encrypted; without an action, every set
+    /// of books that is synchronised.
+    Sync {
+        #[command(subcommand)]
+        action: Option<SyncAction>,
+    },
+    /// Runs a relay: it stores and passes on the encrypted events of books, without reading them. Put it behind a
+    /// reverse proxy that speaks TLS.
+    Relay {
+        /// Where the relay keeps its data; default: spezado-relay in the user's data directory.
+        #[arg(long)]
+        data: Option<PathBuf>,
+        /// The address to listen on.
+        #[arg(long, default_value = "127.0.0.1:8049")]
+        listen: std::net::SocketAddr,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum SyncAction {
+    /// Starts synchronising the books through a relay and prints their recovery code.
+    Start {
+        /// The address of the relay, e.g. https://relay.example.org.
+        relay: String,
+        /// What to call this device, e.g. Laptop.
+        #[arg(long)]
+        name: Option<String>,
+    },
+    /// Prints an invitation for another of your devices, good for a day.
+    Invite,
+    /// Asks to join books with an invitation; they arrive once the inviting device has synchronised.
+    Join {
+        /// The invitation.
+        invitation: String,
+        /// What to call this device.
+        #[arg(long)]
+        name: Option<String>,
+    },
+    /// Brings books back to this device with their recovery code, when no other device is left.
+    Recover {
+        /// The address of the relay.
+        relay: String,
+        /// The recovery code.
+        code: String,
+        /// What to call this device.
+        #[arg(long)]
+        name: Option<String>,
+    },
+    /// Lists the devices of the books.
+    Devices,
 }
 
 #[derive(Debug, clap::Args)]
@@ -186,6 +236,17 @@ fn main() -> Result<()> {
         println!("{}", utoipa_openapi());
         return Ok(());
     }
+    if let Commands::Relay { data, listen } = &cli.command {
+        let data = match data {
+            Some(data) => data.clone(),
+            None => dirs::data_dir().context("no data directory; give --data")?.join("spezado-relay"),
+        };
+        spezado_relay::run(&data, *listen, |address| {
+            println!("spezado relay listens at http://{address}, data in {}", data.display());
+            println!("Put a reverse proxy with TLS in front of it. Stop with Ctrl-C.");
+        })?;
+        return Ok(());
+    }
     if let Commands::Init { device } = cli.command {
         let device = device.unwrap_or_else(|| {
             let id: String = uuid_suffix();
@@ -229,6 +290,7 @@ fn main() -> Result<()> {
             println!("{new} new events in books {id}");
             Ok(())
         }
+        Commands::Sync { action } => sync(&mut workspace, cli.books, action),
         command => {
             let books = choose_books(&workspace, cli.books)?;
             run(&mut workspace, &books, command)
@@ -288,9 +350,70 @@ fn run(workspace: &mut Workspace, books: &BooksId, command: Commands) -> Result<
         }
         Commands::Export => std::io::stdout().write_all(&workspace.export(books)?)?,
         Commands::Tui { .. } => unreachable!("handled in main"),
-        Commands::Serve { .. } | Commands::Openapi => unreachable!("handled in main"),
+        Commands::Serve { .. } | Commands::Openapi | Commands::Sync { .. } | Commands::Relay { .. } => {
+            unreachable!("handled in main")
+        }
         Commands::Init { .. } | Commands::Books | Commands::SetUp(_) | Commands::Import { .. } => {
             unreachable!("handled in main")
+        }
+    }
+    Ok(())
+}
+
+fn sync(workspace: &mut Workspace, books: Option<BooksId>, action: Option<SyncAction>) -> Result<()> {
+    match action {
+        None => {
+            let reports = workspace.sync_all()?;
+            if reports.is_empty() {
+                println!("no books are synchronised – start with `spezado sync start <relay>`");
+            }
+            for (books, report) in reports {
+                if report.waiting {
+                    println!("{books}: waiting to be added by the device that invited this one");
+                    continue;
+                }
+                println!("{books}: {} received, {} sent", report.received, report.sent);
+                for name in report.added {
+                    println!("{books}: added {name}");
+                }
+            }
+        }
+        Some(SyncAction::Start { relay, name }) => {
+            let books = choose_books(workspace, books)?;
+            let code = workspace.start_sync(&books, &relay, name.as_deref())?;
+            println!("The books {books} are synchronised through {relay}.");
+            println!();
+            println!("Recovery code – write it down and keep it safe:");
+            println!();
+            println!("    {code}");
+            println!();
+            println!("With it, the books come back to a new device if every device is lost:");
+            println!("    spezado --books {books} sync recover {relay} <code>");
+            println!("Without it and without a device, the books are lost. spezado shows it only now.");
+        }
+        Some(SyncAction::Invite) => {
+            let books = choose_books(workspace, books)?;
+            println!("{}", workspace.invite(&books)?);
+            println!();
+            println!("On the other device: spezado sync join <invitation> – then run spezado sync here.");
+        }
+        Some(SyncAction::Join { invitation, name }) => {
+            let books = workspace.join(&invitation, name.as_deref())?;
+            println!("Asked to join the books {books}. Run spezado sync on the inviting device, then here.");
+        }
+        Some(SyncAction::Recover { relay, code, name }) => {
+            let books = books.context("give the books with --books")?;
+            let code = code.parse().map_err(|_| anyhow!("not a valid recovery code"))?;
+            let report = workspace.recover(&relay, &books, &code, name.as_deref())?;
+            println!("The books {books} are back on this device: {} received.", report.received);
+        }
+        Some(SyncAction::Devices) => {
+            let books = choose_books(workspace, books)?;
+            for member in workspace.sync_members(&books)? {
+                let what = if member.recovery { "recovery code".to_owned() } else { member.device.unwrap_or_default() };
+                let me = if member.me { " (this device)" } else { "" };
+                println!("{:<20} {what}{me}", member.name);
+            }
         }
     }
     Ok(())
