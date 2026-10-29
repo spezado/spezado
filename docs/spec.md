@@ -114,7 +114,7 @@ One core, three roles, one protocol:
 | M2 Bank | bank statements (camt.053, MT940, CSV, read in librotenado), booking their entries, proposals from invoices and earlier entries; FinTS as a placeholder | done |
 | M3 API and web app | `spezado serve`, OpenAPI, the web app | done |
 | 0.1.0 | a preview for a freelancer's year: opening balances, VAT deadlines with public holidays and the permanent extension, payments booked before their statement, invoices written as XRechnung or ZUGFeRD; binaries per platform | released |
-| M4 Apps | Flutter desktop and mobile apps in spezado/apps | |
+| M4 Apps | Flutter desktop and mobile apps in spezado/apps | desktop app 0.1 released; `spezado tray` in 0.3.0 |
 | M5 Sync | devices, relay, end-to-end encryption (librotenado 0006), sharing with rights, TLS to other devices | done, released as 0.2.0 |
 | then | ELSTER (ERiC), E-Bilanz (XBRL), payroll | |
 

@@ -5,11 +5,11 @@ books of as many organisations as you like, runs on your own device – in the t
 line – and keeps working offline. It is free software (AGPL-3.0-or-later), with every feature included and no
 telemetry.
 
-This is the documentation of **version 0.2, a preview**: a freelancer's year in the terminal and in the web app, in
+This is the documentation of **version 0.3, a preview**: a freelancer's year in the terminal and in the web app, in
 German and English. It is not yet for a real tax return – the German mappings (advance VAT return, Anlage EÜR,
 SKR 03/04) are drafts until tax advisers have reviewed them.
 
-## What 0.2 does
+## What 0.3 does
 
 - **Books** for a person: cash basis or double entry, standard VAT or small business, SKR 03 or SKR 04, opening
   balances; the state whose public holidays move deadlines and the permanent extension of VAT returns.
@@ -25,6 +25,8 @@ SKR 03/04) are drafts until tax advisers have reviewed them.
 - A **review list** in words: whatever breaks a rule of accounting is shown, never fixed silently.
 - **Synchronisation** between a person's own devices through a relay, end-to-end encrypted, with a recovery code –
   shared with other people who read or book, keys in the key store of the system ([Synchronisation](sync.md)).
+- **In the menu bar** with `spezado tray`, started at login if wished ([The web app](web-app.md)); the
+  [desktop app](https://github.com/spezado/apps) installs and starts it by itself.
 
 ## How to read it
 

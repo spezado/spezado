@@ -14,10 +14,10 @@ spezado keeps the books of as many organisations as you like – each person has
 organisation they have access to. It runs on its own as an app, in the terminal or behind a server for larger
 installations, and keeps working offline: data is local first and synchronised end-to-end encrypted.
 
-> **Status:** version 0.2.0, a preview – a freelancer's year in the terminal and in the web app, in German and
-> English: bank statements, documents and e-invoices, invoices written as XRechnung or ZUGFeRD, the advance VAT returns
-> and the Anlage EÜR; synchronised between devices and shared with others, end-to-end encrypted. Not yet for a real
-> tax return – the German mappings are drafts until tax advisers have reviewed them.
+> **Status:** version 0.3.0, a preview – a freelancer's year in the terminal, in the web app and in the
+> [desktop app](https://github.com/spezado/apps), in German and English: bank statements, documents and e-invoices, invoices written as XRechnung or ZUGFeRD, the advance VAT returns
+> and the Anlage EÜR; synchronised between devices and shared with others, end-to-end encrypted; in the menu bar with
+> `spezado tray`. Not yet for a real tax return – the German mappings are drafts until tax advisers have reviewed them.
 > The documentation is at [spezado.dev](https://spezado.dev), the design in [docs/spec.md](docs/spec.md); data
 > follows the open protocol [librotenado](https://github.com/librotenado/librotenado).
 

@@ -7,9 +7,9 @@ SHA-256 checksum: [releases](https://github.com/spezado/spezado/releases). Unpac
 `spezado` (`spezado.exe`), the licences and the changelog. The web app is built into the program.
 
 ```sh
-shasum -a 256 -c spezado-0.2.0-aarch64-apple-darwin.tar.gz.sha256
-tar -xzf spezado-0.2.0-aarch64-apple-darwin.tar.gz
-./spezado-0.2.0-aarch64-apple-darwin/spezado tui
+shasum -a 256 -c spezado-0.3.0-aarch64-apple-darwin.tar.gz.sha256
+tar -xzf spezado-0.3.0-aarch64-apple-darwin.tar.gz
+./spezado-0.3.0-aarch64-apple-darwin/spezado tui
 ```
 
 The binaries are not signed: macOS and Windows may ask before the first start.

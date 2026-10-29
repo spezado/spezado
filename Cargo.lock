@@ -4306,7 +4306,7 @@ dependencies = [
 
 [[package]]
 name = "spezado"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -4329,7 +4329,7 @@ dependencies = [
 
 [[package]]
 name = "spezado-api"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axum",
  "axum-server",
@@ -4356,7 +4356,7 @@ dependencies = [
 
 [[package]]
 name = "spezado-app"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axum",
  "base64 0.23.1",
@@ -4381,7 +4381,7 @@ dependencies = [
 
 [[package]]
 name = "spezado-core"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "librotenado",
  "serde_json",
@@ -4390,14 +4390,14 @@ dependencies = [
 
 [[package]]
 name = "spezado-law"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "librotenado",
 ]
 
 [[package]]
 name = "spezado-law-de"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "librotenado",
  "serde_json",
@@ -4406,7 +4406,7 @@ dependencies = [
 
 [[package]]
 name = "spezado-relay"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axum",
  "http-body-util",
@@ -4421,7 +4421,7 @@ dependencies = [
 
 [[package]]
 name = "spezado-store"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "librotenado",
  "rusqlite",
@@ -4430,7 +4430,7 @@ dependencies = [
 
 [[package]]
 name = "spezado-tui"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axum",
  "librotenado",

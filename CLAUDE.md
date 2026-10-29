@@ -9,8 +9,8 @@ monorepo for the Rust core, CLI/TUI, client, relay, backend, desktop app, progre
 modules. The data model and protocol live in [librotenado](https://github.com/librotenado/librotenado) (MIT library,
 CC BY 4.0 specification); the design is in [docs/spec.md](docs/spec.md).
 
-Version 0.2.0, a preview (`CHANGELOG.md`): milestones 0 to 3 and 5 – core, terminal interface, bank, API, web app and
-synchronisation – on
+Version 0.3.0, a preview (`CHANGELOG.md`): milestones 0 to 3 and 5 – core, terminal interface, bank, API, web app and
+synchronisation – and `spezado tray` with autostart, on
 librotenado 0.6 (tag `v0.6.0`). The crates and what goes where are listed in CONTRIBUTING.md; the plan is in
 [docs/spec.md](docs/spec.md). Releases: a tag `v*` runs `.github/workflows/release.yml` – binaries with the web app
 embedded for Linux, macOS and Windows, published as a pre-release with the notes of `CHANGELOG.md`.

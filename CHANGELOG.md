@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 – 2026-10-29
+
+spezado in the menu bar, and for apps that install it themselves. Still a preview – the German mappings are drafts
+until tax advisers have reviewed them.
 
 - **`spezado tray`:** the server with an icon in the menu bar (macOS) or the system tray (Windows) – open the web
   app, pair a device, start at login, quit. Built into the releases for macOS and Windows; Linux keeps `serve`
