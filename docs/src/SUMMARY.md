@@ -9,6 +9,7 @@
 - [The web app](web-app.md)
 - [The command line](command-line.md)
 - [Invoices](invoices.md)
+- [Synchronisation](sync.md)
 
 # Building on spezado
 

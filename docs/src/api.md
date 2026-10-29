@@ -27,6 +27,7 @@ curl -s http://127.0.0.1:8048/api/v1/books -H "Authorization: Bearer $TOKEN"
 | Invoices | `GET` `PUT /books/{books}/invoicing/profile`; `GET` `POST /customers`; `POST /invoices`; `GET /invoices/next-number` |
 | Reports | `GET /books/{books}/reports`, `/reports/{report}`; `GET` `PUT /deadlines`; `GET /review` |
 | Closing | `POST /books/{books}/closings`; `GET /gobd` |
+| Synchronisation | `GET` `POST /books/{books}/sync` – status, synchronise now; `POST /sync/start`, `/sync/invitations`; `GET /sync/devices`; `POST /sync/join`, `/sync/recover` |
 | Changes | `GET /events` – Server-Sent Events: `changed` with the books whenever something was written |
 
 Amounts are written with their currency, the value as a decimal string with a point –

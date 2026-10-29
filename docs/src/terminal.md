@@ -27,7 +27,7 @@ IBAN.
 
 | Tab | Keys | |
 |---|---|---|
-| Overview | `n` new booking, `i` read a document, `d` deadlines | bank and cash, income, expenses and result of the year, the next advance VAT return and when it is due, open entries, review and the date closed up to |
+| Overview | `n` new booking, `i` read a document, `d` deadlines, `y` synchronise (or set it up), `v` invite a device | bank and cash, income, expenses and result of the year, the next advance VAT return and when it is due, open entries, review, the date closed up to, and the relay the books are synchronised through |
 | Journal | `n` new booking, `z` booking in lines, `r` reverse | every booking; a reversal refers to what it cancels – nothing is changed or deleted |
 | Bank | `i` read a statement, `↵` book, `a` book all proposals, `f` fetch | the entries of your statements not booked yet, each with a proposal where spezado found one |
 | Documents | `i` read, `n` new booking, `r` write an invoice, `k` new customer, `p` seller | documents with their originals |

@@ -15,6 +15,8 @@ where the workspace holds several sets of books, `--books`; `spezado help <comma
 | `check` | what needs review |
 | `close` | closes an owner's books up to a date |
 | `export`, `import` | the events of the books as JSON Lines, out and in |
+| `sync` | synchronises books with other devices: `start`, `invite`, `join`, `recover`, `devices` ([Synchronisation](sync.md)) |
+| `relay` | runs a relay |
 | `tui`, `serve` | the terminal, the web app and API |
 | `openapi` | the description of the API |
 

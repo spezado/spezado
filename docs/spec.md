@@ -115,10 +115,26 @@ One core, three roles, one protocol:
 | M3 API and web app | `spezado serve`, OpenAPI, the web app | done |
 | 0.1.0 | a preview for a freelancer's year: opening balances, VAT deadlines with public holidays and the permanent extension, payments booked before their statement, invoices written as XRechnung; binaries per platform | this version |
 | M4 Apps | Flutter desktop and mobile apps in spezado/apps | |
-| M5 Sync | devices, relay, end-to-end encryption | |
+| M5 Sync | devices, relay, end-to-end encryption (librotenado 0006) | first stage: a person's own devices |
 | then | ELSTER (ERiC), E-Bilanz (XBRL), payroll | |
 
 ## 9. State
+
+Milestone 5, first stage – a person's own devices, after librotenado 0006:
+
+- `spezado relay` holds, per set of books, the ordered member list and the envelopes of events and originals, and
+  checks signatures, the rules of the member list and who may write – never content. It speaks HTTP behind a reverse
+  proxy that terminates TLS.
+- A device **starts** synchronising books: it founds their member list with itself and a **recovery code** – shown
+  once, for paper – and sends every event and original, encrypted with the books key.
+- Another device of the person **joins** with an invitation (relay, books, a secret; good for a day); the inviting
+  device adds it at its next synchronisation, after checking the proof. The new device unwraps the key and the chain
+  and receives everything.
+- When every device is lost, the recovery code **recovers** the books onto a new one.
+- `spezado serve` synchronises every minute; the terminal with `y`, the command line with `spezado sync`.
+- **OPEN:** removing a device (the key changes; librotenado implements it), people other than the owner with rights,
+  seeds in the key store of the operating system, the API for devices other than this one (TLS).
+
 
 Version 0.1.0, a preview – for trying out, not for a real tax return: the German mappings are drafts until tax
 advisers have reviewed them. On top of milestones 0 to 3:
@@ -139,8 +155,8 @@ advisers have reviewed them. On top of milestones 0 to 3:
   § 14 Abs. 4 Nr. 8 and § 14a UStG ask for and the VAT identification numbers they need –, or as a small business
   (§ 19 UStG); booked when paid on a cash basis, when issued with double entry. Without a VAT identification number
   the seller's tax number is also its identifier (BT-29): EN 16931 requires BT-29, BT-30 or BT-31 (BR-CO-26, fatal).
-  The seller's details and customers are kept on the device; they are synchronised, and invoices get number ranges
-  per device, with milestone 5.
+  The seller's details and customers are kept on the device as settings, not events; synchronising them, and number
+  ranges per device, are **OPEN**.
 - **The review list in words**, German and English: each issue names the booking, document, entry and amount.
 - Releases: binaries for Linux (x86_64, arm64), macOS (arm64) and Windows (x86_64) with the web app embedded.
 

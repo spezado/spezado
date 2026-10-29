@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **Synchronisation** between a person's own devices through a relay, end-to-end encrypted after librotenado 0006:
+  `spezado relay`; starting it for books with a recovery code, inviting another device, joining, recovering;
+  `spezado sync`, `y` and `v` in the terminal, the panel on the web app's overview, and every minute while
+  `spezado serve` runs.
 - **Licences:** the description of the API (`api/openapi.json`) is MIT, so that clients generated from it can be
   licensed freely. The brand kit moved to its own repository, spezado/brand; `brand/` keeps copies of what spezado
   uses, the artwork under CC BY-ND 4.0, Domitian under OFL-1.1.

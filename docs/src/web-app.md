@@ -19,7 +19,7 @@ the token it receives; another browser needs a code of its own.
 
 | Page | |
 |---|---|
-| Overview | bank and cash, income, expenses and result of the year, the next advance VAT return and when it is due; the state and the permanent extension that move deadlines, changed from a date on |
+| Overview | bank and cash, income, expenses and result of the year, the next advance VAT return and when it is due; the state and the permanent extension that move deadlines, changed from a date on; synchronisation – starting it, the devices, inviting one, synchronising now ([Synchronisation](sync.md)) |
 | Journal | every booking, reversals |
 | Bank | read statements, book entries or accept the proposals |
 | Documents | read e-invoices into booking proposals, file other documents, download every original |
@@ -28,6 +28,9 @@ the token it receives; another browser needs a code of its own.
 | Reports | the reports of the year, as CSV, too |
 | Review | what needs review, in words |
 | Closing | closing periods, the GoBD data transfer |
+
+Without books, the web app sets up new ones – or brings them from another device, with an invitation or the recovery
+code. While `serve` runs, it synchronises every minute.
 
 `+ Buchen` / `+ Book` books from a gross amount or in lines. The language (German, English) and light or dark – or
 like the system – are chosen at the top and kept in the browser. What another browser, the terminal or the command

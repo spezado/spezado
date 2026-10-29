@@ -23,6 +23,8 @@ SKR 03/04) are drafts until tax advisers have reviewed them.
 - **Reports**: the advance VAT returns with their deadlines, the Anlage EÜR, the HGB statements; closing periods and
   the GoBD data transfer.
 - A **review list** in words: whatever breaks a rule of accounting is shown, never fixed silently.
+- **Synchronisation** between a person's own devices through a relay, end-to-end encrypted, with a recovery code –
+  coming with 0.2 ([Synchronisation](sync.md)).
 
 ## How to read it
 
