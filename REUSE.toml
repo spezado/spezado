@@ -9,10 +9,24 @@ precedence = "aggregate"
 SPDX-FileCopyrightText = "falkOSS – Falcon Lake Open Source Software gUG (haftungsbeschränkt) i. G. and the spezado contributors"
 
 [[annotations]]
-path = ["**/*.md", "**/.gitignore", ".gitattributes", "api/openapi.json", "Cargo.lock", "brand/svg/**", "brand/png/**", "brand/web/**", "docs/src/openapi.json", "docs/theme/favicon.*"]
+path = ["**/*.md", "**/.gitignore", ".gitattributes", "Cargo.lock"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "falkOSS – Falcon Lake Open Source Software gUG (haftungsbeschränkt) i. G. and the spezado contributors"
 SPDX-License-Identifier = "AGPL-3.0-or-later"
+
+# The description of the API: MIT, so that clients generated from it – like spezado/apps – can be licensed freely.
+[[annotations]]
+path = ["api/openapi.json", "docs/src/openapi.json"]
+precedence = "override"
+SPDX-FileCopyrightText = "falkOSS – Falcon Lake Open Source Software gUG (haftungsbeschränkt) i. G. and the spezado contributors"
+SPDX-License-Identifier = "MIT"
+
+# Copies of the brand's artwork from spezado/brand – to be passed on unchanged; name and brand are falkOSS's.
+[[annotations]]
+path = ["brand/svg/**", "brand/web/**", "docs/theme/favicon.*", "web/public/*.svg"]
+precedence = "override"
+SPDX-FileCopyrightText = "falkOSS – Falcon Lake Open Source Software gUG (haftungsbeschränkt) i. G."
+SPDX-License-Identifier = "CC-BY-ND-4.0"
 
 [[annotations]]
 path = ["brand/fonts/**", "brand/web/fonts/**", "docs/src/fonts/**"]
@@ -33,7 +47,7 @@ SPDX-FileCopyrightText = "falkOSS – Falcon Lake Open Source Software gUG (haft
 SPDX-License-Identifier = "MIT"
 
 [[annotations]]
-path = ["web/package.json", "web/pnpm-lock.yaml", "web/tsconfig.json", "web/src/lib/api-types.ts", "web/public/*.svg"]
+path = ["web/package.json", "web/pnpm-lock.yaml", "web/tsconfig.json", "web/src/lib/api-types.ts"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "falkOSS – Falcon Lake Open Source Software gUG (haftungsbeschränkt) i. G. and the spezado contributors"
 SPDX-License-Identifier = "AGPL-3.0-or-later"

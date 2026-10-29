@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **Licences:** the description of the API (`api/openapi.json`) is MIT, so that clients generated from it can be
+  licensed freely. The brand kit moved to its own repository, spezado/brand; `brand/` keeps copies of what spezado
+  uses, the artwork under CC BY-ND 4.0, Domitian under OFL-1.1.
+
 ## 0.1.0 – 2026-10-29
 
 The first release, a preview: a freelancer's year in the terminal and in the web app, in German and English. Not for

@@ -80,13 +80,16 @@ with the terminal, the web app, the command line and the API.
 
 ## Brand
 
-`brand/` – generated from `brand/generate.py` (two folder spines, ink and copper bronze as equals; wordmark in
-Domitian, outlines). Edit the script, never the exports; colours and use in `brand/README.md`.
+The brand kit lives in its own repository, [spezado/brand](https://github.com/spezado/brand) (generator MIT, artwork
+CC BY-ND 4.0, Domitian OFL-1.1): two folder spines, ink and copper bronze as equals; wordmark in Domitian. `brand/`
+here holds copies of what spezado uses – the fonts for invoice PDFs, `web/` for the documentation, the lockups for the
+README. Change the brand there and copy; never edit the copies.
 
 ## Licences
 
-- Everything here: **AGPL-3.0-or-later**, an SPDX header in every own source file. Exception: the fonts in
-  `brand/fonts/` and `brand/web/fonts/` (Domitian, OFL-1.1, see `REUSE.toml`).
+- Everything here: **AGPL-3.0-or-later**, an SPDX header in every own source file. Exceptions (see `REUSE.toml`):
+  the description of the API, `api/openapi.json`, is **MIT**, so that clients generated from it can be licensed
+  freely; the brand's artwork is CC BY-ND 4.0 and the Domitian fonts OFL-1.1, as in spezado/brand.
 - Never copy core or business logic into the MIT repositories: the librotenado library, and the Flutter apps in
   `spezado/apps`, which talk to spezado through its open API only.
 

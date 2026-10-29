@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 /* The brand kit on mdBook: Domitian for headings (OFL, bundled from brand/web/fonts), the system font for text; ink and
-   copper bronze on paper, copper light on night. Colours from brand/generate.py, as on spezado.app. */
+   copper bronze on paper, copper light on night. Colours from spezado/brand, as on spezado.app. */
 @font-face { font-family: "Domitian"; font-weight: 400; font-style: normal; font-display: swap;
   src: url("../fonts/Domitian-Roman.woff2") format("woff2"); }
 @font-face { font-family: "Domitian"; font-weight: 400; font-style: italic; font-display: swap;
