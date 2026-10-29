@@ -120,7 +120,8 @@ enum Commands {
         lang: Option<String>,
     },
     /// Serves the API and the web app on this device, at http://127.0.0.1:PORT – or, with --listen, to other
-    /// devices over TLS with a certificate of this workspace's own.
+    /// devices over TLS with a certificate of this workspace's own. Creates the workspace if there is none; takes
+    /// the pairing code from SPEZADO_PAIRING_CODE if set (for apps that start spezado themselves).
     Serve {
         /// The port on this device.
         #[arg(long, default_value_t = 8048)]
@@ -238,6 +239,17 @@ struct SetUp {
     region: Option<String>,
 }
 
+/// A pairing code given in `SPEZADO_PAIRING_CODE` – by an app that starts `spezado serve` and pairs itself; at least
+/// 16 letters, digits, `-` or `_`. In the environment rather than on the command line, where others could read it.
+fn pairing_code_given() -> Result<Option<String>> {
+    let Some(code) = std::env::var_os("SPEZADO_PAIRING_CODE") else { return Ok(None) };
+    let code = code
+        .into_string()
+        .ok()
+        .filter(|code| code.len() >= 16 && code.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_'));
+    code.map(Some).context("SPEZADO_PAIRING_CODE: at least 16 letters, digits, - or _")
+}
+
 fn main() -> Result<()> {
     let cli = Cli::parse();
     let directory = match cli.dir {
@@ -272,8 +284,10 @@ fn main() -> Result<()> {
         println!("workspace for device {} in {}", workspace.device(), directory.display());
         return Ok(());
     }
-    // The terminal interface starts from nothing: a workspace for this device, then setting up books.
-    if matches!(cli.command, Commands::Tui { .. }) && !directory.join("spezado.sqlite").exists() {
+    // The terminal interface and the server start from nothing: a workspace for this device, then setting up books.
+    if matches!(cli.command, Commands::Tui { .. } | Commands::Serve { .. })
+        && !directory.join("spezado.sqlite").exists()
+    {
         let device = format!("device-{}", uuid_suffix()).parse().expect("a valid device name");
         Workspace::create(&directory, device)?;
     }
@@ -290,7 +304,8 @@ fn main() -> Result<()> {
         Commands::Serve { port, listen, host } => {
             let listen = listen.unwrap_or_else(|| std::net::SocketAddr::from(([127, 0, 0, 1], port)));
             let host = host.unwrap_or_else(|| gethostname::gethostname().to_string_lossy().into_owned());
-            spezado_api::serve(workspace, listen, &host, |serving| {
+            let pairing = pairing_code_given()?;
+            spezado_api::serve(workspace, listen, &host, pairing, |serving| {
                 println!("spezado serves at {}", serving.link.split('#').next().unwrap_or_default());
                 println!("Pair a device with the code {} – or open {}", serving.code, serving.link);
                 if let Some(fingerprint) = &serving.fingerprint {

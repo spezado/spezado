@@ -72,6 +72,16 @@ async fn paired(api: &Api, app: &Router) -> String {
 }
 
 #[tokio::test]
+async fn a_code_given_pairs_once() {
+    let (_scratch, api, app) = setup();
+    api.set_pairing_code("app-made-code-0123456789");
+    let pair = json!({"code": "app-made-code-0123456789", "name": "spezado app"});
+    let (status, body) = send(&app, Method::POST, "/api/v1/pair", None, Some(pair.clone())).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(send(&app, Method::POST, "/api/v1/pair", None, Some(pair)).await.0, StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
 async fn only_paired_devices_get_in() {
     let (_scratch, api, app) = setup();
     assert_eq!(send(&app, Method::GET, "/api/v1/books", None, None).await.0, StatusCode::UNAUTHORIZED);

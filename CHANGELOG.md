@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **`spezado serve` for apps that start it themselves:** it creates the workspace if there is none, and takes the
+  pairing code from `SPEZADO_PAIRING_CODE` (at least 16 letters, digits, `-` or `_`) – in the environment rather
+  than on the command line, where others on the device could read it.
+
 ## 0.2.0 – 2026-10-29
 
 Books on several devices, and shared with other people: synchronised through a relay, end-to-end encrypted. Still a

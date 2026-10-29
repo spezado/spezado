@@ -134,8 +134,14 @@ impl Api {
     /// A new code to pair a device with, valid for a quarter of an hour; the one before stops being valid.
     pub fn pairing_code(&self) -> String {
         let code = random_hex(5);
-        *self.pairing.lock().expect("the pairing code") = Some((code.clone(), Instant::now() + PAIRING));
+        self.set_pairing_code(&code);
         code
+    }
+
+    /// A code to pair a device with, as given – by an app that starts spezado and pairs itself; valid like one made
+    /// up, and the one before stops being valid.
+    pub fn set_pairing_code(&self, code: &str) {
+        *self.pairing.lock().expect("the pairing code") = Some((code.to_owned(), Instant::now() + PAIRING));
     }
 
     /// Runs `work` on the workspace, away from the server's threads.
@@ -293,18 +299,26 @@ pub struct Serving {
 
 /// Serves the API and the web app for a workspace at `listen` until interrupted. On the device itself (a loopback
 /// address) it speaks HTTP; to other devices only TLS, with a certificate of the workspace's own made for `host` –
-/// the name other devices reach this one by. `ready` is told what to show.
+/// the name other devices reach this one by. The pairing code is `pairing` when given, else made up. `ready` is told
+/// what to show.
 pub fn serve(
     workspace: Workspace,
     listen: SocketAddr,
     host: &str,
+    pairing: Option<String>,
     ready: impl FnOnce(&Serving),
 ) -> Result<(), ServeError> {
     let runtime = tokio::runtime::Builder::new_multi_thread().enable_all().build()?;
     let tls = if listen.ip().is_loopback() { None } else { Some(tls::configuration(&workspace, host)?) };
     runtime.block_on(async move {
         let api = Api::new(workspace);
-        let code = api.pairing_code();
+        let code = match pairing {
+            Some(code) => {
+                api.set_pairing_code(&code);
+                code
+            }
+            None => api.pairing_code(),
+        };
         tokio::spawn(sync::every_minute(api.clone()));
         match tls {
             None => {
