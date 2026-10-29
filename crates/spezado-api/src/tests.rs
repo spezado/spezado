@@ -192,6 +192,47 @@ async fn a_freelancer_books_and_reports_through_the_api() {
     );
 }
 
+#[tokio::test]
+async fn a_vat_return_is_prepared_as_a_filing() {
+    let (_scratch, api, app) = setup();
+    let token = paired(&api, &app).await;
+    let token = Some(token.as_str());
+    let setup = json!({
+        "name": "Ada", "from": "2026-01-01", "accounting": "de-cash-basis", "vat_scheme": "de-regular",
+        "vat_basis": "cash", "vat_period": "quarter", "chart": "de-skr03",
+    });
+    let books = send(&app, Method::POST, "/api/v1/books", token, Some(setup)).await.1;
+    let base = format!("/api/v1/books/{}", books["id"].as_str().unwrap());
+    let sale = json!({"date": "2026-02-10", "text": "Rechnung 1", "account": "8400", "gross": "1190.00", "tax": "de-out-19", "payment": "bank"});
+    assert_eq!(send(&app, Method::POST, &format!("{base}/bookings/simple"), token, Some(sale)).await.0, StatusCode::OK);
+
+    let prepare = json!({"report": "de-ustva", "from": "2026-01-01", "to": "2026-03-31"});
+    let (status, filing) = send(&app, Method::POST, &format!("{base}/filings"), token, Some(prepare)).await;
+    assert_eq!(status, StatusCode::OK, "{filing}");
+    assert_eq!((filing["kind"].as_str(), filing["state"].as_str()), (Some("vat_return"), Some("prepared")));
+    assert_eq!(filing["outdated"], false);
+    assert!(
+        filing["fields"].as_array().unwrap().iter().any(|f| f["field"] == "81" && f["amount"]["value"] == "1000.00")
+    );
+    let listed = send(&app, Method::GET, &format!("{base}/filings"), token, None).await.1;
+    assert_eq!(listed.as_array().unwrap().len(), 1);
+
+    // No adapter yet: the filing waits; an adapter is reached over HTTPS, or over HTTP on this device only.
+    assert_eq!(
+        send(&app, Method::GET, "/api/v1/adapters/DE", token, None).await.1,
+        json!({"country": "DE", "url": null})
+    );
+    let plain = json!({"url": "http://example.org", "token": "secret"});
+    assert_eq!(
+        send(&app, Method::PUT, "/api/v1/adapters/DE", token, Some(plain)).await.0,
+        StatusCode::UNPROCESSABLE_ENTITY
+    );
+    let submit = format!("{base}/filings/{}/submit", filing["id"].as_str().unwrap());
+    let (status, problem) = send(&app, Method::POST, &submit, token, Some(json!({"test": true}))).await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(problem["error"], "no adapter set for DE");
+}
+
 #[test]
 fn the_description_in_the_repository_is_current() {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../api/openapi.json");

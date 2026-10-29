@@ -822,3 +822,78 @@ pub struct BooksRef {
     /// The identity of the books.
     pub books: String,
 }
+
+/// A filing of the books and where it stands.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct FilingView {
+    /// Its identity.
+    pub id: String,
+    /// What it is: `vat_return`, `cash_basis_statement`, `annual_accounts`.
+    pub kind: String,
+    /// The report it carries: `de-ustva`.
+    pub report: String,
+    /// The first day of its period.
+    pub from: String,
+    /// The last day of its period.
+    pub to: String,
+    /// `prepared`, `submitted`, `accepted` or `rejected`.
+    pub state: String,
+    /// The books changed since it was prepared so that its content would differ now.
+    pub outdated: bool,
+    /// The filing it corrects.
+    pub corrects: Option<String>,
+    /// The documents of what the authority returned.
+    pub documents: Vec<String>,
+    /// Its fields with an amount.
+    pub fields: Vec<Field>,
+}
+
+/// Preparing the filing of a report.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct PrepareFiling {
+    /// The report: `de-ustva`, `de-euer`.
+    pub report: String,
+    /// The first day of the period, `YYYY-MM-DD`.
+    pub from: String,
+    /// The last day of the period, `YYYY-MM-DD`.
+    pub to: String,
+}
+
+/// Submitting a prepared filing.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct Submit {
+    /// A test submission the authority does not process; nothing is recorded.
+    #[serde(default)]
+    pub test: bool,
+}
+
+/// What the adapter answered.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct SubmissionView {
+    /// `submitted`, `accepted` or `rejected`.
+    pub state: String,
+    /// Whether it was a test submission.
+    pub test: bool,
+    /// How the authority explained a rejection.
+    pub message: Option<String>,
+    /// The file names of what the authority returned.
+    pub receipts: Vec<String>,
+}
+
+/// The adapter of a country.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct AdapterView {
+    /// The country, ISO 3166-1 alpha-2.
+    pub country: String,
+    /// Its address, if one is set.
+    pub url: Option<String>,
+}
+
+/// Setting the adapter of a country.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct SetAdapter {
+    /// Its address: `https://…`, or `http://127.0.0.1:…` on this device.
+    pub url: String,
+    /// The token spezado authenticates itself with.
+    pub token: String,
+}

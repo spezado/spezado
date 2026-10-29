@@ -10,6 +10,83 @@
     "version": "0.3.0"
   },
   "paths": {
+    "/api/v1/adapters/{country}": {
+      "get": {
+        "tags": [
+          "crate::filings"
+        ],
+        "summary": "The adapter that submits filings in a country, if one is set; never its token.",
+        "operationId": "adapter",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdapterView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "crate::filings"
+        ],
+        "summary": "Sets the adapter that submits filings in a country: its address and the token spezado authenticates itself with.",
+        "operationId": "set_adapter",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAdapter"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdapterView"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/books": {
       "get": {
         "tags": [],
@@ -957,6 +1034,223 @@
             }
           },
           "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/filings": {
+      "get": {
+        "tags": [
+          "crate::filings"
+        ],
+        "summary": "The filings of the books, in the order they were prepared.",
+        "operationId": "filings",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "`de` or `en`; German when none.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FilingView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "crate::filings"
+        ],
+        "summary": "Prepares the filing of a report for a period from the books as they are – the same filing again if one with\nthat content waits to be submitted, a correction if one was submitted.",
+        "operationId": "prepare",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "`de` or `en`; German when none.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrepareFiling"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilingView"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/filings/{filing}/refresh": {
+      "post": {
+        "tags": [
+          "crate::filings"
+        ],
+        "summary": "Asks the adapter where a submitted filing stands and records an answer.",
+        "operationId": "refresh",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filing",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionView"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/filings/{filing}/submit": {
+      "post": {
+        "tags": [
+          "crate::filings"
+        ],
+        "summary": "Submits a prepared filing through the adapter of its country. A test submission is not processed by the\nauthority and changes nothing in the books.",
+        "operationId": "submit",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filing",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Submit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionView"
+                }
+              }
+            }
+          },
+          "422": {
             "content": {
               "application/json": {
                 "schema": {
@@ -2172,6 +2466,26 @@
           }
         }
       },
+      "AdapterView": {
+        "type": "object",
+        "description": "The adapter of a country.",
+        "required": [
+          "country"
+        ],
+        "properties": {
+          "country": {
+            "type": "string",
+            "description": "The country, ISO 3166-1 alpha-2."
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Its address, if one is set."
+          }
+        }
+      },
       "Amount": {
         "type": "object",
         "description": "An amount of money.",
@@ -2591,6 +2905,72 @@
           "name": {
             "type": "string",
             "description": "Its name."
+          }
+        }
+      },
+      "FilingView": {
+        "type": "object",
+        "description": "A filing of the books and where it stands.",
+        "required": [
+          "id",
+          "kind",
+          "report",
+          "from",
+          "to",
+          "state",
+          "outdated",
+          "documents",
+          "fields"
+        ],
+        "properties": {
+          "corrects": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The filing it corrects."
+          },
+          "documents": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The documents of what the authority returned."
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Field"
+            },
+            "description": "Its fields with an amount."
+          },
+          "from": {
+            "type": "string",
+            "description": "The first day of its period."
+          },
+          "id": {
+            "type": "string",
+            "description": "Its identity."
+          },
+          "kind": {
+            "type": "string",
+            "description": "What it is: `vat_return`, `cash_basis_statement`, `annual_accounts`."
+          },
+          "outdated": {
+            "type": "boolean",
+            "description": "The books changed since it was prepared so that its content would differ now."
+          },
+          "report": {
+            "type": "string",
+            "description": "The report it carries: `de-ustva`."
+          },
+          "state": {
+            "type": "string",
+            "description": "`prepared`, `submitted`, `accepted` or `rejected`."
+          },
+          "to": {
+            "type": "string",
+            "description": "The last day of its period."
           }
         }
       },
@@ -3260,6 +3640,29 @@
           }
         }
       },
+      "PrepareFiling": {
+        "type": "object",
+        "description": "Preparing the filing of a report.",
+        "required": [
+          "report",
+          "from",
+          "to"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "The first day of the period, `YYYY-MM-DD`."
+          },
+          "report": {
+            "type": "string",
+            "description": "The report: `de-ustva`, `de-euer`."
+          },
+          "to": {
+            "type": "string",
+            "description": "The last day of the period, `YYYY-MM-DD`."
+          }
+        }
+      },
       "Problem": {
         "type": "object",
         "description": "An error: what was refused or went wrong.",
@@ -3451,6 +3854,24 @@
           }
         }
       },
+      "SetAdapter": {
+        "type": "object",
+        "description": "Setting the adapter of a country.",
+        "required": [
+          "url",
+          "token"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "The token spezado authenticates itself with."
+          },
+          "url": {
+            "type": "string",
+            "description": "Its address: `https://…`, or `http://127.0.0.1:…` on this device."
+          }
+        }
+      },
       "SetUp": {
         "type": "object",
         "description": "Setting up books for a person.",
@@ -3549,6 +3970,49 @@
           "text": {
             "type": "string",
             "description": "What it is about."
+          }
+        }
+      },
+      "SubmissionView": {
+        "type": "object",
+        "description": "What the adapter answered.",
+        "required": [
+          "state",
+          "test",
+          "receipts"
+        ],
+        "properties": {
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "How the authority explained a rejection."
+          },
+          "receipts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The file names of what the authority returned."
+          },
+          "state": {
+            "type": "string",
+            "description": "`submitted`, `accepted` or `rejected`."
+          },
+          "test": {
+            "type": "boolean",
+            "description": "Whether it was a test submission."
+          }
+        }
+      },
+      "Submit": {
+        "type": "object",
+        "description": "Submitting a prepared filing.",
+        "properties": {
+          "test": {
+            "type": "boolean",
+            "description": "A test submission the authority does not process; nothing is recorded."
           }
         }
       },

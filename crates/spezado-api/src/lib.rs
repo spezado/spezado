@@ -24,6 +24,7 @@ use spezado_core::CommandError;
 use tokio::sync::broadcast;
 
 pub mod dto;
+mod filings;
 mod invoices;
 mod records;
 mod routes;
@@ -276,6 +277,7 @@ pub fn router(api: Api) -> Router {
         .merge(records::routes())
         .merge(invoices::routes())
         .merge(sync::routes())
+        .merge(filings::routes())
         .layer(axum::extract::DefaultBodyLimit::max(32 * 1024 * 1024))
         .route_layer(middleware::from_fn_with_state(api.clone(), authorise));
     Router::new()

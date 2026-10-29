@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! spezado on the command line: set up books, book, reverse, read the journal, balances and reports, close periods,
-//! review, export and import. Everything goes through the workspace of `spezado-app`.
+//! prepare and submit filings, review, export and import. Everything goes through the workspace of `spezado-app`.
 
 use std::{collections::BTreeMap, io::Write, path::PathBuf};
 
@@ -115,6 +115,19 @@ enum Commands {
         #[arg(long)]
         owner: Option<PartyId>,
     },
+    /// Lists the filings of the books, or prepares, submits or asks about one.
+    Filing {
+        #[command(subcommand)]
+        action: Option<FilingAction>,
+    },
+    /// Shows the adapter that submits filings in a country, or sets it – with the token from
+    /// SPEZADO_ADAPTER_TOKEN, in the environment rather than on the command line.
+    Adapter {
+        /// The country, e.g. DE.
+        country: librotenado::Country,
+        /// Its address: https://…, or http://127.0.0.1:… on this device.
+        url: Option<String>,
+    },
     /// Shows what needs review.
     Check,
     /// Writes the events of the books as JSON Lines to standard output.
@@ -222,6 +235,37 @@ enum SyncAction {
     },
     /// Lists the devices of the books.
     Devices,
+}
+
+#[derive(Debug, Subcommand)]
+enum FilingAction {
+    /// Prepares the filing of a report for a period from the books as they are.
+    Prepare {
+        /// The report: de-ustva, de-euer.
+        report: String,
+        /// The first day.
+        #[arg(long)]
+        from: Date,
+        /// The last day.
+        #[arg(long)]
+        to: Date,
+        /// The owner; may be left out while the books have one.
+        #[arg(long)]
+        owner: Option<PartyId>,
+    },
+    /// Submits a prepared filing through the adapter of its country.
+    Submit {
+        /// The filing.
+        filing: librotenado::FilingId,
+        /// A test submission the authority does not process; nothing is recorded.
+        #[arg(long)]
+        test: bool,
+    },
+    /// Asks the adapter where a submitted filing stands.
+    Refresh {
+        /// The filing.
+        filing: librotenado::FilingId,
+    },
 }
 
 #[derive(Debug, clap::Args)]
@@ -399,6 +443,18 @@ fn main() -> Result<()> {
             Ok(())
         }
         Commands::Sync { action } => sync(&mut workspace, cli.books, action),
+        Commands::Adapter { country, url } => {
+            if let Some(url) = url {
+                let token =
+                    std::env::var("SPEZADO_ADAPTER_TOKEN").context("give the token in SPEZADO_ADAPTER_TOKEN")?;
+                workspace.set_adapter(country, &url, &token)?;
+            }
+            match workspace.adapter(country)? {
+                Some(url) => println!("{country}: {url}"),
+                None => println!("{country}: no adapter"),
+            }
+            Ok(())
+        }
         command => {
             let books = choose_books(&workspace, cli.books)?;
             run(&mut workspace, &books, command)
@@ -447,6 +503,7 @@ fn run(workspace: &mut Workspace, books: &BooksId, command: Commands) -> Result<
             let software = workspace.software();
             println!("{}", workspace.execute(books, Command::Close { owner, to, software })?);
         }
+        Commands::Filing { action } => filing(workspace, books, action)?,
         Commands::Check => {
             let issues = workspace.review(books)?;
             if issues.is_empty() {
@@ -460,12 +517,58 @@ fn run(workspace: &mut Workspace, books: &BooksId, command: Commands) -> Result<
         Commands::Tui { .. } | Commands::Autostart { .. } => unreachable!("handled in main"),
         #[cfg(feature = "tray")]
         Commands::Tray { .. } => unreachable!("handled in main"),
-        Commands::Serve { .. } | Commands::Openapi | Commands::Sync { .. } | Commands::Relay { .. } => {
+        Commands::Serve { .. }
+        | Commands::Openapi
+        | Commands::Sync { .. }
+        | Commands::Relay { .. }
+        | Commands::Adapter { .. } => {
             unreachable!("handled in main")
         }
         Commands::Init { .. } | Commands::Books | Commands::SetUp(_) | Commands::Import { .. } => {
             unreachable!("handled in main")
         }
+    }
+    Ok(())
+}
+
+fn filing(workspace: &mut Workspace, books: &BooksId, action: Option<FilingAction>) -> Result<()> {
+    let status = match action {
+        None => {
+            let filings = workspace.filings(books)?;
+            if filings.is_empty() {
+                println!("no filings – prepare one with `spezado filing prepare <report> --from … --to …`");
+            }
+            for item in filings {
+                let filing = &item.filing;
+                let report = filing.content.first().map_or("", |c| c.report.as_str());
+                let outdated = if item.outdated { ", outdated" } else { "" };
+                println!("{} {report:<10} {} – {} {:?}{outdated}", filing.id, filing.from, filing.to, item.state);
+            }
+            return Ok(());
+        }
+        Some(FilingAction::Prepare { report, from, to, owner }) => {
+            let owner = choose_owner(workspace, books, owner)?;
+            let filing = workspace.prepare_filing(books, &owner, &report, from, to)?;
+            println!("{}", filing.id);
+            if let Some(corrects) = &filing.corrects {
+                println!("corrects {corrects}");
+            }
+            for content in &filing.content {
+                for (field, amount) in &content.fields {
+                    println!("{field:>12} {:>16}", format_amount(amount));
+                }
+            }
+            return Ok(());
+        }
+        Some(FilingAction::Submit { filing, test }) => workspace.submit_filing(books, &filing, test)?,
+        Some(FilingAction::Refresh { filing }) => workspace.refresh_filing(books, &filing)?,
+    };
+    println!("{:?}", status.state);
+    if let Some(message) = &status.message {
+        println!("{message}");
+    }
+    for receipt in &status.receipts {
+        println!("received {}", receipt.name);
     }
     Ok(())
 }

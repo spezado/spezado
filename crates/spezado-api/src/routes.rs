@@ -71,7 +71,13 @@ use crate::{Api, ApiError, dto};
         crate::sync::sync_devices,
         crate::sync::sync_remove,
         crate::sync::sync_join,
-        crate::sync::sync_recover
+        crate::sync::sync_recover,
+        crate::filings::filings,
+        crate::filings::prepare,
+        crate::filings::submit,
+        crate::filings::refresh,
+        crate::filings::adapter,
+        crate::filings::set_adapter
     ),
     components(schemas(dto::Problem))
 )]
