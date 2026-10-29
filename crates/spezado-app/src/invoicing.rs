@@ -196,11 +196,7 @@ impl Workspace {
     }
 
     /// The name, tax numbers and contact of a party of the books.
-    fn party_of(
-        &self,
-        books: &BooksId,
-        id: &PartyId,
-    ) -> Result<Option<(String, Vec<TaxId>, Option<Contact>)>, AppError> {
+    fn party_of(&self, books: &BooksId, id: &PartyId) -> Result<Option<PartyDetails>, AppError> {
         let (organisations, persons) = self.get(books)?.events().parties();
         Ok(match (organisations.get(id), persons.get(id)) {
             (Some(o), _) => Some((o.name.clone(), o.tax_ids.clone(), o.contact.clone())),
@@ -670,6 +666,9 @@ impl Workspace {
         Ok(written)
     }
 }
+
+/// The name, tax numbers and contact of a party.
+type PartyDetails = (String, Vec<TaxId>, Option<Contact>);
 
 /// A postal address of one line, a postcode, a city and a country.
 fn postal_address(street: &str, postcode: &str, city: &str, country: &str) -> Result<PostalAddress, AppError> {
