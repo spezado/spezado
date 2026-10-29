@@ -1,3 +1,8 @@
+---
+title: The terminal
+nav_order: 3
+---
+
 # The terminal
 
 `spezado tui` starts the terminal interface. It works with the keyboard and the mouse: every key shown at the bottom

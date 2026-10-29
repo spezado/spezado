@@ -1,3 +1,10 @@
+---
+title: Home
+nav_order: 1
+redirect_from:
+  - /introduction.html
+---
+
 # spezado
 
 **Free accounting for everyone** – from private finances to freelancers, companies and non-profits. spezado keeps the
@@ -36,7 +43,7 @@ SKR 03/04) are drafts until tax advisers have reviewed them.
 | work in the terminal or the browser | [The terminal](terminal.md), [The web app](web-app.md) |
 | script it | [The command line](command-line.md), [The API](api.md) |
 | write invoices | [Invoices](invoices.md) |
-| know how it is built and what comes next | [Design](design.md) |
+| know how it is built and what comes next | [Design](spec.md) |
 
 The data follows the open protocol [librotenado](https://librotenado.dev), which any program may implement.
 spezado is a project of [falkOSS](https://falkoss.org); the source is on

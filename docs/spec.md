@@ -1,3 +1,9 @@
+---
+title: Design
+nav_order: 10
+permalink: /design.html
+---
+
 # spezado – design
 
 The design of spezado: what it is for, how it is built and in what order. The protocol it is built on is specified

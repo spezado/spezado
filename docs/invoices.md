@@ -1,3 +1,8 @@
+---
+title: Invoices
+nav_order: 6
+---
+
 # Invoices
 
 spezado writes invoices as **XRechnung 3.0** – an XML file after EN 16931 – or as **ZUGFeRD** – a PDF to read with the

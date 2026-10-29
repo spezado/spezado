@@ -5,8 +5,8 @@
 /web/node_modules
 /web/dist
 
-# The documentation: its build, and what docs/build.sh copies in.
-/docs/book
-/docs/src/fonts
-/docs/src/openapi.json
-/docs/theme/favicon.*
+# The documentation: what docs/prepare.sh brings in, and Jekyll's build.
+/docs/changelog.md
+/docs/openapi.json
+/docs/_site
+/_site

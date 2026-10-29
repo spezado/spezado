@@ -24,20 +24,20 @@ SPDX-FileCopyrightText = "falkOSS – Falcon Lake Open Source Software gUG (haft
 SPDX-License-Identifier = "CC-BY-4.0"
 
 [[annotations]]
-path = ["api/openapi.json", "docs/src/openapi.json"]
+path = ["api/openapi.json"]
 precedence = "override"
 SPDX-FileCopyrightText = "falkOSS – Falcon Lake Open Source Software gUG (haftungsbeschränkt) i. G. and the spezado contributors"
 SPDX-License-Identifier = "MIT"
 
 # Copies of the brand's artwork from spezado/brand – to be passed on unchanged; name and brand are falkOSS's.
 [[annotations]]
-path = ["brand/svg/**", "brand/png/**", "brand/web/**", "docs/theme/favicon.*", "web/public/*.svg"]
+path = ["brand/svg/**", "brand/png/**", "brand/web/**", "docs/assets/*.svg", "docs/assets/favicon.ico", "web/public/*.svg"]
 precedence = "override"
 SPDX-FileCopyrightText = "falkOSS – Falcon Lake Open Source Software gUG (haftungsbeschränkt) i. G."
 SPDX-License-Identifier = "CC-BY-ND-4.0"
 
 [[annotations]]
-path = ["brand/fonts/**", "brand/web/fonts/**", "docs/src/fonts/**"]
+path = ["brand/fonts/**", "brand/web/fonts/**", "docs/assets/fonts/**"]
 precedence = "override"
 SPDX-FileCopyrightText = ["2014, 2015 (URW)++ Design & Development", "2019-2020 Daniel Benjamin Miller"]
 SPDX-License-Identifier = "OFL-1.1"
@@ -65,3 +65,10 @@ path = "web/public/fonts/**"
 precedence = "override"
 SPDX-FileCopyrightText = ["2014, 2015 (URW)++ Design & Development", "2019-2020 Daniel Benjamin Miller"]
 SPDX-License-Identifier = "OFL-1.1"
+
+# A template of Just the Docs, changed in one place (see its comment).
+[[annotations]]
+path = "docs/_includes/components/footer.html"
+precedence = "override"
+SPDX-FileCopyrightText = ["2016 Patrick Marsceill", "falkOSS – Falcon Lake Open Source Software gUG (haftungsbeschränkt) i. G. and the spezado contributors"]
+SPDX-License-Identifier = "MIT"

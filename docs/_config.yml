@@ -1,0 +1,45 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# The spezado documentation at spezado.dev, built from this folder with Jekyll and the remote theme Just the Docs by
+# .github/workflows/docs.yml – after docs/prepare.sh has brought in the changelog and the description of the API,
+# which live elsewhere in the repository. The files in assets/ are copies from spezado/brand.
+title: spezado
+description: Free accounting for everyone – the documentation
+url: https://spezado.dev
+lang: en
+
+remote_theme: just-the-docs/just-the-docs@v0.10.0
+plugins:
+  - jekyll-remote-theme
+  - jekyll-redirect-from
+
+color_scheme: spezado
+logo: /assets/spezado-lockup-on-light.svg
+favicon_ico: /assets/favicon.ico
+search_enabled: true
+heading_anchors: true
+back_to_top: true
+back_to_top_text: Back to top
+
+aux_links:
+  spezado.app: https://spezado.app
+  GitHub: https://github.com/spezado/spezado
+aux_links_new_tab: true
+
+gh_edit_link: true
+gh_edit_link_text: Edit this page on GitHub
+gh_edit_repository: https://github.com/spezado/spezado
+gh_edit_branch: main
+gh_edit_source: docs
+gh_edit_view_mode: edit
+
+footer_content: "spezado is free software under AGPL-3.0-or-later, its documentation CC BY 4.0 – a <a href=\"https://falkoss.org\">falkOSS</a> project. <a href=\"https://falkoss.org/impressum.html\">Imprint</a> · <a href=\"https://falkoss.org/datenschutz.html\">Privacy</a>"
+
+exclude:
+  - prepare.sh
+
+# Every page uses the theme's layout (GitHub Pages would default to it as well; a local build does not)
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default

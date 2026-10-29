@@ -8,6 +8,8 @@
   app, the API and with `spezado filing` and `spezado adapter`. There is no adapter for ELSTER yet (**OPEN**).
 - **A container image** for servers with every release, `ghcr.io/spezado/spezado` for Linux on amd64 and arm64: it
   runs the relay unless told otherwise; `deploy/compose.yaml` starts one behind a reverse proxy.
+- The documentation at spezado.dev is built with Jekyll and Just the Docs, as falkOSS projects build theirs; the
+  addresses stay, the old introduction forwards.
 - Data follows librotenado 0.7.2.
 
 ## 0.3.0 – 2026-10-29

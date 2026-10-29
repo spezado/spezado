@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// The brand's type: Domitian (OFL-1.1, from assets/fonts) for headings and the navigation's title, the system font for
+// text – as on spezado.app.
+@font-face { font-family: "Domitian"; font-weight: 400; font-style: normal; font-display: swap;
+  src: url("/assets/fonts/Domitian-Roman.woff2") format("woff2"); }
+@font-face { font-family: "Domitian"; font-weight: 400; font-style: italic; font-display: swap;
+  src: url("/assets/fonts/Domitian-Italic.woff2") format("woff2"); }
+@font-face { font-family: "Domitian"; font-weight: 700; font-style: normal; font-display: swap;
+  src: url("/assets/fonts/Domitian-Bold.woff2") format("woff2"); }
+
+.main-content h1, .main-content h2, .main-content h3 {
+  font-family: "Domitian", Palatino, "Palatino Linotype", Georgia, serif;
+  font-weight: 700;
+}

@@ -1,3 +1,8 @@
+---
+title: The API
+nav_order: 9
+---
+
 # The API
 
 `spezado serve` offers an open HTTP API under `/api/v1` – the same one the web app uses: over HTTP on the device

@@ -1,3 +1,8 @@
+---
+title: Synchronisation
+nav_order: 8
+---
+
 # Synchronisation
 
 A set of books starts on one device. Through a **relay** it reaches the person's other devices – end-to-end

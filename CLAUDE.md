@@ -15,9 +15,11 @@ librotenado 0.6 (tag `v0.6.0`). The crates and what goes where are listed in CON
 [docs/spec.md](docs/spec.md). Releases: a tag `v*` runs `.github/workflows/release.yml` – binaries with the web app
 embedded for Linux, macOS and Windows, published as a pre-release with the notes of `CHANGELOG.md`.
 
-Documentation (`docs/`, mdBook, published to spezado.dev by `.github/workflows/docs.yml`): guides in `docs/src/`;
-the design (`docs/spec.md`) and the changelog are only included there – each has one home. Keep the guides in step
-with the terminal, the web app, the command line and the API.
+Documentation (`docs/`, Jekyll with Just the Docs, published to spezado.dev by `.github/workflows/docs.yml`): the
+guides and the design (`docs/spec.md`, at `/design.html`) in `docs/`; `docs/prepare.sh` brings in the changelog and
+`api/openapi.json` when the site is built – each has one home. Its own workflow rather than falkoss/starterpack's
+`pages-jekyll.yml`, which builds a folder only; the same actions, pinned alike. Keep the guides in step with the
+terminal, the web app, the command line and the API.
 
 - `spezado-core` – pure: `Books` over librotenado's `EventSet`, `Command` → checked → one event payload, journal,
   review list. No I/O, no clock.

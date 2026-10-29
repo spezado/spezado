@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# The documentation at spezado.dev (docs/build.sh): built on every pull request, published to GitHub Pages on every
-# push to main. Actions are pinned by commit, with the version as a comment.
+# The documentation at spezado.dev: docs/ built with Jekyll and Just the Docs as falkoss/starterpack's pages-jekyll.yml
+# builds it, with the same actions – but first docs/prepare.sh brings in the changelog and the description of the
+# API; the shared workflow builds a folder only. Built on every pull request, published to GitHub Pages on every push
+# to main. Actions are pinned by commit, with the version as a comment.
 name: Docs
 
 on:
@@ -16,24 +18,20 @@ concurrency:
   group: docs-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  CARGO_TERM_COLOR: always
-  MDBOOK_VERSION: 0.5.4
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Rust toolchain from rust-toolchain.toml
-        run: rustup toolchain install
-      - uses: Swatinem/rust-cache@2201cc584a476d1b508be977bbe4b7d1c7a52e9c # v2.9.3
-      - run: cargo install mdbook --locked --version "$MDBOOK_VERSION"
-      - run: docs/build.sh
+      - run: docs/prepare.sh
+      - if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - uses: actions/jekyll-build-pages@44a6e6beabd48582f863aeeb6cb2151cc1716697 # v1.0.13
+        with:
+          source: ./docs
+          destination: ./_site
       - if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
-        with:
-          path: docs/book
 
   deploy:
     if: github.event_name != 'pull_request'

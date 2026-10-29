@@ -1,3 +1,8 @@
+---
+title: The web app
+nav_order: 4
+---
+
 # The web app
 
 `spezado serve` serves the web app and the [API](api.md) on this device, at `http://127.0.0.1:8048` (another port with

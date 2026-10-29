@@ -1,3 +1,8 @@
+---
+title: The command line
+nav_order: 5
+---
+
 # The command line
 
 Everything the terminal does with books is open to scripts as well. Every command takes `--dir` (the workspace) and,
