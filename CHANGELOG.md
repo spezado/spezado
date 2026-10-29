@@ -6,6 +6,13 @@
   `spezado relay`; starting it for books with a recovery code, inviting another device, joining, recovering;
   `spezado sync`, `y` and `v` in the terminal, the panel on the web app's overview, and every minute while
   `spezado serve` runs.
+- **Sharing** books with other people – read, write or manage, set by the invitation –, **removing** a device or a
+  person (the key of the books changes), and books a device may only read refuse to book.
+- The **keys** of synchronised books in the key store of the system, else in the workspace.
+- The **seller's details, customers and invoice numbers** in the books: they travel with them, and every device
+  writes its own series of numbers (`RE-2026-B001`).
+- **Other devices** reach `spezado serve --listen` over TLS, with a certificate of the workspace's own whose
+  fingerprint the pairing link carries, also as a QR code.
 - **Licences:** the description of the API (`api/openapi.json`) is MIT, so that clients generated from it can be
   licensed freely. The brand kit moved to its own repository, spezado/brand; `brand/` keeps copies of what spezado
   uses, the artwork under CC BY-ND 4.0, Domitian under OFL-1.1.

@@ -132,8 +132,11 @@ Milestone 5, first stage – a person's own devices, after librotenado 0006:
   and receives everything.
 - When every device is lost, the recovery code **recovers** the books onto a new one.
 - `spezado serve` synchronises every minute; the terminal with `y`, the command line with `spezado sync`.
-- **OPEN:** removing a device (the key changes; librotenado implements it), people other than the owner with rights,
-  seeds in the key store of the operating system, the API for devices other than this one (TLS).
+- Second stage: other people with rights (`read`, `write`, `manage`) by invitation, removing a device or a person (the
+  key changes), read-only books refuse commands; seeds in the key store of the system; the seller's details,
+  customers and series of invoice numbers per device as events (librotenado 0.6); `serve --listen` for other
+  devices over TLS with a certificate of the workspace's own, its fingerprint in the pairing link and a QR code.
+- **OPEN:** access for a limited time, an auditor for one period.
 
 
 Version 0.1.0, a preview – for trying out, not for a real tax return: the German mappings are drafts until tax
@@ -155,8 +158,7 @@ advisers have reviewed them. On top of milestones 0 to 3:
   § 14 Abs. 4 Nr. 8 and § 14a UStG ask for and the VAT identification numbers they need –, or as a small business
   (§ 19 UStG); booked when paid on a cash basis, when issued with double entry. Without a VAT identification number
   the seller's tax number is also its identifier (BT-29): EN 16931 requires BT-29, BT-30 or BT-31 (BR-CO-26, fatal).
-  The seller's details and customers are kept on the device as settings, not events; synchronising them, and number
-  ranges per device, are **OPEN**.
+  The seller's details and customers travel with the books; every device writes its own series of numbers.
 - **The review list in words**, German and English: each issue names the booking, document, entry and amount.
 - Releases: binaries for Linux (x86_64, arm64), macOS (arm64) and Windows (x86_64) with the web app embedded.
 

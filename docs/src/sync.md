@@ -6,8 +6,8 @@ sends with the key of the books, which only the devices of the books hold. The r
 cannot read. It sees which books it holds, which device sends when and how much, and the names of the devices –
 not the books.
 
-This is the first stage: one person and their own devices. Sharing books with other people, and removing a device,
-follow.
+Books are shared the same way with other people – a tax adviser who reads, a bookkeeper who books –, each with
+what they may do.
 
 ## Starting
 
@@ -46,6 +46,38 @@ offers *join* when setting up, the terminal shows the invitation with `v` on *Ov
 spezado sync            # every set of books that is synchronised
 spezado sync devices    # the devices of the books
 ```
+
+## Other people and what they may do
+
+An invitation says what the device it brings may do:
+
+| Rights | |
+|---|---|
+| `manage` | everything: read, book, invite and remove – the person's own devices (the default) |
+| `write` | read and book – a bookkeeper |
+| `read` | only read – a tax adviser; on such a device, spezado refuses to book |
+
+```sh
+spezado sync invite --rights read      # for the tax adviser
+```
+
+The web app offers the same when inviting and shows what every device may do.
+
+## Removing a device or a person
+
+```sh
+spezado sync remove Steuerberaterin    # by name or device name
+```
+
+The books get a new key, which the device removed does not receive: nothing written afterwards reaches it. What it
+has read, it may have kept – removing protects the future, not the past. In the web app, every device but this one
+has *remove*.
+
+## Where the keys are
+
+Each device keeps its key of the books in the key store of the system – the macOS keychain, the Windows credential
+manager, the Secret Service on Linux. Where there is none – a server, a container –, or with `SPEZADO_KEYCHAIN=0`, it
+stays in the workspace; `spezado sync start` says which. Protect the workspace's folder then.
 
 ## Recovery
 

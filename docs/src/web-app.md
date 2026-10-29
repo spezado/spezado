@@ -1,13 +1,26 @@
 # The web app
 
 `spezado serve` serves the web app and the [API](api.md) on this device, at `http://127.0.0.1:8048` (another port with
-`--port`). It listens on this device only. Nothing is loaded from elsewhere – no fonts, no scripts, no tracking.
+`--port`). Nothing is loaded from elsewhere – no fonts, no scripts, no tracking.
 
 ```sh
 spezado serve
 # spezado serves at http://127.0.0.1:8048
 # Pair a device with the code 6958d36774 – or open http://127.0.0.1:8048/#pair=6958d36774
 ```
+
+## Other devices
+
+To reach spezado from a phone, a tablet or an app in the same network, let it listen there – only over TLS:
+
+```sh
+spezado serve --listen 0.0.0.0:8443 --host laptop.local
+```
+
+It makes a certificate of the workspace's own for the host name and keeps it. The pairing link carries the
+certificate's fingerprint and is printed as a QR code: an app checks the fingerprint, a browser asks once whether to
+trust the certificate. A server with a domain can put a reverse proxy with a certificate of its own in front instead
+([Synchronisation](sync.md), running a relay).
 
 ## Pairing
 

@@ -15,9 +15,9 @@ where the workspace holds several sets of books, `--books`; `spezado help <comma
 | `check` | what needs review |
 | `close` | closes an owner's books up to a date |
 | `export`, `import` | the events of the books as JSON Lines, out and in |
-| `sync` | synchronises books with other devices: `start`, `invite`, `join`, `recover`, `devices` ([Synchronisation](sync.md)) |
+| `sync` | synchronises books with other devices and people: `start`, `invite --rights`, `join`, `recover`, `devices`, `remove` ([Synchronisation](sync.md)) |
 | `relay` | runs a relay |
-| `tui`, `serve` | the terminal, the web app and API |
+| `tui`, `serve` | the terminal; the web app and API – `serve --listen 0.0.0.0:8443` for other devices, over TLS ([The web app](web-app.md)) |
 | `openapi` | the description of the API |
 
 ## A freelancer's quarter
