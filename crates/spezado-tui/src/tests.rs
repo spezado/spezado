@@ -470,3 +470,51 @@ fn an_invoice_is_written_in_the_terminal() {
     let (_, document) = &app.view.documents[0];
     assert_eq!(document.original.media_type, "application/pdf");
 }
+
+/// A relay on a free port of this machine, running until the test ends; its address.
+fn relay(scratch: &Scratch) -> String {
+    let relay = spezado_relay::Relay::open(&scratch.0).unwrap();
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let address = listener.local_addr().unwrap();
+    listener.set_nonblocking(true).unwrap();
+    std::thread::spawn(move || {
+        let runtime = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
+        runtime.block_on(async move {
+            let listener = tokio::net::TcpListener::from_std(listener).unwrap();
+            axum::serve(listener, spezado_relay::router(relay)).await.unwrap();
+        });
+    });
+    format!("http://{address}")
+}
+
+#[test]
+fn synchronisation_is_set_up_on_the_overview() {
+    let (scratch, relay_dir) = (Scratch::new("sync"), Scratch::new("relay"));
+    let relay = relay(&relay_dir);
+    let mut workspace = Workspace::create(&scratch.0, "laptop".parse().unwrap()).unwrap();
+    let mut app = App::new(&mut workspace, Lang::De);
+    set_up(&mut app);
+    assert!(screen(&app).contains("nur auf diesem Gerät"));
+    press(&mut app, KeyCode::Char('y'));
+    assert!(screen(&app).contains("Synchronisation einrichten"));
+    for _ in 0.."https://".len() {
+        press(&mut app, KeyCode::Backspace);
+    }
+    type_in(&mut app, &relay);
+    press(&mut app, KeyCode::Enter);
+    type_in(&mut app, "Laptop");
+    press(&mut app, KeyCode::Enter);
+    assert!(matches!(app.mode, Mode::Notice(crate::i18n::Text::RecoveryCode, _)), "{:?}", app.status);
+    press(&mut app, KeyCode::Esc);
+    assert!(screen(&app).contains(&relay));
+    press(&mut app, KeyCode::Char('v'));
+    let Mode::Notice(crate::i18n::Text::Invitation, lines) = &app.mode else { panic!("{:?}", app.status) };
+    assert!(lines[0].contains("#join="));
+    press(&mut app, KeyCode::Esc);
+    press(&mut app, KeyCode::Char('y'));
+    assert!(
+        app.status.as_ref().is_some_and(|(error, text)| !error && text.starts_with("Synchronisiert")),
+        "{:?}",
+        app.status
+    );
+}

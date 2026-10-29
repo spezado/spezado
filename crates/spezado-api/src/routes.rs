@@ -63,7 +63,14 @@ use crate::{Api, ApiError, dto};
         crate::invoices::customers,
         crate::invoices::save_customer,
         crate::invoices::next_number,
-        crate::invoices::issue
+        crate::invoices::issue,
+        crate::sync::sync_status,
+        crate::sync::sync_now,
+        crate::sync::sync_start,
+        crate::sync::sync_invite,
+        crate::sync::sync_devices,
+        crate::sync::sync_join,
+        crate::sync::sync_recover
     ),
     components(schemas(dto::Problem))
 )]

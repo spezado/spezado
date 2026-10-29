@@ -715,3 +715,91 @@ pub struct NextNumber {
     /// `RE-2026-004`.
     pub number: String,
 }
+
+/// Whether books are synchronised.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct SyncStatus {
+    /// The relay they are synchronised through; none when they are not.
+    pub relay: Option<String>,
+}
+
+/// What a synchronisation did.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct SyncReport {
+    /// Events and originals received.
+    pub received: usize,
+    /// Events and originals sent.
+    pub sent: usize,
+    /// Devices added by invitation.
+    pub added: Vec<String>,
+    /// Whether this device still waits to be added.
+    pub waiting: bool,
+}
+
+/// Starting to synchronise books.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct SyncStart {
+    /// The address of the relay: `https://relay.example.org`.
+    pub relay: String,
+    /// What to call this device: `Laptop`.
+    #[serde(default)]
+    pub name: Option<String>,
+}
+
+/// The recovery code of books, shown once.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RecoveryCode {
+    /// 53 characters in groups of four.
+    pub code: String,
+}
+
+/// An invitation for another device, good for a day.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct SyncInvitation {
+    /// The text to carry to the other device.
+    pub invitation: String,
+}
+
+/// A device of synchronised books.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct SyncDevice {
+    /// What people call it.
+    pub name: String,
+    /// The device name it writes under; none for the recovery code.
+    pub device: Option<String>,
+    /// Whether it is the recovery code.
+    pub recovery: bool,
+    /// Whether it is this device.
+    pub me: bool,
+}
+
+/// Joining books with an invitation.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct SyncJoin {
+    /// The invitation from the other device.
+    pub invitation: String,
+    /// What to call this device.
+    #[serde(default)]
+    pub name: Option<String>,
+}
+
+/// Recovering books with their recovery code.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct SyncRecover {
+    /// The address of the relay.
+    pub relay: String,
+    /// The identity of the books.
+    pub books: String,
+    /// The recovery code.
+    pub code: String,
+    /// What to call this device.
+    #[serde(default)]
+    pub name: Option<String>,
+}
+
+/// A set of books, by identity.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct BooksRef {
+    /// The identity of the books.
+    pub books: String,
+}

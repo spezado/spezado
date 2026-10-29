@@ -27,6 +27,7 @@ pub mod dto;
 mod invoices;
 mod records;
 mod routes;
+mod sync;
 
 pub use routes::ApiDoc;
 
@@ -267,6 +268,7 @@ pub fn router(api: Api) -> Router {
     let protected = routes::protected()
         .merge(records::routes())
         .merge(invoices::routes())
+        .merge(sync::routes())
         .layer(axum::extract::DefaultBodyLimit::max(32 * 1024 * 1024))
         .route_layer(middleware::from_fn_with_state(api.clone(), authorise));
     Router::new()
@@ -285,6 +287,7 @@ pub fn serve(workspace: Workspace, port: u16, ready: impl FnOnce(SocketAddr, &st
         // Only on the device itself; other devices follow with TLS (milestone 4).
         let listener = tokio::net::TcpListener::bind(SocketAddr::from(([127, 0, 0, 1], port))).await?;
         ready(listener.local_addr()?, &code);
+        tokio::spawn(sync::every_minute(api.clone()));
         axum::serve(listener, router(api))
             .with_graceful_shutdown(async {
                 let _ = tokio::signal::ctrl_c().await;

@@ -357,6 +357,32 @@ async fn opening_balances_through_the_api() {
 }
 
 #[tokio::test]
+async fn synchronisation_is_reported_and_refused_without_a_relay() {
+    let (_scratch, api, app) = setup();
+    let token = paired(&api, &app).await;
+    let (_, books) = send(
+        &app,
+        Method::POST,
+        "/api/v1/books",
+        Some(&token),
+        Some(json!({
+            "name": "Ada", "from": "2026-01-01", "accounting": "de-cash-basis", "vat_scheme": "de-regular",
+            "vat_basis": "cash", "vat_period": "quarter", "chart": "de-skr03",
+        })),
+    )
+    .await;
+    let base = format!("/api/v1/books/{}/sync", books["id"].as_str().unwrap());
+    let (status, view) = send(&app, Method::GET, &base, Some(&token), None).await;
+    assert_eq!((status, view), (StatusCode::OK, json!({"relay": null})));
+    assert_eq!(send(&app, Method::POST, &base, Some(&token), None).await.0, StatusCode::UNPROCESSABLE_ENTITY);
+    let join = json!({"invitation": "not an invitation"});
+    assert_eq!(
+        send(&app, Method::POST, "/api/v1/sync/join", Some(&token), Some(join)).await.0,
+        StatusCode::UNPROCESSABLE_ENTITY
+    );
+}
+
+#[tokio::test]
 async fn deadlines_change_through_the_api() {
     let (_scratch, api, app) = setup();
     let token = paired(&api, &app).await;

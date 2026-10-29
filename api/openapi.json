@@ -1616,6 +1616,203 @@
         }
       }
     },
+    "/api/v1/books/{books}/sync": {
+      "get": {
+        "tags": [
+          "crate::sync"
+        ],
+        "summary": "Whether the books are synchronised, and through which relay.",
+        "operationId": "sync_status",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncStatus"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "crate::sync"
+        ],
+        "summary": "Synchronises the books now: adds devices that asked with an invitation, receives and sends.",
+        "operationId": "sync_now",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/sync/devices": {
+      "get": {
+        "tags": [
+          "crate::sync"
+        ],
+        "summary": "The devices of the books, as their relay lists them.",
+        "operationId": "sync_devices",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SyncDevice"
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/sync/invitations": {
+      "post": {
+        "tags": [
+          "crate::sync"
+        ],
+        "summary": "An invitation for another of the person's devices, good for a day.",
+        "operationId": "sync_invite",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncInvitation"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/sync/start": {
+      "post": {
+        "tags": [
+          "crate::sync"
+        ],
+        "summary": "Starts synchronising the books through a relay; answers with the recovery code, shown this once.",
+        "operationId": "sync_start",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncStart"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCode"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/books/{books}/tax-codes": {
       "get": {
         "tags": [],
@@ -1792,6 +1989,84 @@
           }
         }
       }
+    },
+    "/api/v1/sync/join": {
+      "post": {
+        "tags": [
+          "crate::sync"
+        ],
+        "summary": "Asks to join books with an invitation from another device; they arrive once that device has synchronised.",
+        "operationId": "sync_join",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncJoin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BooksRef"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sync/recover": {
+      "post": {
+        "tags": [
+          "crate::sync"
+        ],
+        "summary": "Brings books back to this device with their recovery code.",
+        "operationId": "sync_recover",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncRecover"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1948,6 +2223,19 @@
           "text": {
             "type": "string",
             "description": "Its text."
+          }
+        }
+      },
+      "BooksRef": {
+        "type": "object",
+        "description": "A set of books, by identity.",
+        "required": [
+          "books"
+        ],
+        "properties": {
+          "books": {
+            "type": "string",
+            "description": "The identity of the books."
           }
         }
       },
@@ -2991,6 +3279,19 @@
           }
         }
       },
+      "RecoveryCode": {
+        "type": "object",
+        "description": "The recovery code of books, shown once.",
+        "required": [
+          "code"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "53 characters in groups of four."
+          }
+        }
+      },
       "RegionView": {
         "type": "object",
         "description": "A state whose public holidays move deadlines.",
@@ -3203,6 +3504,165 @@
           "source": {
             "type": "string",
             "description": "`booked` – the payment booked before the statement came, booked again naming the entry –, `invoice` – an\nunbooked invoice it pays – or `history` – as the same party's last entry."
+          }
+        }
+      },
+      "SyncDevice": {
+        "type": "object",
+        "description": "A device of synchronised books.",
+        "required": [
+          "name",
+          "recovery",
+          "me"
+        ],
+        "properties": {
+          "device": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The device name it writes under; none for the recovery code."
+          },
+          "me": {
+            "type": "boolean",
+            "description": "Whether it is this device."
+          },
+          "name": {
+            "type": "string",
+            "description": "What people call it."
+          },
+          "recovery": {
+            "type": "boolean",
+            "description": "Whether it is the recovery code."
+          }
+        }
+      },
+      "SyncInvitation": {
+        "type": "object",
+        "description": "An invitation for another device, good for a day.",
+        "required": [
+          "invitation"
+        ],
+        "properties": {
+          "invitation": {
+            "type": "string",
+            "description": "The text to carry to the other device."
+          }
+        }
+      },
+      "SyncJoin": {
+        "type": "object",
+        "description": "Joining books with an invitation.",
+        "required": [
+          "invitation"
+        ],
+        "properties": {
+          "invitation": {
+            "type": "string",
+            "description": "The invitation from the other device."
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What to call this device."
+          }
+        }
+      },
+      "SyncRecover": {
+        "type": "object",
+        "description": "Recovering books with their recovery code.",
+        "required": [
+          "relay",
+          "books",
+          "code"
+        ],
+        "properties": {
+          "books": {
+            "type": "string",
+            "description": "The identity of the books."
+          },
+          "code": {
+            "type": "string",
+            "description": "The recovery code."
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What to call this device."
+          },
+          "relay": {
+            "type": "string",
+            "description": "The address of the relay."
+          }
+        }
+      },
+      "SyncReport": {
+        "type": "object",
+        "description": "What a synchronisation did.",
+        "required": [
+          "received",
+          "sent",
+          "added",
+          "waiting"
+        ],
+        "properties": {
+          "added": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Devices added by invitation."
+          },
+          "received": {
+            "type": "integer",
+            "description": "Events and originals received.",
+            "minimum": 0
+          },
+          "sent": {
+            "type": "integer",
+            "description": "Events and originals sent.",
+            "minimum": 0
+          },
+          "waiting": {
+            "type": "boolean",
+            "description": "Whether this device still waits to be added."
+          }
+        }
+      },
+      "SyncStart": {
+        "type": "object",
+        "description": "Starting to synchronise books.",
+        "required": [
+          "relay"
+        ],
+        "properties": {
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What to call this device: `Laptop`."
+          },
+          "relay": {
+            "type": "string",
+            "description": "The address of the relay: `https://relay.example.org`."
+          }
+        }
+      },
+      "SyncStatus": {
+        "type": "object",
+        "description": "Whether books are synchronised.",
+        "properties": {
+          "relay": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The relay they are synchronised through; none when they are not."
           }
         }
       },

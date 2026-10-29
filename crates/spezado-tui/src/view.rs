@@ -95,6 +95,10 @@ pub fn draw(frame: &mut Frame, app: &App) -> Hits {
     match &app.mode {
         Mode::Form(_, form) => draw_form(frame, app, form, &mut hits),
         Mode::Proposal(proposal) => draw_proposal(frame, app, proposal, &mut hits),
+        Mode::Notice(title, lines) => {
+            let lines = lines.iter().map(|line| (Line::from(line.as_str()), None)).collect();
+            draw_box(frame, format!(" {} ", app.lang.t(*title)), lines, 76, &mut hits);
+        }
         _ => {}
     }
     hits
@@ -153,7 +157,7 @@ fn keys(app: &App) -> Vec<(Text, KeyCode)> {
             keys
         }
         (Mode::Figures(_), _) => vec![(Text::KeyExport, char('e')), (Text::KeyBack, KeyCode::Esc)],
-        (Mode::Ledger(_), _) => vec![(Text::KeyBack, KeyCode::Esc)],
+        (Mode::Ledger(_), _) | (Mode::Notice(..), _) => vec![(Text::KeyBack, KeyCode::Esc)],
         (Mode::Normal, Tab::Journal) => {
             vec![(Text::KeyNew, char('n')), (Text::KeyLines, char('z')), (Text::KeyReverse, char('r'))]
         }
@@ -171,7 +175,13 @@ fn keys(app: &App) -> Vec<(Text, KeyCode)> {
             (Text::KeyFetch, char('f')),
         ],
         (Mode::Normal, Tab::Overview) => {
-            vec![(Text::KeyNew, char('n')), (Text::KeyImport, char('i')), (Text::KeyDeadlines, char('d'))]
+            let mut keys =
+                vec![(Text::KeyNew, char('n')), (Text::KeyImport, char('i')), (Text::KeyDeadlines, char('d'))];
+            keys.push((if app.view.relay.is_some() { Text::KeySync } else { Text::KeySyncStart }, char('y')));
+            if app.view.relay.is_some() {
+                keys.push((Text::KeyInvite, char('v')));
+            }
+            keys
         }
         (Mode::Normal, Tab::Accounts) => vec![(Text::KeyOpen, KeyCode::Enter), (Text::KeyOpening, char('o'))],
         (Mode::Normal, Tab::Reports) => vec![(Text::KeyOpen, KeyCode::Enter)],
@@ -388,6 +398,8 @@ fn draw_overview(frame: &mut Frame, app: &App, area: Rect) {
     lines.push(Line::from(format!("{}: {}", t(Text::OpenIssues), app.view.issues.len())));
     let closed = app.view.closed.map_or_else(|| t(Text::NotClosed).to_owned(), |date| app.lang.date(date));
     lines.push(Line::from(format!("{}: {closed}", t(Text::ClosedUntil))));
+    let relay = app.view.relay.as_deref().map_or_else(|| t(Text::NotSynchronised).to_owned(), str::to_owned);
+    lines.push(Line::from(format!("{}: {relay}", t(Text::Synchronisation))));
     lines.push(Line::from(""));
     lines.push(Line::from(Span::styled(t(Text::Preview), dim())));
     frame.render_widget(Paragraph::new(lines).wrap(ratatui::widgets::Wrap { trim: true }), area);

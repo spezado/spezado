@@ -2776,12 +2776,15 @@ dependencies = [
 name = "spezado-tui"
 version = "0.1.0"
 dependencies = [
+ "axum",
  "librotenado",
  "ratatui",
  "serde_json",
  "spezado-app",
  "spezado-core",
+ "spezado-relay",
  "thiserror 2.0.21",
+ "tokio",
 ]
 
 [[package]]

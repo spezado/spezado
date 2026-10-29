@@ -107,6 +107,8 @@ pub enum Purpose {
     Invoice,
     /// Changing what moves the deadlines.
     Deadlines,
+    /// Starting to synchronise through a relay.
+    SyncStart,
 }
 
 /// A report on screen.
@@ -148,6 +150,8 @@ pub enum Mode {
     Ledger(AccountId),
     /// A booking proposal.
     Proposal(Box<Proposal>),
+    /// Something to read and write down – a recovery code, an invitation –, with its title.
+    Notice(Text, Vec<String>),
 }
 
 /// A report that can be opened.
@@ -182,6 +186,8 @@ pub struct View {
     pub money: Option<(Money, Money, Money, Money)>,
     /// The next advance VAT return, from today.
     pub next_return: Option<ReportItem>,
+    /// The relay the books are synchronised through, if they are.
+    pub relay: Option<String>,
     /// The last day closed.
     pub closed: Option<Date>,
     /// The accounts to choose from.
@@ -294,6 +300,7 @@ impl<'w> App<'w> {
         self.view.journal = set.journal(Some(&owner), Some(first), Some(last));
         self.view.issues = self.workspace.review_in(&books, Some(&owner), self.lang.code()).unwrap_or_default();
         self.view.closed = events.closed_until(&owner);
+        self.view.relay = self.workspace.sync_relay(&books).ok().flatten();
         self.view.documents = self.workspace.documents(&books).unwrap_or_default();
         self.view.accounts = self.workspace.account_choices(&books, &owner, date, self.lang.code()).unwrap_or_default();
         let by_id: BTreeMap<&AccountId, &AccountChoice> = self.view.accounts.iter().map(|a| (&a.id, a)).collect();
@@ -401,6 +408,11 @@ impl<'w> App<'w> {
                 }
             }
             Mode::Proposal(proposal) => self.in_proposal(*proposal, key),
+            Mode::Notice(title, lines) => {
+                if !matches!(key.code, KeyCode::Esc | KeyCode::Enter | KeyCode::Char('q')) {
+                    self.mode = Mode::Notice(title, lines);
+                }
+            }
         }
     }
 }
@@ -541,6 +553,43 @@ impl App<'_> {
                     ),
                 ];
                 self.mode = Mode::Form(Purpose::Invoice, Form::new(Text::NewInvoice, fields));
+            }
+            KeyCode::Char('y') if self.tab == Tab::Overview => {
+                let Some(books) = self.books.clone() else { return };
+                if self.view.relay.is_none() {
+                    let fields = vec![Field::text(Text::Relay, "https://"), Field::text(Text::DeviceName, "")];
+                    let mut form = Form::new(Text::SyncStart, fields);
+                    form.help = Some(Text::SyncHelp);
+                    self.mode = Mode::Form(Purpose::SyncStart, form);
+                    return;
+                }
+                match self.workspace.sync(&books) {
+                    Ok(report) => {
+                        let added = if report.added.is_empty() {
+                            String::new()
+                        } else {
+                            format!(" · {}: {}", self.t(Text::Added), report.added.join(", "))
+                        };
+                        self.say(format!(
+                            "{}: {} ↓ · {} ↑{added}",
+                            self.t(Text::Synchronised),
+                            report.received,
+                            report.sent
+                        ));
+                        self.refresh();
+                    }
+                    Err(error) => self.fail(error.to_string()),
+                }
+            }
+            KeyCode::Char('v') if self.tab == Tab::Overview && self.view.relay.is_some() => {
+                let Some(books) = self.books.clone() else { return };
+                match self.workspace.invite(&books) {
+                    Ok(invitation) => {
+                        let lines = vec![invitation, String::new(), self.t(Text::InvitationHelp).to_owned()];
+                        self.mode = Mode::Notice(Text::Invitation, lines);
+                    }
+                    Err(error) => self.fail(error.to_string()),
+                }
             }
             KeyCode::Char('d') if self.tab == Tab::Overview => {
                 let (Some(books), Some(owner)) = (self.books.clone(), self.owner.clone()) else { return };
@@ -742,6 +791,16 @@ impl App<'_> {
             Purpose::Simple(document) => self.submit_simple(form, document.as_deref()),
             Purpose::Lines => self.submit_lines(form),
             Purpose::Opening => self.submit_opening(form),
+            Purpose::SyncStart => {
+                let books = self.books.clone().ok_or("no books")?;
+                let relay = form.field(Text::Relay).value.trim().to_owned();
+                let name = form.field(Text::DeviceName).value.trim().to_owned();
+                let name = (!name.is_empty()).then_some(name);
+                let code = self.workspace.start_sync(&books, &relay, name.as_deref()).map_err(|e| e.to_string())?;
+                let lines = vec![code.to_string(), String::new(), self.t(Text::RecoveryHelp).to_owned()];
+                self.mode = Mode::Notice(Text::RecoveryCode, lines);
+                Ok(())
+            }
             Purpose::Deadlines => {
                 let (books, owner) = (self.books.clone().ok_or("no books")?, self.owner.clone().ok_or("no owner")?);
                 let from = self.date(form, Text::ValidFrom)?;

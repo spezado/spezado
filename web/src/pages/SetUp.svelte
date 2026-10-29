@@ -24,6 +24,27 @@
   });
   let failure = $state<string | null>(null);
 
+  let joining = $state({ invitation: "", name: "" });
+  let recovering = $state({ relay: "", books: "", code: "", name: "" });
+  let joined = $state(false);
+  let otherFailure = $state<string | null>(null);
+
+  async function join(event: SubmitEvent) {
+    event.preventDefault();
+    otherFailure = null;
+    const { data, error, response } = await api.POST("/api/v1/sync/join", { body: { invitation: joining.invitation, name: joining.name || null } });
+    if (!data) otherFailure = problem(error, response);
+    else joined = true;
+  }
+
+  async function recover(event: SubmitEvent) {
+    event.preventDefault();
+    otherFailure = null;
+    const { data, error, response } = await api.POST("/api/v1/sync/recover", { body: { ...recovering, name: recovering.name || null } });
+    if (!data) otherFailure = problem(error, response);
+    else onsetup();
+  }
+
   async function submit(event: SubmitEvent) {
     event.preventDefault();
     const { data, error, response } = await api.POST("/api/v1/books", { body: { ...form, region: form.region || null } });
@@ -80,6 +101,28 @@
     {#if failure}<p class="error" role="alert">{failure}</p>{/if}
     <div class="row-actions"><button type="submit">{t("setUp")}</button></div>
   </form>
+
+  <h2>{t("fromOtherDevice")}</h2>
+  {#if joined}
+    <p role="status">{t("joinWaiting")}</p>
+  {:else}
+    <form onsubmit={join}>
+      <label>{t("invitation")} <input bind:value={joining.invitation} required /></label>
+      <label>{t("deviceName")} <input bind:value={joining.name} placeholder="Laptop" /></label>
+      <div class="row-actions"><button type="submit">{t("join")}</button></div>
+    </form>
+    <details>
+      <summary>{t("recover")}</summary>
+      <form onsubmit={recover}>
+        <label>{t("relay")} <input type="url" bind:value={recovering.relay} required /></label>
+        <label>{t("booksId")} <input bind:value={recovering.books} required /></label>
+        <label>{t("recoveryCode")} <input bind:value={recovering.code} required autocomplete="off" /></label>
+        <label>{t("deviceName")} <input bind:value={recovering.name} /></label>
+        <div class="row-actions"><button type="submit">{t("recoverAction")}</button></div>
+      </form>
+    </details>
+  {/if}
+  {#if otherFailure}<p class="error" role="alert">{otherFailure}</p>{/if}
 </section>
 
 <style>

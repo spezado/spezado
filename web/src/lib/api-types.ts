@@ -492,6 +492,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/books/{books}/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Whether the books are synchronised, and through which relay. */
+        get: operations["sync_status"];
+        put?: never;
+        /** Synchronises the books now: adds devices that asked with an invitation, receives and sends. */
+        post: operations["sync_now"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/books/{books}/sync/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The devices of the books, as their relay lists them. */
+        get: operations["sync_devices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/books/{books}/sync/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** An invitation for another of the person's devices, good for a day. */
+        post: operations["sync_invite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/books/{books}/sync/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Starts synchronising the books through a relay; answers with the recovery code, shown this once. */
+        post: operations["sync_start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/books/{books}/tax-codes": {
         parameters: {
             query?: never;
@@ -597,6 +666,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sync/join": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Asks to join books with an invitation from another device; they arrive once that device has synchronised. */
+        post: operations["sync_join"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sync/recover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Brings books back to this device with their recovery code. */
+        post: operations["sync_recover"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -659,6 +762,11 @@ export interface components {
             postings: components["schemas"]["PostingView"][];
             /** @description Its text. */
             text: string;
+        };
+        /** @description A set of books, by identity. */
+        BooksRef: {
+            /** @description The identity of the books. */
+            books: string;
         };
         /** @description A set of books of the workspace. */
         BooksSummary: {
@@ -1022,6 +1130,11 @@ export interface components {
             /** @description The booking's text. */
             text?: string | null;
         };
+        /** @description The recovery code of books, shown once. */
+        RecoveryCode: {
+            /** @description 53 characters in groups of four. */
+            code: string;
+        };
         /** @description A state whose public holidays move deadlines. */
         RegionView: {
             /** @description Its code, ISO 3166-2: `DE-BY`. */
@@ -1105,6 +1218,63 @@ export interface components {
              *     unbooked invoice it pays – or `history` – as the same party's last entry.
              */
             source: string;
+        };
+        /** @description A device of synchronised books. */
+        SyncDevice: {
+            /** @description The device name it writes under; none for the recovery code. */
+            device?: string | null;
+            /** @description Whether it is this device. */
+            me: boolean;
+            /** @description What people call it. */
+            name: string;
+            /** @description Whether it is the recovery code. */
+            recovery: boolean;
+        };
+        /** @description An invitation for another device, good for a day. */
+        SyncInvitation: {
+            /** @description The text to carry to the other device. */
+            invitation: string;
+        };
+        /** @description Joining books with an invitation. */
+        SyncJoin: {
+            /** @description The invitation from the other device. */
+            invitation: string;
+            /** @description What to call this device. */
+            name?: string | null;
+        };
+        /** @description Recovering books with their recovery code. */
+        SyncRecover: {
+            /** @description The identity of the books. */
+            books: string;
+            /** @description The recovery code. */
+            code: string;
+            /** @description What to call this device. */
+            name?: string | null;
+            /** @description The address of the relay. */
+            relay: string;
+        };
+        /** @description What a synchronisation did. */
+        SyncReport: {
+            /** @description Devices added by invitation. */
+            added: string[];
+            /** @description Events and originals received. */
+            received: number;
+            /** @description Events and originals sent. */
+            sent: number;
+            /** @description Whether this device still waits to be added. */
+            waiting: boolean;
+        };
+        /** @description Starting to synchronise books. */
+        SyncStart: {
+            /** @description What to call this device: `Laptop`. */
+            name?: string | null;
+            /** @description The address of the relay: `https://relay.example.org`. */
+            relay: string;
+        };
+        /** @description Whether books are synchronised. */
+        SyncStatus: {
+            /** @description The relay they are synchronised through; none when they are not. */
+            relay?: string | null;
         };
         /** @description A tax code to choose from. */
         TaxCodeView: {
@@ -2125,6 +2295,147 @@ export interface operations {
             };
         };
     };
+    sync_status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                books: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncStatus"];
+                };
+            };
+        };
+    };
+    sync_now: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                books: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncReport"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    sync_devices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                books: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncDevice"][];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    sync_invite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                books: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncInvitation"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    sync_start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                books: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SyncStart"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecoveryCode"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     tax_codes: {
         parameters: {
             query?: {
@@ -2262,6 +2573,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RegionView"][];
+                };
+            };
+        };
+    };
+    sync_join: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SyncJoin"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BooksRef"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    sync_recover: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SyncRecover"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncReport"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
                 };
             };
         };
