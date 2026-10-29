@@ -399,6 +399,10 @@ fn sync(workspace: &mut Workspace, books: Option<BooksId>, action: Option<SyncAc
             println!("With it, the books come back to a new device if every device is lost:");
             println!("    spezado --books {books} sync recover {relay} <code>");
             println!("Without it and without a device, the books are lost. spezado shows it only now.");
+            match workspace.sync_key_store(&books)? {
+                Some("keychain") => println!("This device's key of the books is in the key store of the system."),
+                _ => println!("This device's key of the books is in the workspace – protect its folder."),
+            }
         }
         Some(SyncAction::Invite { rights }) => {
             let books = choose_books(workspace, books)?;

@@ -44,8 +44,11 @@ fn relay(scratch: &Scratch) -> String {
     format!("http://{address}")
 }
 
+/// A device whose keys stay in its workspace – tests leave the key store of the machine alone.
 fn device(scratch: &Scratch, name: &str) -> Workspace {
-    Workspace::create(&scratch.0, name.parse().unwrap()).unwrap()
+    let mut workspace = Workspace::create(&scratch.0, name.parse().unwrap()).unwrap();
+    workspace.use_keychain(false);
+    workspace
 }
 
 /// The hashes of all events of the books, for comparing devices.
@@ -121,6 +124,7 @@ fn own_devices_share_books_through_a_relay() {
         Some("RE-2026-001")
     );
     let code = laptop.start_sync(&books, &relay, Some("Laptop")).unwrap();
+    assert_eq!(laptop.sync_key_store(&books).unwrap(), Some("workspace"));
     assert!(laptop.start_sync(&books, &relay, None).is_err(), "only once");
 
     // The phone joins by invitation: it waits until the laptop has added it, then receives everything.

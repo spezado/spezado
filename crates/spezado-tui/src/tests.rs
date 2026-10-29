@@ -492,6 +492,7 @@ fn synchronisation_is_set_up_on_the_overview() {
     let (scratch, relay_dir) = (Scratch::new("sync"), Scratch::new("relay"));
     let relay = relay(&relay_dir);
     let mut workspace = Workspace::create(&scratch.0, "laptop".parse().unwrap()).unwrap();
+    workspace.use_keychain(false);
     let mut app = App::new(&mut workspace, Lang::De);
     set_up(&mut app);
     assert!(screen(&app).contains("nur auf diesem Gerät"));

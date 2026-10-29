@@ -174,6 +174,8 @@ pub struct Workspace {
     chart: Chart,
     law: Vec<Box<dyn LawModule>>,
     books: BTreeMap<BooksId, Books>,
+    /// Whether member seeds go into the operating system's key store (off with `SPEZADO_KEYCHAIN=0`).
+    keychain: bool,
 }
 
 /// The harmonised chart books are set up with.
@@ -225,7 +227,14 @@ impl Workspace {
             books.insert(id, Books::from_events(events));
         }
         let law: Vec<Box<dyn LawModule>> = vec![Box::new(spezado_law_de::Germany)];
-        Ok(Workspace { store, device, clock, chart: Chart::v0_1(), law, books })
+        let keychain = std::env::var("SPEZADO_KEYCHAIN").map_or(true, |v| v != "0");
+        Ok(Workspace { store, device, clock, chart: Chart::v0_1(), law, books, keychain })
+    }
+
+    /// Whether member seeds of books synchronised from now on go into the operating system's key store – the macOS
+    /// keychain, the Windows credential manager, the Secret Service on Linux – rather than into the workspace.
+    pub fn use_keychain(&mut self, on: bool) {
+        self.keychain = on;
     }
 
     /// This device.

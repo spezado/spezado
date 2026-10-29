@@ -23,6 +23,8 @@ use crate::{AppError, Books, Workspace, now_ms};
 
 /// Where the state of synchronising a set of books is kept.
 const SYNC: &str = "sync";
+/// The service under which seeds are kept in the operating system's key store.
+const KEYCHAIN: &str = "spezado";
 /// Where the books are listed that this device has asked to join.
 const JOINING: &str = "joining";
 /// How long an invitation is good for, in seconds.
@@ -37,8 +39,11 @@ const MAX_RESPONSE: u64 = 512 * 1024 * 1024;
 struct SyncState {
     /// The address of the relay.
     relay: String,
-    /// The seed of this device as a member, in hexadecimal.
+    /// The seed of this device as a member, in hexadecimal – empty when it is in the key store.
     seed: String,
+    /// Where the seed is: `keychain` – the operating system's key store –, or absent: here.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    seed_in: Option<String>,
     /// The relay's position up to which envelopes were received.
     position: i64,
     /// Whether this device is a member yet – after asking to join, it is not until it was added.
@@ -226,9 +231,43 @@ impl Workspace {
         Ok(self.store.set_setting(Some(books), SYNC, &serde_json::to_string(state).map_err(failed)?)?)
     }
 
-    fn keys_of(state: &SyncState) -> Result<MemberKeys, AppError> {
-        let seed = hex::decode(&state.seed).map_err(failed)?;
+    fn keys_of(&self, books: &BooksId, state: &SyncState) -> Result<MemberKeys, AppError> {
+        let seed = match state.seed_in.as_deref() {
+            Some("keychain") => keyring::Entry::new(KEYCHAIN, &self.keychain_account(books))
+                .and_then(|entry| entry.get_secret())
+                .map_err(|e| failed(format!("the key of these books is not in the key store of this device: {e}")))?,
+            _ => hex::decode(&state.seed).map_err(failed)?,
+        };
         Ok(MemberKeys::from_seed(seed.try_into().map_err(|_| failed("a damaged seed"))?))
+    }
+
+    fn keychain_account(&self, books: &BooksId) -> String {
+        format!("{books} {}", self.device)
+    }
+
+    /// A state for new keys: the seed in the key store if it takes it and gives it back, else here.
+    fn new_state(&self, books: &BooksId, relay: &str, keys: &MemberKeys, joined: bool) -> SyncState {
+        let seed = keys.seed();
+        let stored = self.keychain
+            && keyring::Entry::new(KEYCHAIN, &self.keychain_account(books))
+                .and_then(|entry| entry.set_secret(&seed).and_then(|()| entry.get_secret()))
+                .is_ok_and(|back| back == seed);
+        SyncState {
+            relay: relay.to_owned(),
+            seed: if stored { String::new() } else { hex::encode(seed) },
+            seed_in: stored.then(|| "keychain".to_owned()),
+            position: 0,
+            joined,
+            invited: vec![],
+            rights: joined.then_some(Rights::Manage),
+        }
+    }
+
+    /// Where the key of synchronised books is kept on this device: `keychain`, or `workspace`.
+    pub fn sync_key_store(&self, books: &BooksId) -> Result<Option<&'static str>, AppError> {
+        Ok(self
+            .sync_state(books)?
+            .map(|s| if s.seed_in.as_deref() == Some("keychain") { "keychain" } else { "workspace" }))
     }
 
     fn joining(&self) -> Result<Vec<BooksId>, AppError> {
@@ -281,14 +320,7 @@ impl Workspace {
         if !Relay::new(relay, &keys).record(books, &record)? {
             return Err(failed("the relay holds these books already"));
         }
-        let state = SyncState {
-            relay: relay.to_owned(),
-            seed: hex::encode(keys.seed()),
-            position: 0,
-            joined: true,
-            invited: vec![],
-            rights: Some(Rights::Manage),
-        };
+        let state = self.new_state(books, relay, &keys, true);
         self.save_sync_state(books, &state)?;
         self.sync(books)?;
         Ok(recovery)
@@ -317,7 +349,7 @@ impl Workspace {
     /// does not get. What it has read, it may have kept (librotenado 0006).
     pub fn remove_member(&mut self, books: &BooksId, who: &str) -> Result<String, AppError> {
         let state = self.sync_state(books)?.ok_or_else(|| failed("these books are not synchronised"))?;
-        let keys = Self::keys_of(&state)?;
+        let keys = self.keys_of(books, &state)?;
         let relay = Relay::new(&state.relay, &keys);
         for _ in 0..3 {
             let list = relay.members(books)?;
@@ -358,14 +390,7 @@ impl Workspace {
         if status != 201 {
             return Err(Relay::refused(status, &body));
         }
-        let state = SyncState {
-            relay: invitation.relay,
-            seed: hex::encode(keys.seed()),
-            position: 0,
-            joined: false,
-            invited: vec![],
-            rights: None,
-        };
+        let state = self.new_state(&books, &invitation.relay, &keys, false);
         self.save_sync_state(&books, &state)?;
         self.note_joining(&books)?;
         Ok(books)
@@ -398,14 +423,7 @@ impl Workspace {
         if !client.record(books, &list.add(&recovery, &current, vec![me]))? {
             return Err(failed("the member list changed meanwhile – try again"));
         }
-        let state = SyncState {
-            relay: relay.to_owned(),
-            seed: hex::encode(keys.seed()),
-            position: 0,
-            joined: true,
-            invited: vec![],
-            rights: Some(Rights::Manage),
-        };
+        let state = self.new_state(books, relay, &keys, true);
         self.save_sync_state(books, &state)?;
         self.note_joining(books)?;
         self.sync(books)
@@ -420,7 +438,7 @@ impl Workspace {
     /// The members of synchronised books, as the relay lists them.
     pub fn sync_members(&self, books: &BooksId) -> Result<Vec<SyncMember>, AppError> {
         let state = self.sync_state(books)?.ok_or_else(|| failed("these books are not synchronised"))?;
-        let keys = Self::keys_of(&state)?;
+        let keys = self.keys_of(books, &state)?;
         let list = Relay::new(&state.relay, &keys).members(books)?;
         Ok(list
             .members()
@@ -448,7 +466,7 @@ impl Workspace {
     /// invitation from here, receives what other devices sent and sends what this one wrote.
     pub fn sync(&mut self, books: &BooksId) -> Result<SyncReport, AppError> {
         let mut state = self.sync_state(books)?.ok_or_else(|| failed("these books are not synchronised"))?;
-        let keys = Self::keys_of(&state)?;
+        let keys = self.keys_of(books, &state)?;
         let relay = Relay::new(&state.relay, &keys);
         let mut report = SyncReport::default();
         let mut list = relay.members(books)?;
