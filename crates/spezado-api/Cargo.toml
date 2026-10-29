@@ -14,11 +14,14 @@ workspace = true
 
 [dependencies]
 axum = "0.8.9"
+axum-server = { version = "0.8.0", default-features = false, features = ["tls-rustls-no-provider"] }
 futures-util = "0.3.34"
 getrandom = "0.4.3"
 hex = "0.4.3"
 librotenado.workspace = true
+rcgen = "0.14.10"
 rust-embed = { version = "8.13.0", features = ["mime-guess"] }
+rustls = { version = "0.23.46", default-features = false, features = ["ring", "std", "logging", "tls12"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 sha2 = "0.11.1"

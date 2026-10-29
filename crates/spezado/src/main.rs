@@ -119,11 +119,18 @@ enum Commands {
         #[arg(long)]
         lang: Option<String>,
     },
-    /// Serves the API and the web app on this device, at http://127.0.0.1:PORT.
+    /// Serves the API and the web app on this device, at http://127.0.0.1:PORT – or, with --listen, to other
+    /// devices over TLS with a certificate of this workspace's own.
     Serve {
-        /// The port.
+        /// The port on this device.
         #[arg(long, default_value_t = 8048)]
         port: u16,
+        /// An address to listen on for other devices, e.g. 0.0.0.0:8443; they are served over TLS only.
+        #[arg(long)]
+        listen: Option<std::net::SocketAddr>,
+        /// The name other devices reach this one by; default: the name of this computer.
+        #[arg(long)]
+        host: Option<String>,
     },
     /// Writes the description of the API in OpenAPI to standard output.
     Openapi,
@@ -280,10 +287,21 @@ fn main() -> Result<()> {
             println!("{id}");
             Ok(())
         }
-        Commands::Serve { port } => {
-            spezado_api::serve(workspace, port, |address, code| {
-                println!("spezado serves at http://{address}");
-                println!("Pair a device with the code {code} – or open http://{address}/#pair={code}");
+        Commands::Serve { port, listen, host } => {
+            let listen = listen.unwrap_or_else(|| std::net::SocketAddr::from(([127, 0, 0, 1], port)));
+            let host = host.unwrap_or_else(|| gethostname::gethostname().to_string_lossy().into_owned());
+            spezado_api::serve(workspace, listen, &host, |serving| {
+                println!("spezado serves at {}", serving.link.split('#').next().unwrap_or_default());
+                println!("Pair a device with the code {} – or open {}", serving.code, serving.link);
+                if let Some(fingerprint) = &serving.fingerprint {
+                    println!("The certificate's fingerprint is {fingerprint}; apps check it, browsers ask once.");
+                    if let Ok(code) = qrcode::QrCode::new(serving.link.as_bytes()) {
+                        use qrcode::render::unicode::Dense1x2;
+                        let image =
+                            code.render::<Dense1x2>().dark_color(Dense1x2::Light).light_color(Dense1x2::Dark).build();
+                        println!("{image}");
+                    }
+                }
                 println!("The code is valid for 15 minutes. Stop with Ctrl-C.");
             })?;
             Ok(())

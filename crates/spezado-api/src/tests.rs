@@ -466,3 +466,15 @@ async fn invoices_through_the_api() {
     assert_eq!(status, StatusCode::OK);
     assert!(pdf.starts_with(b"%PDF"));
 }
+
+#[test]
+fn the_certificate_is_kept_for_its_host() {
+    let scratch = Scratch::new("tls");
+    let workspace = Workspace::create(&scratch.0, "server".parse().unwrap()).unwrap();
+    let (_, first) = crate::tls::configuration(&workspace, "spezado.test").unwrap();
+    let (_, again) = crate::tls::configuration(&workspace, "spezado.test").unwrap();
+    assert!(first.starts_with("sha256:") && first.len() == 7 + 64);
+    assert_eq!(first, again, "the same certificate after a restart");
+    let (_, other) = crate::tls::configuration(&workspace, "other.test").unwrap();
+    assert_ne!(first, other, "a new one for another host name");
+}
