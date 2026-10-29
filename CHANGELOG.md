@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **Filings** after librotenado 0007: the advance VAT return and the Anlage EÜR prepared from the books – again as
+  a correction once one was submitted, outdated when the books change –, submitted through the adapter of their
+  country, also as a test, and asked about; what the authority returns becomes a document. In the terminal, the web
+  app, the API and with `spezado filing` and `spezado adapter`. There is no adapter for ELSTER yet (**OPEN**).
+- Data follows librotenado 0.7.1.
+
 ## 0.3.0 – 2026-10-29
 
 spezado in the menu bar, and for apps that install it themselves. Still a preview – the German mappings are drafts

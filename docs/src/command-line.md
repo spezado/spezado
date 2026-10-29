@@ -14,6 +14,8 @@ where the workspace holds several sets of books, `--books`; `spezado help <comma
 | `report` | a report for a period, or – without one – the reports that apply |
 | `check` | what needs review |
 | `close` | closes an owner's books up to a date |
+| `filing` | lists the filings; `prepare`, `submit [--test]`, `refresh` ([Filings](filings.md)) |
+| `adapter` | shows or sets the adapter that submits filings in a country, the token from `SPEZADO_ADAPTER_TOKEN` |
 | `export`, `import` | the events of the books as JSON Lines, out and in |
 | `sync` | synchronises books with other devices and people: `start`, `invite --rights`, `join`, `recover`, `devices`, `remove` ([Synchronisation](sync.md)) |
 | `relay` | runs a relay |

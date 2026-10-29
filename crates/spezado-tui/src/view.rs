@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Drawing the interface – and remembering what was drawn where, so that a click can be told what it meant.
 
-use librotenado::Money;
+use librotenado::{FilingState, Money};
 use ratatui::{
     Frame,
     crossterm::event::KeyCode,
@@ -156,7 +156,14 @@ fn keys(app: &App) -> Vec<(Text, KeyCode)> {
             keys.push((Text::KeyCancel, KeyCode::Esc));
             keys
         }
-        (Mode::Figures(_), _) => vec![(Text::KeyExport, char('e')), (Text::KeyBack, KeyCode::Esc)],
+        (Mode::Figures(figures), _) => {
+            let mut keys = vec![(Text::KeyExport, char('e'))];
+            if figures.filing.is_some() {
+                keys.push((Text::KeyPrepare, char('p')));
+            }
+            keys.push((Text::KeyBack, KeyCode::Esc));
+            keys
+        }
         (Mode::Ledger(_), _) | (Mode::Notice(..), _) => vec![(Text::KeyBack, KeyCode::Esc)],
         (Mode::Normal, Tab::Journal) => {
             vec![(Text::KeyNew, char('n')), (Text::KeyLines, char('z')), (Text::KeyReverse, char('r'))]
@@ -316,7 +323,7 @@ fn draw_tab(frame: &mut Frame, app: &App, area: Rect, hits: &mut Hits) {
                 frame.render_widget(Paragraph::new(t(Text::NoReports)).style(dim()), inner);
                 return;
             }
-            let items: Vec<ListItem> = app
+            let mut items: Vec<ListItem> = app
                 .view
                 .reports
                 .iter()
@@ -326,10 +333,34 @@ fn draw_tab(frame: &mut Frame, app: &App, area: Rect, hits: &mut Hits) {
                     ListItem::new(format!("{}  {} – {}{due}", r.name, app.lang.date(r.from), app.lang.date(r.to)))
                 })
                 .collect();
+            items.extend(app.view.filings.iter().map(|item| {
+                let filing = &item.filing;
+                let report = filing.content.first().map_or("", |c| c.report.as_str());
+                let state = match item.state {
+                    FilingState::Prepared => Text::FilingPrepared,
+                    FilingState::Submitted => Text::FilingSubmitted,
+                    FilingState::Accepted => Text::FilingAccepted,
+                    FilingState::Rejected => Text::FilingRejected,
+                };
+                let mut line = format!(
+                    "{} {report}  {} – {}  {}",
+                    t(Text::Filing),
+                    app.lang.date(filing.from),
+                    app.lang.date(filing.to),
+                    t(state)
+                );
+                if filing.corrects.is_some() {
+                    line.push_str(&format!(" · {}", t(Text::Correction)));
+                }
+                if item.outdated {
+                    line.push_str(&format!(" · {}", t(Text::Outdated)));
+                }
+                ListItem::new(line).style(if item.outdated { Style::default() } else { dim() })
+            }));
             let list = List::new(items).highlight_style(selected());
             let mut state = ListState::default().with_selected(Some(selected_row));
             frame.render_stateful_widget(list, inner, &mut state);
-            row_hits(hits, inner, 0, state.offset(), app.view.reports.len());
+            row_hits(hits, inner, 0, state.offset(), app.view.reports.len() + app.view.filings.len());
         }
         Tab::Review => {
             if app.view.issues.is_empty() {

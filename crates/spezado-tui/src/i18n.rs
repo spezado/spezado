@@ -253,6 +253,20 @@ texts! {
     Field => "Kennzahl", "Field";
     Exported => "Exportiert nach", "Exported to";
     NoReports => "Keine Berichte für dieses Jahr", "No reports for this year";
+    KeyPrepare => "p als Meldung vorbereiten", "p prepare as a filing";
+    Filing => "Meldung", "Filing";
+    FilingPrepared => "vorbereitet", "prepared";
+    FilingSubmitted => "eingereicht", "submitted";
+    FilingAccepted => "angenommen", "accepted";
+    FilingRejected => "abgelehnt", "rejected";
+    Correction => "Berichtigung", "correction";
+    Outdated => "veraltet – neu vorbereiten", "outdated – prepare it again";
+    SubmitFiling => "Meldung senden", "Submit filing";
+    Submission => "Übermittlung", "Submission";
+    AsTest => "als Test (die Behörde verarbeitet sie nicht)", "as a test (the authority does not process it)";
+    ForReal => "echt – an die Behörde", "for real – to the authority";
+    Test => "Test", "Test";
+    Received => "erhalten", "received";
     // Review
     NothingToReview => "Nichts zu klären", "Nothing to review";
     // Closing

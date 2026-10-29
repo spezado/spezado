@@ -1,9 +1,14 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-<!-- The reports of the year – the advance VAT returns with their deadlines, the annual ones – and their figures. -->
+<!-- The reports of the year – the advance VAT returns with their deadlines, the annual ones – their figures, and the
+     filings prepared from them. -->
 <script lang="ts">
   import { api, problem, save, type Schemas } from "../lib/api";
   import { amount, date } from "../lib/format";
+  import Filings from "../lib/Filings.svelte";
   import { app, t } from "../lib/state.svelte";
+
+  /** The reports filed on their own; the API refuses the others. */
+  const FILED = ["de-ustva", "de-euer"];
 
   let reports = $state<Schemas["ReportItem"][]>([]);
   let figures = $state<(Schemas["Figures"] & { from: string; to: string }) | null>(null);
@@ -26,6 +31,18 @@
     else failure = problem(error, response);
   }
 
+  async function prepare() {
+    if (!app.books || !figures) return;
+    failure = null;
+    const result = await api.POST("/api/v1/books/{books}/filings", {
+      params: { path: { books: app.books }, query: { lang: app.lang } },
+      body: { report: figures.id, from: figures.from, to: figures.to },
+    });
+    if (!result.data) return void (failure = problem(result.error, result.response));
+    figures = null;
+    app.version++;
+  }
+
   function csv() {
     if (!figures) return;
     const quote = (text: string) => `"${text.replaceAll('"', '""')}"`;
@@ -43,6 +60,7 @@
     <div class="row-actions">
       <button class="quiet" onclick={() => (figures = null)}>{t("back")}</button>
       <button class="quiet" onclick={csv}>{t("csv")}</button>
+      {#if FILED.includes(figures.id)}<button onclick={prepare}>{t("prepareFiling")}</button>{/if}
     </div>
     <table>
       <thead><tr><th>{t("field")}</th><th></th><th class="number">{t("amount")}</th></tr></thead>
@@ -67,6 +85,7 @@
         {/each}
       </ul>
     {/if}
+    <Filings />
   {/if}
 </section>
 

@@ -176,6 +176,9 @@ fn a_vat_return_is_prepared_submitted_and_accepted() {
     let items = workspace.filings(&books).unwrap();
     assert_eq!((items[0].state, items[0].documents.len(), items[0].outdated), (FilingState::Submitted, 1, false));
     assert!(workspace.submit_filing(&books, &filing.id, false).is_err());
+    // Nothing changed: no correction, the filing submitted.
+    assert_eq!(workspace.prepare_filing(&books, &ada, "de-ustva", from, to).unwrap().id, filing.id);
+    assert_eq!(workspace.filings(&books).unwrap().len(), 1);
 
     // A later sale in the quarter makes it outdated; the authority's acceptance is recorded, the protocol once.
     sell(&mut workspace, &books, &ada, 2_380);

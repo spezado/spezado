@@ -116,7 +116,8 @@ One core, three roles, one protocol:
 | 0.1.0 | a preview for a freelancer's year: opening balances, VAT deadlines with public holidays and the permanent extension, payments booked before their statement, invoices written as XRechnung or ZUGFeRD; binaries per platform | released |
 | M4 Apps | Flutter desktop and mobile apps in spezado/apps | desktop app 0.1 released; `spezado tray` in 0.3.0 |
 | M5 Sync | devices, relay, end-to-end encryption (librotenado 0006), sharing with rights, TLS to other devices | done, released as 0.2.0 |
-| then | ELSTER (ERiC), E-Bilanz (XBRL), payroll | |
+| Filings | filings prepared from the reports, submitted through an adapter after librotenado 0007, receipts as documents | done; the adapter for ELSTER waits for ERiC (**OPEN**) |
+| then | the adapter for ELSTER (ERiC), E-Bilanz (XBRL), payroll | |
 
 ## 9. State
 

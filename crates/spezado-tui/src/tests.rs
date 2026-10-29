@@ -141,9 +141,26 @@ fn a_booking_is_reversed_and_the_vat_return_shows_it() {
     app.selected[5] = quarter.1.unwrap_or(0);
     press(&mut app, KeyCode::Enter);
     let shown = screen(&app);
-    assert!(shown.contains("Draft") && shown.contains("spezado-law-de"), "{shown}");
+    assert!(shown.contains("Draft") && shown.contains("spezado-law-de") && shown.contains("p prepare"), "{shown}");
+
+    // Prepared as a filing – with nothing to report, after the reversal –, listed after the reports.
+    press(&mut app, KeyCode::Char('p'));
+    assert!(matches!(app.mode, Mode::Figures(_)), "{:?}", app.status);
     press(&mut app, KeyCode::Esc);
     assert_eq!(app.tab, Tab::Reports);
+    assert_eq!(app.view.filings.len(), 1, "{:?}", app.status);
+    assert!(app.view.filings[0].filing.content[0].fields.is_empty());
+    assert!(screen(&app).contains("Filing de-ustva"), "{}", screen(&app));
+    // Submitting asks: a test, or for real; without an adapter, nothing goes out.
+    app.selected[5] = app.view.reports.len();
+    press(&mut app, KeyCode::Enter);
+    assert!(screen(&app).contains("Submit filing"), "{}", screen(&app));
+    press(&mut app, KeyCode::Enter);
+    assert!(app.status.as_ref().is_some_and(|(_, text)| text.contains("no adapter set for DE")), "{:?}", app.status);
+    // The books read back with the filing in them.
+    drop(app);
+    let reopened = Workspace::open(&scratch.0).unwrap();
+    assert_eq!(reopened.filings(reopened.books().keys().next().unwrap()).unwrap().len(), 1);
 }
 
 #[test]

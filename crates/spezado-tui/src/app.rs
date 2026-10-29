@@ -4,13 +4,13 @@
 use std::{collections::BTreeMap, path::PathBuf};
 
 use librotenado::{
-    AccountId, Booking, BooksId, Currency, Date, Document, DocumentId, EventHash, InvoiceSide, Money, Names, PartyId,
-    Person, Posting,
+    AccountId, Booking, BooksId, Currency, Date, Document, DocumentId, EventHash, FilingId, FilingState, InvoiceSide,
+    Money, Names, PartyId, Person, Posting, SubmissionState, SubmissionStatus,
 };
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 use spezado_app::{
-    AccountChoice, AppError, GERMAN_STATES, OpenEntry, Party, ReadDocument, SimpleEntry, Source, Suggestion, Workspace,
-    new_id, today,
+    AccountChoice, AppError, FilingItem, GERMAN_STATES, OpenEntry, Party, ReadDocument, SimpleEntry, Source,
+    Suggestion, Workspace, new_id, today,
 };
 use spezado_core::{Command, JournalEntry};
 
@@ -109,6 +109,8 @@ pub enum Purpose {
     Deadlines,
     /// Starting to synchronise through a relay.
     SyncStart,
+    /// Submitting a prepared filing.
+    Submit(FilingId),
 }
 
 /// A report on screen.
@@ -122,6 +124,8 @@ pub struct Figures {
     pub rows: Vec<(String, String, Money)>,
     /// What it is called in a file name.
     pub file: String,
+    /// The report and its period, when it is filed on its own.
+    pub filing: Option<(&'static str, Date, Date)>,
 }
 
 /// A booking proposed – from a document read, or for an entry of a bank statement –, to be confirmed.
@@ -180,6 +184,8 @@ pub struct View {
     pub balances: Vec<(AccountId, String, String, Money)>,
     /// The reports of the year.
     pub reports: Vec<ReportItem>,
+    /// The filings of the books, after the reports in their tab.
+    pub filings: Vec<FilingItem>,
     /// What needs review.
     pub issues: Vec<String>,
     /// Bank, cash, income, expenses.
@@ -343,6 +349,7 @@ impl<'w> App<'w> {
             due: None,
         }));
         self.view.reports = reports;
+        self.view.filings = self.workspace.filings(&books).unwrap_or_default();
         let mut upcoming = self.workspace.vat_returns(&books, &owner, today().year()).unwrap_or_default();
         upcoming.retain(|r| r.due >= today());
         self.view.next_return = upcoming.first().map(|r| ReportItem {
@@ -399,6 +406,10 @@ impl<'w> App<'w> {
                     );
                     self.pending_figures = Some(figures);
                 }
+                KeyCode::Char('p') if figures.filing.is_some() => {
+                    self.prepare_filing(figures.filing);
+                    self.mode = Mode::Figures(figures);
+                }
                 KeyCode::Esc | KeyCode::Char('q') => {}
                 _ => self.mode = Mode::Figures(figures),
             },
@@ -425,7 +436,7 @@ impl App<'_> {
             Tab::Bank => self.view.open_entries.len(),
             Tab::Documents => self.view.documents.len(),
             Tab::Accounts => self.view.balances.len(),
-            Tab::Reports => self.view.reports.len(),
+            Tab::Reports => self.view.reports.len() + self.view.filings.len(),
             Tab::Review => self.view.issues.len(),
             Tab::Overview | Tab::Closing => 0,
         }
@@ -669,10 +680,71 @@ impl App<'_> {
             Tab::Reports => {
                 if let Some(item) = self.view.reports.get(selected).cloned() {
                     self.open_report(&item);
+                } else if let Some(item) = self.view.filings.get(selected - self.view.reports.len()).cloned() {
+                    self.open_filing(&item);
                 }
             }
             _ => {}
         }
+    }
+
+    fn prepare_filing(&mut self, filing: Option<(&'static str, Date, Date)>) {
+        let (Some(books), Some(owner), Some((report, from, to))) = (self.books.clone(), self.owner.clone(), filing)
+        else {
+            return;
+        };
+        match self.workspace.prepare_filing(&books, &owner, report, from, to) {
+            Ok(_) => {
+                self.refresh();
+                self.say(format!("{} {}", self.t(Text::Filing), self.t(Text::FilingPrepared)));
+            }
+            Err(error) => self.fail(error.to_string()),
+        }
+    }
+
+    /// A prepared or rejected filing is submitted, after choosing a test or the real thing; for a submitted one, the
+    /// adapter is asked where it stands.
+    fn open_filing(&mut self, item: &FilingItem) {
+        let Some(books) = self.books.clone() else { return };
+        match item.state {
+            FilingState::Prepared | FilingState::Rejected => {
+                let options = vec![
+                    (self.t(Text::AsTest).to_owned(), "test".to_owned()),
+                    (self.t(Text::ForReal).to_owned(), "real".to_owned()),
+                ];
+                let form = Form::new(Text::SubmitFiling, vec![Field::choice(Text::Submission, options, 0)]);
+                self.mode = Mode::Form(Purpose::Submit(item.filing.id.clone()), form);
+            }
+            FilingState::Submitted => match self.workspace.refresh_filing(&books, &item.filing.id) {
+                Ok(status) => {
+                    self.refresh();
+                    let answer = self.answer(&status, false);
+                    self.say(answer);
+                }
+                Err(error) => self.fail(error.to_string()),
+            },
+            FilingState::Accepted => {}
+        }
+    }
+
+    /// What an adapter answered, in words.
+    fn answer(&self, status: &SubmissionStatus, test: bool) -> String {
+        let state = match status.state {
+            SubmissionState::Submitted => Text::FilingSubmitted,
+            SubmissionState::Accepted => Text::FilingAccepted,
+            SubmissionState::Rejected => Text::FilingRejected,
+        };
+        let mut parts = vec![format!(
+            "{}{}",
+            if test { format!("{}: ", self.t(Text::Test)) } else { String::new() },
+            self.t(state)
+        )];
+        parts.extend(status.message.clone());
+        if !status.receipts.is_empty() {
+            let names: Vec<&str> = status.receipts.iter().map(|r| r.name.as_str()).collect();
+            parts.push(format!("{}: {}", self.t(Text::Received), names.join(", ")));
+        }
+        parts.join(" · ")
     }
 
     fn open_report(&mut self, item: &ReportItem) {
@@ -691,7 +763,9 @@ impl App<'_> {
                     .collect();
                 let title = format!("{} {} – {}", item.name, self.lang.date(item.from), self.lang.date(item.to));
                 let file = format!("{}-{}-{}", item.id, item.from, item.to);
-                self.mode = Mode::Figures(Figures { title, law: figures.law, rows, file });
+                let filed = self.workspace.is_filed(&books, &owner, item.id, item.from, item.to).unwrap_or(false);
+                let filing = filed.then_some((item.id, item.from, item.to));
+                self.mode = Mode::Figures(Figures { title, law: figures.law, rows, file, filing });
             }
             Err(error) => self.fail(error.to_string()),
         }
@@ -872,6 +946,14 @@ impl App<'_> {
                 Ok(())
             }
             Purpose::ReadDocument => self.submit_read(form),
+            Purpose::Submit(filing) => {
+                let books = self.books.clone().ok_or("no books")?;
+                let test = form.field(Text::Submission).get() == "test";
+                let status = self.workspace.submit_filing(&books, filing, test).map_err(|e| e.to_string())?;
+                let answer = self.answer(&status, test);
+                self.say(answer);
+                Ok(())
+            }
             Purpose::Close => {
                 let to = self.date(form, Text::CloseUpTo)?;
                 let owner = self.owner.clone().ok_or("no owner")?;

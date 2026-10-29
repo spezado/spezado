@@ -4,6 +4,24 @@
  */
 
 export interface paths {
+    "/api/v1/adapters/{country}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The adapter that submits filings in a country, if one is set; never its token. */
+        get: operations["adapter"];
+        /** Sets the adapter that submits filings in a country: its address and the token spezado authenticates itself with. */
+        put: operations["set_adapter"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/books": {
         parameters: {
             query?: never;
@@ -297,6 +315,64 @@ export interface paths {
         get: operations["original"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/books/{books}/filings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The filings of the books, in the order they were prepared. */
+        get: operations["filings"];
+        put?: never;
+        /**
+         * Prepares the filing of a report for a period from the books as they are – the same filing again if one with
+         *     that content waits to be submitted, a correction if one was submitted.
+         */
+        post: operations["prepare"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/books/{books}/filings/{filing}/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Asks the adapter where a submitted filing stands and records an answer. */
+        post: operations["refresh"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/books/{books}/filings/{filing}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submits a prepared filing through the adapter of its country. A test submission is not processed by the
+         *     authority and changes nothing in the books.
+         */
+        post: operations["submit"];
         delete?: never;
         options?: never;
         head?: never;
@@ -740,6 +816,13 @@ export interface components {
             /** @description Its national number. */
             number?: string | null;
         };
+        /** @description The adapter of a country. */
+        AdapterView: {
+            /** @description The country, ISO 3166-1 alpha-2. */
+            country: string;
+            /** @description Its address, if one is set. */
+            url?: string | null;
+        };
         /** @description An amount of money. */
         Amount: {
             /** @description The currency, ISO 4217: `"EUR"`. */
@@ -897,6 +980,29 @@ export interface components {
             law: string;
             /** @description Its name. */
             name: string;
+        };
+        /** @description A filing of the books and where it stands. */
+        FilingView: {
+            /** @description The filing it corrects. */
+            corrects?: string | null;
+            /** @description The documents of what the authority returned. */
+            documents: string[];
+            /** @description Its fields with an amount. */
+            fields: components["schemas"]["Field"][];
+            /** @description The first day of its period. */
+            from: string;
+            /** @description Its identity. */
+            id: string;
+            /** @description What it is: `vat_return`, `cash_basis_statement`, `annual_accounts`. */
+            kind: string;
+            /** @description The books changed since it was prepared so that its content would differ now. */
+            outdated: boolean;
+            /** @description The report it carries: `de-ustva`. */
+            report: string;
+            /** @description `prepared`, `submitted`, `accepted` or `rejected`. */
+            state: string;
+            /** @description The last day of its period. */
+            to: string;
         };
         /** @description What reading a file of statements did. */
         Imported: {
@@ -1126,6 +1232,15 @@ export interface components {
             /** @description The tax code. */
             tax?: string | null;
         };
+        /** @description Preparing the filing of a report. */
+        PrepareFiling: {
+            /** @description The first day of the period, `YYYY-MM-DD`. */
+            from: string;
+            /** @description The report: `de-ustva`, `de-euer`. */
+            report: string;
+            /** @description The last day of the period, `YYYY-MM-DD`. */
+            to: string;
+        };
         /** @description An error: what was refused or went wrong. */
         Problem: {
             /** @description What happened, in English. */
@@ -1194,6 +1309,13 @@ export interface components {
             /** @description Its identity. */
             id: string;
         };
+        /** @description Setting the adapter of a country. */
+        SetAdapter: {
+            /** @description The token spezado authenticates itself with. */
+            token: string;
+            /** @description Its address: `https://…`, or `http://127.0.0.1:…` on this device. */
+            url: string;
+        };
         /** @description Setting up books for a person. */
         SetUp: {
             /** @description `de-cash-basis` or `de-double-entry`. */
@@ -1231,6 +1353,22 @@ export interface components {
             tax?: string | null;
             /** @description What it is about. */
             text: string;
+        };
+        /** @description What the adapter answered. */
+        SubmissionView: {
+            /** @description How the authority explained a rejection. */
+            message?: string | null;
+            /** @description The file names of what the authority returned. */
+            receipts: string[];
+            /** @description `submitted`, `accepted` or `rejected`. */
+            state: string;
+            /** @description Whether it was a test submission. */
+            test: boolean;
+        };
+        /** @description Submitting a prepared filing. */
+        Submit: {
+            /** @description A test submission the authority does not process; nothing is recorded. */
+            test?: boolean;
         };
         /** @description A proposal for an entry. */
         SuggestionView: {
@@ -1340,6 +1478,60 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    adapter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                country: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdapterView"];
+                };
+            };
+        };
+    };
+    set_adapter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                country: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetAdapter"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdapterView"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     books: {
         parameters: {
             query?: never;
@@ -1946,6 +2138,138 @@ export interface operations {
                 };
             };
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    filings: {
+        parameters: {
+            query?: {
+                /** @description `de` or `en`; German when none. */
+                lang?: string | null;
+            };
+            header?: never;
+            path: {
+                books: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FilingView"][];
+                };
+            };
+        };
+    };
+    prepare: {
+        parameters: {
+            query?: {
+                /** @description `de` or `en`; German when none. */
+                lang?: string | null;
+            };
+            header?: never;
+            path: {
+                books: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrepareFiling"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FilingView"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    refresh: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                books: string;
+                filing: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubmissionView"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    submit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                books: string;
+                filing: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Submit"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubmissionView"];
+                };
+            };
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -54,7 +54,7 @@ the token it receives; another browser needs a code of its own.
 | Documents | read e-invoices into booking proposals, file other documents, download every original |
 | Invoices | the seller's details, customers, invoices written as XRechnung or ZUGFeRD ([Invoices](invoices.md)) |
 | Accounts | balances, ledgers, opening balances |
-| Reports | the reports of the year, as CSV, too |
+| Reports | the reports of the year, as CSV, too; the filings prepared from them ([Filings](filings.md)) |
 | Review | what needs review, in words |
 | Closing | closing periods, the GoBD data transfer |
 

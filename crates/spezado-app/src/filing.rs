@@ -83,6 +83,21 @@ impl Workspace {
         serde_json::from_str(&json).map(Some).map_err(|e| AppError::Adapter(e.to_string()))
     }
 
+    /// Whether a report is filed on its own, as the law that applies to the owner says.
+    pub fn is_filed(
+        &self,
+        books: &BooksId,
+        owner: &PartyId,
+        report: &str,
+        from: Date,
+        to: Date,
+    ) -> Result<bool, AppError> {
+        let (configuration, country, legal_form, module) = self.law_for(books, owner, from)?;
+        let facts = Facts::new(&configuration, country, legal_form.as_deref());
+        let reports = module.reports(&facts, from, to);
+        Ok(reports.iter().any(|candidate| candidate.id == report && candidate.filing.is_some()))
+    }
+
     /// The filings of a set of books, in the order they were prepared.
     pub fn filings(&self, books: &BooksId) -> Result<Vec<FilingItem>, AppError> {
         let events = self.get(books)?.events();
@@ -116,8 +131,8 @@ impl Workspace {
     }
 
     /// Prepares the filing of a report for an owner and a period: derives its content from the books as they are and
-    /// records it. A filing of the same kind and period that was submitted or accepted is corrected by it; one that
-    /// was only prepared, with the same content, is returned as it is.
+    /// records it. A filing of the same kind and period that was submitted or accepted is corrected by it – unless
+    /// the latest has the same content, which is returned as it is, as is one only prepared with the same content.
     pub fn prepare_filing(
         &mut self,
         books: &BooksId,
@@ -131,14 +146,18 @@ impl Workspace {
             let f = &item.filing;
             f.filer == *owner && f.kind == kind && f.from == from && f.to == to
         });
-        let mut corrects = None;
+        let mut latest = None;
         for item in earlier {
             match item.state {
                 FilingState::Prepared if item.filing.content == [content.clone()] => return Ok(item.filing),
-                FilingState::Submitted | FilingState::Accepted => corrects = Some(item.filing.id),
+                FilingState::Submitted | FilingState::Accepted => latest = Some(item.filing),
                 _ => {}
             }
         }
+        if let Some(filed) = latest.as_ref().filter(|filed| filed.content == [content.clone()]) {
+            return Ok(filed.clone());
+        }
+        let corrects = latest.map(|filed| filed.id);
         let filing = Filing {
             id: new_id(),
             kind,
