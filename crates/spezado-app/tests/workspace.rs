@@ -25,7 +25,7 @@ impl Drop for Scratch {
 }
 
 fn person(id: &PartyId, name: &str) -> Party {
-    Party::Person(Person { id: id.clone(), name: name.into(), tax_ids: vec![], roles: vec![] })
+    Party::Person(Person { id: id.clone(), name: name.into(), tax_ids: vec![], roles: vec![], contact: None })
 }
 
 fn configuration(owner: &PartyId, accounting: Option<&str>, vat: bool) -> Configuration {

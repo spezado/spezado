@@ -485,8 +485,11 @@ fn set_up(workspace: &mut Workspace, setup: SetUp) -> Result<BooksId> {
             registrations: vec![],
             tax_ids: vec![],
             shares: vec![],
+            contact: None,
         }),
-        None => Party::Person(Person { id: id.clone(), name: setup.name, tax_ids: vec![], roles: vec![] }),
+        None => {
+            Party::Person(Person { id: id.clone(), name: setup.name, tax_ids: vec![], roles: vec![], contact: None })
+        }
     };
     let mut configuration = serde_json::json!({
         "owner": id.as_str(), "from": setup.from.to_string(), "currency": setup.currency.as_str(),

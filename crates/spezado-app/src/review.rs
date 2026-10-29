@@ -330,6 +330,22 @@ impl Words<'_> {
                 format!("{} bucht für {}, bevor die Bücher eingerichtet sind.", self.event(event), self.party(owner)),
                 format!("{} posts for {} before the books are set up.", self.event(event), self.party(owner)),
             ),
+            PartyProblem::SeriesTaken { owner, series, devices } => {
+                let devices = devices.iter().map(ToString::to_string).collect::<Vec<_>>().join(", ");
+                let series = if series.is_empty() { "ohne Kennbuchstaben".to_owned() } else { series.clone() };
+                self.say(
+                    format!(
+                        "Die Rechnungsnummern-Serie {series} von {} ist mehreren Geräten zugeteilt ({devices}) – sie \
+                         könnten dieselben Nummern vergeben. Einem Gerät eine andere Serie geben.",
+                        self.party(owner)
+                    ),
+                    format!(
+                        "The series {series} of invoice numbers of {} is assigned to several devices ({devices}) – they \
+                         may write the same numbers. Give one device another series.",
+                        self.party(owner)
+                    ),
+                )
+            }
             PartyProblem::ConfigurationOfNonOwner { event, owner } => self.say(
                 format!(
                     "{0} gilt {1} – {1} ist aber kein Eigentümer der Bücher.",

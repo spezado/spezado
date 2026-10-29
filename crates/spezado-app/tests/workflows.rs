@@ -33,7 +33,7 @@ fn freelancer(scratch: &Scratch, chart: &str) -> (Workspace, BooksId, PartyId) {
         "accounting": "de-cash-basis", "vat": {"scheme": "de-regular", "basis": "cash", "period": "quarter"},
     }))
     .unwrap();
-    let person = Person { id: ada.clone(), name: "Ada".into(), tax_ids: vec![], roles: vec![] };
+    let person = Person { id: ada.clone(), name: "Ada".into(), tax_ids: vec![], roles: vec![], contact: None };
     let books = workspace.set_up(Party::Person(person), configuration).unwrap();
     (workspace, books, ada)
 }

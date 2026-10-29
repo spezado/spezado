@@ -958,7 +958,7 @@ impl App<'_> {
             configuration["region"] = form.field(Text::Region).get().into();
         }
         let configuration = serde_json::from_value(configuration).map_err(|e| e.to_string())?;
-        let person = Person { id, name, tax_ids: vec![], roles: vec![] };
+        let person = Person { id, name, tax_ids: vec![], roles: vec![], contact: None };
         let books = self.workspace.set_up(Party::Person(person), configuration).map_err(|e: AppError| e.to_string())?;
         self.books = Some(books);
         self.year = from.year();

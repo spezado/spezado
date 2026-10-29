@@ -272,7 +272,8 @@ async fn set_up(State(api): State<Api>, Json(setup): Json<dto::SetUp>) -> Result
                 configuration["region"] = region.as_str().into();
             }
             let configuration = serde_json::from_value(configuration).map_err(|e| ApiError::bad(e.to_string()))?;
-            let person = Person { id: id.clone(), name: setup.name.clone(), tax_ids: vec![], roles: vec![] };
+            let person =
+                Person { id: id.clone(), name: setup.name.clone(), tax_ids: vec![], roles: vec![], contact: None };
             let books = workspace.set_up(Party::Person(person), configuration)?;
             Ok(dto::BooksSummary {
                 id: books.to_string(),

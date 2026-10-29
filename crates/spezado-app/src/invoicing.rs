@@ -16,11 +16,13 @@
 use std::collections::BTreeMap;
 
 use librotenado::{
-    BooksId, CurrencyTable, Date, Decimal, Document, DocumentId, DocumentKind, InvoiceSide, Money, Original, PartyId,
-    ProposalAccounts, TaxCode, en16931, propose_booking,
+    BooksId, Contact, CurrencyTable, Date, Decimal, Document, DocumentKind, InvoiceSide, Invoicing, Money,
+    Organisation, Original, PartyId, Person, PostalAddress, ProposalAccounts, Series, TaxCode, TaxId, en16931,
+    propose_booking,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use spezado_core::Command;
 
 use crate::{AppError, Workspace, new_id};
 
@@ -187,50 +189,236 @@ fn money(units: i128, currency: &librotenado::Currency) -> Result<Money, AppErro
 }
 
 impl Workspace {
-    /// The seller's details on the invoices of a set of books; none before they are given.
+    /// The owner whose invoices are written: the first owner of the books.
+    fn invoicing_owner(&self, books: &BooksId) -> Result<PartyId, AppError> {
+        let owners = self.get(books)?.events().owners();
+        owners.first().map(|o| (*o).clone()).ok_or_else(|| AppError::Invoice("the books have no owner".into()))
+    }
+
+    /// The name, tax numbers and contact of a party of the books.
+    fn party_of(
+        &self,
+        books: &BooksId,
+        id: &PartyId,
+    ) -> Result<Option<(String, Vec<TaxId>, Option<Contact>)>, AppError> {
+        let (organisations, persons) = self.get(books)?.events().parties();
+        Ok(match (organisations.get(id), persons.get(id)) {
+            (Some(o), _) => Some((o.name.clone(), o.tax_ids.clone(), o.contact.clone())),
+            (None, Some(p)) => Some((p.name.clone(), p.tax_ids.clone(), p.contact.clone())),
+            (None, None) => None,
+        })
+    }
+
+    /// The seller's details on the invoices of a set of books – the owner's contact and invoicing settings (spec
+    /// 0008); none before they are given. Details kept on this device by spezado 0.1 are read where the books have
+    /// none yet.
     pub fn invoice_profile(&self, books: &BooksId) -> Result<Option<InvoiceProfile>, AppError> {
-        let Some(json) = self.store.setting(Some(books), PROFILE)? else { return Ok(None) };
-        serde_json::from_str(&json).map(Some).map_err(|e| AppError::Invoice(e.to_string()))
+        let owner = self.invoicing_owner(books)?;
+        let events = self.get(books)?.events();
+        let Some(invoicing) = events.invoicing(&owner) else {
+            let Some(json) = self.store.setting(Some(books), PROFILE)? else { return Ok(None) };
+            return serde_json::from_str(&json).map(Some).map_err(|e| AppError::Invoice(e.to_string()));
+        };
+        let (name, tax_ids, contact) = self.party_of(books, &owner)?.unwrap_or_default();
+        let contact = contact.unwrap_or_default();
+        let address = contact.address.clone();
+        let tax = |scheme: &str| tax_ids.iter().find(|t| t.scheme == scheme).map(|t| t.number.clone());
+        Ok(Some(InvoiceProfile {
+            name,
+            street: address.as_ref().and_then(|a| a.lines.first().cloned()).unwrap_or_default(),
+            postcode: address.as_ref().and_then(|a| a.postcode.clone()).unwrap_or_default(),
+            city: address.as_ref().and_then(|a| a.city.clone()).unwrap_or_default(),
+            country: address.as_ref().map_or_else(|| "DE".to_owned(), |a| a.country.to_string()),
+            vat_id: tax("vat"),
+            tax_number: tax("de-steuernummer"),
+            contact: contact.name.unwrap_or_default(),
+            phone: contact.phone.unwrap_or_default(),
+            email: contact.email.unwrap_or_default(),
+            iban: invoicing.account.clone().unwrap_or_default(),
+            payment_days: invoicing.payment_days.unwrap_or(14),
+            prefix: invoicing.prefix.clone(),
+        }))
     }
 
-    /// Keeps the seller's details.
-    pub fn set_invoice_profile(&self, books: &BooksId, profile: &InvoiceProfile) -> Result<(), AppError> {
-        self.get(books)?;
-        let json = serde_json::to_string(profile).map_err(|e| AppError::Invoice(e.to_string()))?;
-        Ok(self.store.set_setting(Some(books), PROFILE, &json)?)
+    /// Keeps the seller's details: as the owner's description and invoicing settings, which travel with the books.
+    pub fn set_invoice_profile(&mut self, books: &BooksId, profile: &InvoiceProfile) -> Result<(), AppError> {
+        let owner = self.invoicing_owner(books)?;
+        let (organisations, persons) = self.get(books)?.events().parties();
+        let (organisation, person) =
+            (organisations.get(&owner).map(|o| (*o).clone()), persons.get(&owner).map(|p| (*p).clone()));
+        let tax_ids = |mut ids: Vec<TaxId>| {
+            ids.retain(|t| t.scheme != "vat" && t.scheme != "de-steuernummer");
+            let given = |n: &Option<String>| n.as_ref().map(|n| n.trim().to_owned()).filter(|n| !n.is_empty());
+            ids.extend(given(&profile.vat_id).map(|number| TaxId { scheme: "vat".into(), number }));
+            ids.extend(given(&profile.tax_number).map(|number| TaxId { scheme: "de-steuernummer".into(), number }));
+            ids
+        };
+        let text = |t: &str| Some(t.trim().to_owned()).filter(|t| !t.is_empty());
+        let contact = Contact {
+            address: Some(postal_address(&profile.street, &profile.postcode, &profile.city, &profile.country)?),
+            name: text(&profile.contact),
+            phone: text(&profile.phone),
+            email: text(&profile.email),
+            endpoint: text(&profile.email).map(|address| librotenado::Endpoint { scheme: "EM".into(), address }),
+            buyer_reference: None,
+        };
+        let describe = match (organisation, person) {
+            (Some(o), _) => Command::DescribeOrganisation(Organisation {
+                name: profile.name.trim().to_owned(),
+                tax_ids: tax_ids(o.tax_ids.clone()),
+                contact: Some(contact),
+                ..o
+            }),
+            (None, Some(p)) => Command::DescribePerson(Person {
+                name: profile.name.trim().to_owned(),
+                tax_ids: tax_ids(p.tax_ids.clone()),
+                contact: Some(contact),
+                ..p
+            }),
+            (None, None) => return Err(AppError::Invoice("the owner is not described".into())),
+        };
+        let invoicing = Invoicing {
+            owner,
+            prefix: profile.prefix.clone(),
+            payment_days: Some(profile.payment_days),
+            account: text(&profile.iban).map(|i| i.replace(' ', "")),
+        };
+        self.execute_all(vec![(books.clone(), describe), (books.clone(), Command::ConfigureInvoicing(invoicing))])?;
+        Ok(())
     }
 
-    /// The customers of a set of books, by name.
+    /// The customers of a set of books, by name: the organisations and persons described in them who are not
+    /// owners. Customers kept on this device by spezado 0.1 are read where the books have none yet.
     pub fn customers(&self, books: &BooksId) -> Result<Vec<Customer>, AppError> {
-        let Some(json) = self.store.setting(Some(books), CUSTOMERS)? else { return Ok(Vec::new()) };
-        let mut customers: Vec<Customer> = serde_json::from_str(&json).map_err(|e| AppError::Invoice(e.to_string()))?;
+        let events = self.get(books)?.events();
+        let owners = events.owners();
+        let (organisations, persons) = events.parties();
+        let parties = organisations
+            .iter()
+            .filter(|(id, _)| !owners.contains(id))
+            .map(|(id, o)| (*id, o.name.clone(), &o.tax_ids, o.contact.as_ref()))
+            .chain(
+                persons
+                    .iter()
+                    .filter(|(id, _)| !owners.contains(id))
+                    .map(|(id, p)| (*id, p.name.clone(), &p.tax_ids, p.contact.as_ref())),
+            );
+        let mut customers: Vec<Customer> = parties
+            .map(|(id, name, tax_ids, contact)| {
+                let address = contact.and_then(|c| c.address.as_ref());
+                Customer {
+                    id: id.to_string(),
+                    name,
+                    street: address.and_then(|a| a.lines.first().cloned()).unwrap_or_default(),
+                    postcode: address.and_then(|a| a.postcode.clone()).unwrap_or_default(),
+                    city: address.and_then(|a| a.city.clone()).unwrap_or_default(),
+                    country: address.map_or_else(|| "DE".to_owned(), |a| a.country.to_string()),
+                    email: contact
+                        .and_then(|c| c.endpoint.as_ref().map(|e| e.address.clone()).or_else(|| c.email.clone()))
+                        .unwrap_or_default(),
+                    vat_id: tax_ids.iter().find(|t| t.scheme == "vat").map(|t| t.number.clone()),
+                    reference: contact.and_then(|c| c.buyer_reference.clone()),
+                }
+            })
+            .collect();
+        if customers.is_empty()
+            && let Some(json) = self.store.setting(Some(books), CUSTOMERS)?
+        {
+            customers = serde_json::from_str(&json).map_err(|e| AppError::Invoice(e.to_string()))?;
+        }
         customers.sort_by_key(|c| c.name.to_lowercase());
         Ok(customers)
     }
 
-    /// Keeps a customer: a new one without an identity gets one, one with an identity replaces it. Returns the
-    /// identity.
-    pub fn save_customer(&self, books: &BooksId, mut customer: Customer) -> Result<String, AppError> {
+    /// Keeps a customer as an organisation described in the books: a new one without an identity gets one, one with
+    /// an identity is described anew. Returns the identity.
+    pub fn save_customer(&mut self, books: &BooksId, customer: Customer) -> Result<String, AppError> {
         self.get(books)?;
         if customer.name.trim().is_empty() {
             return Err(AppError::Invoice("a customer needs a name".into()));
         }
-        if customer.id.is_empty() {
-            customer.id = new_id::<DocumentId>().to_string();
+        let id: PartyId = if customer.id.is_empty() {
+            new_id()
+        } else {
+            customer.id.parse().map_err(|_| AppError::Invoice(format!("not a customer: {}", customer.id)))?
+        };
+        if self.get(books)?.events().owners().contains(&&id) {
+            return Err(AppError::Invoice("an owner of the books is not a customer".into()));
         }
-        let mut customers: Vec<Customer> = self.customers(books)?.into_iter().filter(|c| c.id != customer.id).collect();
-        let id = customer.id.clone();
-        customers.push(customer);
-        let json = serde_json::to_string(&customers).map_err(|e| AppError::Invoice(e.to_string()))?;
-        self.store.set_setting(Some(books), CUSTOMERS, &json)?;
-        Ok(id)
+        let text = |t: &str| Some(t.trim().to_owned()).filter(|t| !t.is_empty());
+        let country = customer.country.trim().to_uppercase();
+        let organisation = Organisation {
+            id: id.clone(),
+            name: customer.name.trim().to_owned(),
+            legal_form: String::new(),
+            country: country.parse().map_err(|_| AppError::Invoice(format!("not a country: {country}")))?,
+            registrations: vec![],
+            tax_ids: customer
+                .vat_id
+                .as_deref()
+                .and_then(text)
+                .map(|number| vec![TaxId { scheme: "vat".into(), number }])
+                .unwrap_or_default(),
+            shares: vec![],
+            contact: Some(Contact {
+                address: Some(postal_address(&customer.street, &customer.postcode, &customer.city, &country)?),
+                name: None,
+                phone: None,
+                email: text(&customer.email),
+                endpoint: text(&customer.email).map(|address| librotenado::Endpoint { scheme: "EM".into(), address }),
+                buyer_reference: customer.reference.as_deref().and_then(text),
+            }),
+        };
+        self.execute(books, Command::DescribeOrganisation(organisation))?;
+        Ok(id.to_string())
     }
 
-    /// The next invoice number of a year: the prefix, the year, and one more than the highest number of that year
-    /// among the invoices recorded with the prefix – `RE-2026-001` first.
+    /// Brings the seller's details and customers kept on this device by spezado 0.1 into the books, so that they
+    /// travel with them; does nothing when the books have them already.
+    pub fn migrate_invoicing(&mut self, books: &BooksId) -> Result<(), AppError> {
+        let owner = self.invoicing_owner(books)?;
+        if self.get(books)?.events().invoicing(&owner).is_none()
+            && let Some(profile) = self.invoice_profile(books)?
+        {
+            self.set_invoice_profile(books, &profile)?;
+        }
+        let (organisations, persons) = self.get(books)?.events().parties();
+        let described = organisations.len() + persons.len();
+        let owners = self.get(books)?.events().owners().len();
+        if described <= owners
+            && let Some(json) = self.store.setting(Some(books), CUSTOMERS)?
+        {
+            let legacy: Vec<Customer> = serde_json::from_str(&json).map_err(|e| AppError::Invoice(e.to_string()))?;
+            for customer in legacy {
+                self.save_customer(books, customer)?;
+            }
+        }
+        Ok(())
+    }
+
+    /// The series of invoice numbers of this device for an owner, and whether it is still to be assigned: the one
+    /// assigned, else none if no device has one yet, else the first letter no device has (spec 0008).
+    fn device_series(&self, books: &BooksId, owner: &PartyId) -> Result<(String, bool), AppError> {
+        let series = self.get(books)?.events().series(owner);
+        if let Some(mine) = series.get(&self.device) {
+            return Ok((mine.clone(), false));
+        }
+        let taken: Vec<&String> = series.values().collect();
+        let free = std::iter::once(String::new())
+            .chain(('B'..='Z').map(String::from))
+            .chain(('A'..='Z').flat_map(|a| ('A'..='Z').map(move |b| format!("{a}{b}"))))
+            .find(|s| !taken.contains(&s))
+            .expect("a free series");
+        Ok((free, true))
+    }
+
+    /// The next invoice number of a year on this device: the prefix, the year, `-`, the device's series and one more
+    /// than the highest number of that series in that year – `RE-2026-001`, `RE-2026-B001`.
     pub fn next_invoice_number(&self, books: &BooksId, year: u16) -> Result<String, AppError> {
+        let owner = self.invoicing_owner(books)?;
         let prefix = self.invoice_profile(books)?.map_or_else(|| "RE-".to_owned(), |p| p.prefix);
-        let start = format!("{prefix}{year}-");
+        let (series, _) = self.device_series(books, &owner)?;
+        let start = format!("{prefix}{year}-{series}");
         let highest = self
             .documents(books)?
             .iter()
@@ -471,11 +659,32 @@ impl Workspace {
         owner: &PartyId,
         new: &NewInvoice,
     ) -> Result<WrittenInvoice, AppError> {
+        let (series, assign) = self.device_series(books, owner)?;
+        if assign {
+            let device = self.device.clone();
+            self.execute(books, Command::AssignSeries(Series { owner: owner.clone(), device, series }))?;
+        }
         let written = self.write_invoice(books, owner, new)?;
         self.store.put_original(&written.original)?;
         self.record_document(books, written.document.clone(), written.booking.clone())?;
         Ok(written)
     }
+}
+
+/// A postal address of one line, a postcode, a city and a country.
+fn postal_address(street: &str, postcode: &str, city: &str, country: &str) -> Result<PostalAddress, AppError> {
+    let text = |t: &str| Some(t.trim().to_owned()).filter(|t| !t.is_empty());
+    Ok(PostalAddress {
+        lines: text(street).into_iter().collect(),
+        city: text(city),
+        postcode: text(postcode),
+        subdivision: None,
+        country: country
+            .trim()
+            .to_uppercase()
+            .parse()
+            .map_err(|_| AppError::Invoice(format!("not a country: {country}")))?,
+    })
 }
 
 /// A unit price as a decimal with as many places as it needs: `95`, `12.5`.

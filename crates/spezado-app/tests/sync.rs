@@ -5,8 +5,9 @@
 use std::fs;
 use std::path::PathBuf;
 
+use librotenado::Money;
 use librotenado::{BooksId, Person};
-use spezado_app::{Party, Workspace, new_id};
+use spezado_app::{Customer, InvoiceFormat, InvoiceProfile, NewInvoice, NewLine, Party, Workspace, new_id};
 
 const OCTOBER: &[u8] = include_bytes!("data/statement-001.08.xml");
 
@@ -71,9 +72,54 @@ fn own_devices_share_books_through_a_relay() {
         "accounting": "de-cash-basis", "vat": {"scheme": "de-regular", "basis": "cash", "period": "quarter"},
     }))
     .unwrap();
-    let person = Person { id: ada.clone(), name: "Ada".into(), tax_ids: vec![], roles: vec![] };
+    let person = Person { id: ada.clone(), name: "Ada".into(), tax_ids: vec![], roles: vec![], contact: None };
     let books = laptop.set_up(Party::Person(person), configuration).unwrap();
     laptop.import_statements(&books, &ada, OCTOBER, Some("oktober.xml"), None).unwrap();
+    let profile = InvoiceProfile {
+        name: "Ada".into(),
+        street: "Musterweg 1".into(),
+        postcode: "10115".into(),
+        city: "Berlin".into(),
+        country: "DE".into(),
+        vat_id: Some("DE123456789".into()),
+        tax_number: None,
+        contact: "Ada".into(),
+        phone: "+49 30 1234567".into(),
+        email: "ada@example.org".into(),
+        iban: "DE02120300000000202051".into(),
+        payment_days: 14,
+        prefix: "RE-".into(),
+    };
+    laptop.set_invoice_profile(&books, &profile).unwrap();
+    let customer = Customer {
+        name: "Kunde A GmbH".into(),
+        street: "Hauptstraße 5".into(),
+        postcode: "80331".into(),
+        city: "München".into(),
+        country: "DE".into(),
+        email: "rechnung@kunde-a.example".into(),
+        ..Customer::default()
+    };
+    let kunde = laptop.save_customer(&books, customer).unwrap();
+    let invoice = |day: &str| NewInvoice {
+        customer: kunde.clone(),
+        date: day.parse().unwrap(),
+        delivery: None,
+        lines: vec![NewLine {
+            name: "Beratung".into(),
+            quantity: "1".parse().unwrap(),
+            unit: "HUR".into(),
+            price: Money::new(10_000, "EUR".parse().unwrap()).unwrap(),
+            tax: Some("de-out-19".parse().unwrap()),
+        }],
+        note: None,
+        exemption: None,
+        format: InvoiceFormat::XRechnung,
+    };
+    assert_eq!(
+        laptop.issue_invoice(&books, &ada, &invoice("2026-10-01")).unwrap().document.number.as_deref(),
+        Some("RE-2026-001")
+    );
     let code = laptop.start_sync(&books, &relay, Some("Laptop")).unwrap();
     assert!(laptop.start_sync(&books, &relay, None).is_err(), "only once");
 
@@ -94,6 +140,15 @@ fn own_devices_share_books_through_a_relay() {
     let statement = &phone.documents(&books).unwrap()[0].1;
     assert!(phone.original(&statement.original.hash).unwrap().is_some(), "the original came along");
     assert!(stranger.sync(&books).unwrap().waiting);
+
+    // The seller's details and the customers came along; the phone writes invoices in a series of its own.
+    assert_eq!(phone.invoice_profile(&books).unwrap(), Some(profile));
+    assert_eq!(phone.customers(&books).unwrap().len(), 1);
+    let numbered = phone.issue_invoice(&books, &ada, &invoice("2026-10-02")).unwrap();
+    assert_eq!(numbered.document.number.as_deref(), Some("RE-2026-B001"));
+    assert_eq!(laptop.next_invoice_number(&books, 2026).unwrap(), "RE-2026-002");
+    phone.sync(&books).unwrap();
+    laptop.sync(&books).unwrap();
 
     // Both write; each receives the other's.
     let close = spezado_core::Command::Close {

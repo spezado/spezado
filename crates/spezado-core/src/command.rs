@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 
 use librotenado::{
     Account, Booking, BookingError, BooksId, Chart, Closing, Configuration, Date, Document, DocumentId, EventHash,
-    Organisation, PartyId, Payload, Person,
+    Invoicing, Organisation, PartyId, Payload, Person, Series,
 };
 
 use crate::Books;
@@ -41,6 +41,10 @@ pub enum Command {
     },
     /// Records a document; its original is stored by its hash, outside the events.
     RecordDocument(Document),
+    /// Records how an owner writes invoices.
+    ConfigureInvoicing(Invoicing),
+    /// Gives a device a series of invoice numbers of an owner.
+    AssignSeries(Series),
     /// Closes an owner's books up to a date.
     Close {
         /// The owner.
@@ -222,6 +226,18 @@ impl Books {
                     return Err(CommandError::DocumentExists(document.id));
                 }
                 Payload::DocumentRecorded { document }
+            }
+            Command::ConfigureInvoicing(invoicing) => {
+                if !self.is_owner(&invoicing.owner) {
+                    return Err(CommandError::NotAnOwner(invoicing.owner));
+                }
+                Payload::InvoicingConfigured { invoicing }
+            }
+            Command::AssignSeries(series) => {
+                if !self.is_owner(&series.owner) {
+                    return Err(CommandError::NotAnOwner(series.owner));
+                }
+                Payload::SeriesAssigned { series }
             }
             Command::Close { owner, to, software } => {
                 if !self.is_owner(&owner) {

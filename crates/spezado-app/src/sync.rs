@@ -257,6 +257,8 @@ impl Workspace {
         if self.sync_state(books)?.is_some() {
             return Err(failed("these books are synchronised already"));
         }
+        // What spezado 0.1 kept on this device only goes into the books, to travel with them.
+        self.migrate_invoicing(books)?;
         let keys = MemberKeys::generate();
         let recovery = RecoveryCode::generate();
         let me = self.me(&keys, name.map(str::to_owned));

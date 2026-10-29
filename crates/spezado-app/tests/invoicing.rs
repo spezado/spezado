@@ -37,7 +37,7 @@ fn books(scratch: &Scratch, accounting: &str, vat: &str) -> (Workspace, libroten
         "accounting": accounting, "vat": {"scheme": vat, "basis": "cash", "period": period},
     }))
     .unwrap();
-    let person = Person { id: ada.clone(), name: "Ada".into(), tax_ids: vec![], roles: vec![] };
+    let person = Person { id: ada.clone(), name: "Ada".into(), tax_ids: vec![], roles: vec![], contact: None };
     let books = workspace.set_up(Party::Person(person), configuration).unwrap();
     let profile = InvoiceProfile {
         name: "Ada Beispiel".into(),
@@ -58,7 +58,7 @@ fn books(scratch: &Scratch, accounting: &str, vat: &str) -> (Workspace, libroten
     (workspace, books, ada)
 }
 
-fn customer(workspace: &Workspace, books: &librotenado::BooksId) -> String {
+fn customer(workspace: &mut Workspace, books: &librotenado::BooksId) -> String {
     let customer = Customer {
         name: "Kunde A GmbH".into(),
         street: "Hauptstraße 5".into(),
@@ -79,7 +79,7 @@ fn euros(cents: i128) -> Money {
 fn an_invoice_is_written_paid_and_reported() {
     let scratch = Scratch::new("cash");
     let (mut workspace, books, ada) = books(&scratch, "de-cash-basis", "de-regular");
-    let kunde = customer(&workspace, &books);
+    let kunde = customer(&mut workspace, &books);
     assert_eq!(workspace.next_invoice_number(&books, 2026).unwrap(), "RE-2026-001");
     let invoice = NewInvoice {
         customer: kunde.clone(),
@@ -125,7 +125,7 @@ fn an_invoice_is_written_paid_and_reported() {
 fn a_small_business_invoices_without_vat() {
     let scratch = Scratch::new("small");
     let (mut workspace, books, ada) = books(&scratch, "de-cash-basis", "de-small-business");
-    let kunde = customer(&workspace, &books);
+    let kunde = customer(&mut workspace, &books);
     let line = NewLine {
         name: "Beratung".into(),
         quantity: "2.5".parse().unwrap(),
@@ -158,7 +158,7 @@ fn a_small_business_invoices_without_vat() {
 fn with_double_entry_the_receivable_is_booked_when_issued() {
     let scratch = Scratch::new("double");
     let (mut workspace, books, ada) = books(&scratch, "de-double-entry", "de-regular");
-    let kunde = customer(&workspace, &books);
+    let kunde = customer(&mut workspace, &books);
     let line = NewLine {
         name: "Projekt".into(),
         quantity: "1".parse().unwrap(),
@@ -190,7 +190,7 @@ fn with_double_entry_the_receivable_is_booked_when_issued() {
         "accounting": "de-cash-basis", "vat": {"scheme": "de-regular", "basis": "cash", "period": "quarter"},
     }))
     .unwrap();
-    let person = Person { id: ada.clone(), name: "Ada".into(), tax_ids: vec![], roles: vec![] };
+    let person = Person { id: ada.clone(), name: "Ada".into(), tax_ids: vec![], roles: vec![], contact: None };
     let books = bare.set_up(Party::Person(person), configuration).unwrap();
     assert!(bare.write_invoice(&books, &ada, &invoice).is_err());
 }
@@ -296,7 +296,7 @@ fn supplies_without_vat_state_why_and_reach_their_fields() {
 fn an_invoice_is_written_as_zugferd() {
     let scratch = Scratch::new("zugferd");
     let (mut workspace, books, ada) = books(&scratch, "de-cash-basis", "de-regular");
-    let kunde = customer(&workspace, &books);
+    let kunde = customer(&mut workspace, &books);
     let line = |name: &str, cents: i128, tax: &str| NewLine {
         name: name.into(),
         quantity: "3".parse().unwrap(),
