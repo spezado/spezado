@@ -1,0 +1,3268 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "spezado",
+    "description": "The open API of spezado: free accounting for everyone.",
+    "license": {
+      "name": "AGPL-3.0-or-later",
+      "identifier": "AGPL-3.0-or-later"
+    },
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/books": {
+      "get": {
+        "tags": [],
+        "summary": "The books of the workspace.",
+        "operationId": "books",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BooksSummary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [],
+        "summary": "Sets up books for a person.",
+        "operationId": "set_up",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetUp"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BooksSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/accounts": {
+      "get": {
+        "tags": [],
+        "summary": "The accounts to book on, by national number.",
+        "operationId": "accounts",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "`de` or `en`; German when none.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AccountView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/balances": {
+      "get": {
+        "tags": [],
+        "summary": "The balances of the accounts at the end of a year, those that have one.",
+        "operationId": "balances",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "description": "The calendar year.",
+            "required": false,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "The language of names: `de` or `en`.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BalanceView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/bank/accept-all": {
+      "post": {
+        "tags": [
+          "crate::records"
+        ],
+        "summary": "Books every open entry that has a proposal, all or none.",
+        "operationId": "accept_all",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Accepted"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/bank/entries": {
+      "get": {
+        "tags": [
+          "crate::records"
+        ],
+        "summary": "The entries of bank statements not booked yet, each with a proposal where there is one.",
+        "operationId": "open_entries",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OpenEntry"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/bank/entries/accept": {
+      "post": {
+        "tags": [
+          "crate::records"
+        ],
+        "summary": "Books an entry by its proposal.",
+        "operationId": "accept",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EntryRef"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Written"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/bank/entries/book": {
+      "post": {
+        "tags": [
+          "crate::records"
+        ],
+        "summary": "Books an entry on an account with a tax code, its amount as the gross amount.",
+        "operationId": "book_entry",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookEntry"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Written"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/bank/fetch": {
+      "post": {
+        "tags": [
+          "crate::records"
+        ],
+        "summary": "Fetches statements from the bank by FinTS – waits for the product registration of falkOSS, answers 501 until then.",
+        "operationId": "fetch",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/bank/statements": {
+      "post": {
+        "tags": [
+          "crate::records"
+        ],
+        "summary": "Reads a file of statements – camt.053, MT940 or a bank's CSV file – and records each statement.",
+        "operationId": "import",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "description": "The file name.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "iban",
+            "in": "query",
+            "description": "The IBAN of the account, for a CSV file that does not name it.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imported"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/bookings/lines": {
+      "post": {
+        "tags": [],
+        "summary": "Books lines that balance.",
+        "operationId": "book_lines",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinesBooking"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Written"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/bookings/simple": {
+      "post": {
+        "tags": [],
+        "summary": "Books a gross amount on an account, split by its tax code, against the bank or the cash.",
+        "operationId": "book_simple",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimpleBooking"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Written"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/closings": {
+      "post": {
+        "tags": [],
+        "summary": "Closes the books of their owner up to a date.",
+        "operationId": "close",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Close"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Written"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/customers": {
+      "get": {
+        "tags": [
+          "crate::invoices"
+        ],
+        "summary": "The customers, by name.",
+        "operationId": "customers",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Customer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "crate::invoices"
+        ],
+        "summary": "Keeps a customer – new without an identity, else replacing the one with it.",
+        "operationId": "save_customer",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Customer"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Saved"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/deadlines": {
+      "get": {
+        "tags": [],
+        "summary": "The facts that move the owner's deadlines today: the state whose public holidays apply and whether VAT returns\nare extended for good.",
+        "operationId": "deadlines",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Deadlines"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [],
+        "summary": "Changes the facts that move the owner's deadlines from a date on; everything else stays as configured.",
+        "operationId": "change_deadlines",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Deadlines"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Deadlines"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/documents": {
+      "get": {
+        "tags": [
+          "crate::records"
+        ],
+        "summary": "The documents recorded, newest first.",
+        "operationId": "documents",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DocumentView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "crate::records"
+        ],
+        "summary": "Reads a file – an e-invoice (XRechnung, ZUGFeRD), a PDF, a photo – as a document, with a proposal for an e-invoice.\nNothing is recorded until it is named in `documents/pending/{pending}` within the hour.",
+        "operationId": "read_document",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "description": "The file name.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "side",
+            "in": "query",
+            "description": "`purchase` (default) or `sale`.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "payment",
+            "in": "query",
+            "description": "`bank` (default) or `cash`: where it was paid from or to.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadDocument"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/documents/pending/{pending}": {
+      "post": {
+        "tags": [
+          "crate::records"
+        ],
+        "summary": "Records a document read – alone, or with its proposal, dated and worded as given.",
+        "operationId": "record",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pending",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Record"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Written"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/documents/{document}/original": {
+      "get": {
+        "tags": [
+          "crate::records"
+        ],
+        "summary": "The original of a document, byte for byte.",
+        "operationId": "original",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "document",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {}
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/gobd": {
+      "get": {
+        "tags": [
+          "crate::records"
+        ],
+        "summary": "The data transfer of the GoBD (Z3) for a period, as a ZIP file: `index.xml` and its CSV files.",
+        "operationId": "gobd",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "The first day, `YYYY-MM-DD`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "The last day, `YYYY-MM-DD`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/zip": {}
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/invoices": {
+      "post": {
+        "tags": [
+          "crate::invoices"
+        ],
+        "summary": "Writes an invoice as XRechnung and records it; with double entry, its receivable is booked.",
+        "operationId": "issue",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewInvoice"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Issued"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/invoices/next-number": {
+      "get": {
+        "tags": [
+          "crate::invoices"
+        ],
+        "summary": "The number the next invoice of a year gets.",
+        "operationId": "next_number",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "description": "The calendar year; this one when none.",
+            "required": false,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NextNumber"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/invoicing/profile": {
+      "get": {
+        "tags": [
+          "crate::invoices"
+        ],
+        "summary": "The seller's details on invoices; null before they are given.",
+        "operationId": "profile",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/InvoiceProfile"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "crate::invoices"
+        ],
+        "summary": "Keeps the seller's details on invoices.",
+        "operationId": "set_profile",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvoiceProfile"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceProfile"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/journal": {
+      "get": {
+        "tags": [],
+        "summary": "The bookings of a year, by date.",
+        "operationId": "journal",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "description": "The calendar year.",
+            "required": false,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "The language of names: `de` or `en`.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JournalEntry"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/opening": {
+      "get": {
+        "tags": [],
+        "summary": "The first day of the books and the opening balances booked.",
+        "operationId": "opening",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "`de` or `en`; German when none.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpeningView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [],
+        "summary": "Books opening balances, once, against the opening balance sheet – they count in balances, in no result.",
+        "operationId": "book_opening",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Opening"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Written"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/overview": {
+      "get": {
+        "tags": [],
+        "summary": "The books at a glance, for a year.",
+        "operationId": "overview",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "description": "The calendar year.",
+            "required": false,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "The language of names: `de` or `en`.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Overview"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/reports": {
+      "get": {
+        "tags": [],
+        "summary": "The reports of a year: the advance VAT returns with their deadlines, the annual ones.",
+        "operationId": "reports",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "description": "The calendar year.",
+            "required": false,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "The language of names: `de` or `en`.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReportItem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/reports/{report}": {
+      "get": {
+        "tags": [],
+        "summary": "The figures of a report for a period – a draft until tax advisers have reviewed its mapping.",
+        "operationId": "report",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "report",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "The first day, `YYYY-MM-DD`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "The last day, `YYYY-MM-DD`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "`de` or `en`.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Figures"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/reversals": {
+      "post": {
+        "tags": [],
+        "summary": "Reverses a booking.",
+        "operationId": "reverse",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Reversal"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Written"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/review": {
+      "get": {
+        "tags": [],
+        "summary": "What needs review, each issue in a sentence of the language asked for.",
+        "operationId": "review",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "`de` or `en`; German when none.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/tax-codes": {
+      "get": {
+        "tags": [],
+        "summary": "The tax codes to choose from.",
+        "operationId": "tax_codes",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "`de` or `en`; German when none.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TaxCodeView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices": {
+      "get": {
+        "tags": [],
+        "summary": "The devices paired.",
+        "operationId": "devices",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Device"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/{device}": {
+      "delete": {
+        "tags": [],
+        "summary": "Revokes a device's token.",
+        "operationId": "revoke",
+        "parameters": [
+          {
+            "name": "device",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {},
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/events": {
+      "get": {
+        "tags": [],
+        "summary": "Server-Sent Events: `changed` with the books whenever something was written – read again what is shown. A browser\npasses its token as the query `token`.",
+        "operationId": "events",
+        "responses": {
+          "200": {
+            "description": "text/event-stream of dto::Change"
+          }
+        }
+      }
+    },
+    "/api/v1/pair": {
+      "post": {
+        "tags": [],
+        "summary": "Pairs a device with the code `spezado serve` shows; returns its token, once.",
+        "operationId": "pair",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PairRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Paired"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/regions": {
+      "get": {
+        "tags": [],
+        "summary": "The states whose public holidays can move deadlines.",
+        "operationId": "regions",
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "`de` or `en`; German when none.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RegionView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Accepted": {
+        "type": "object",
+        "description": "How many proposals were booked.",
+        "required": [
+          "count"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "description": "Their number.",
+            "minimum": 0
+          }
+        }
+      },
+      "AccountView": {
+        "type": "object",
+        "description": "An account to choose from.",
+        "required": [
+          "id",
+          "name",
+          "kind"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Its identity."
+          },
+          "kind": {
+            "type": "string",
+            "description": "`asset`, `liability`, `equity`, `income`, `expense`, `memo`."
+          },
+          "name": {
+            "type": "string",
+            "description": "Its name."
+          },
+          "number": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Its national number."
+          }
+        }
+      },
+      "Amount": {
+        "type": "object",
+        "description": "An amount of money.",
+        "required": [
+          "value",
+          "currency"
+        ],
+        "properties": {
+          "currency": {
+            "type": "string",
+            "description": "The currency, ISO 4217: `\"EUR\"`."
+          },
+          "value": {
+            "type": "string",
+            "description": "The amount with a decimal point, as many places as the currency has: `\"-12.40\"`."
+          }
+        }
+      },
+      "BalanceView": {
+        "type": "object",
+        "description": "The balance of an account.",
+        "required": [
+          "account",
+          "name",
+          "balance"
+        ],
+        "properties": {
+          "account": {
+            "type": "string",
+            "description": "The account."
+          },
+          "balance": {
+            "$ref": "#/components/schemas/Amount",
+            "description": "Debit positive."
+          },
+          "name": {
+            "type": "string",
+            "description": "Its name."
+          },
+          "number": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Its national number."
+          }
+        }
+      },
+      "BookEntry": {
+        "type": "object",
+        "description": "Booking an entry on an account, its amount as the gross amount.",
+        "required": [
+          "document",
+          "entry",
+          "account",
+          "text"
+        ],
+        "properties": {
+          "account": {
+            "type": "string",
+            "description": "The account: national number or identity."
+          },
+          "document": {
+            "type": "string",
+            "description": "The statement."
+          },
+          "entry": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The entry's position in it, from 1.",
+            "minimum": 0
+          },
+          "tax": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The tax code."
+          },
+          "text": {
+            "type": "string",
+            "description": "The text."
+          }
+        }
+      },
+      "BookingView": {
+        "type": "object",
+        "description": "A booking proposed, not written.",
+        "required": [
+          "date",
+          "text",
+          "postings"
+        ],
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Its date."
+          },
+          "postings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PostingView"
+            },
+            "description": "Its lines."
+          },
+          "text": {
+            "type": "string",
+            "description": "Its text."
+          }
+        }
+      },
+      "BooksSummary": {
+        "type": "object",
+        "description": "A set of books of the workspace.",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "chart": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The national chart of accounts: `\"de-skr03\"`."
+          },
+          "id": {
+            "type": "string",
+            "description": "The identity of the books."
+          },
+          "owner": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The owner shown – the first."
+          },
+          "owner_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The owner's name."
+          }
+        }
+      },
+      "Close": {
+        "type": "object",
+        "description": "Closing the books up to a date.",
+        "required": [
+          "to"
+        ],
+        "properties": {
+          "to": {
+            "type": "string",
+            "description": "The last day closed, `YYYY-MM-DD`."
+          }
+        }
+      },
+      "Customer": {
+        "type": "object",
+        "description": "A customer.",
+        "required": [
+          "name",
+          "street",
+          "postcode",
+          "city",
+          "country",
+          "email"
+        ],
+        "properties": {
+          "city": {
+            "type": "string",
+            "description": "The city."
+          },
+          "country": {
+            "type": "string",
+            "description": "The country, ISO 3166-1 alpha-2."
+          },
+          "email": {
+            "type": "string",
+            "description": "Where invoices are sent: an e-mail address."
+          },
+          "id": {
+            "type": "string",
+            "description": "Its identity; empty for a new one."
+          },
+          "name": {
+            "type": "string",
+            "description": "The name."
+          },
+          "postcode": {
+            "type": "string",
+            "description": "The postcode."
+          },
+          "reference": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The reference the customer asked for – a Leitweg-ID; the invoice number when none."
+          },
+          "street": {
+            "type": "string",
+            "description": "Street and number."
+          },
+          "vat_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The VAT identification number, if there is one."
+          }
+        }
+      },
+      "Deadlines": {
+        "type": "object",
+        "description": "The facts that move an owner's deadlines.",
+        "properties": {
+          "from": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "From when they apply, `YYYY-MM-DD`: when changing, today if none."
+          },
+          "region": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The state whose public holidays move deadlines, ISO 3166-2 (`DE-BY`); none for holidays of all states only."
+          },
+          "vat_extended": {
+            "type": "boolean",
+            "description": "Whether advance VAT returns are due a month later for good (§ 46 UStDV)."
+          }
+        }
+      },
+      "Device": {
+        "type": "object",
+        "description": "A device paired with the API.",
+        "required": [
+          "id",
+          "name",
+          "paired"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Its identity."
+          },
+          "name": {
+            "type": "string",
+            "description": "What it is called."
+          },
+          "paired": {
+            "type": "string",
+            "description": "When it was paired, `YYYY-MM-DD`."
+          }
+        }
+      },
+      "DocumentView": {
+        "type": "object",
+        "description": "A document recorded, or read and waiting to be recorded.",
+        "required": [
+          "id",
+          "kind",
+          "date",
+          "media_type",
+          "size",
+          "booked"
+        ],
+        "properties": {
+          "booked": {
+            "type": "boolean",
+            "description": "Whether a booking rests on it."
+          },
+          "date": {
+            "type": "string",
+            "description": "The date it bears."
+          },
+          "due": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Amount",
+                "description": "The amount due, for an invoice."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "format": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The format of its original: `en16931-ubl`, `iso20022-camt.053` …"
+          },
+          "id": {
+            "type": "string",
+            "description": "Its identity."
+          },
+          "kind": {
+            "type": "string",
+            "description": "`invoice`, `credit_note`, `receipt`, `bank_statement` …"
+          },
+          "media_type": {
+            "type": "string",
+            "description": "The media type of its original."
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The file name it came with."
+          },
+          "number": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Its number, e.g. the invoice number."
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The size of its original in bytes.",
+            "minimum": 0
+          }
+        }
+      },
+      "EntryRef": {
+        "type": "object",
+        "description": "An entry of a bank statement.",
+        "required": [
+          "document",
+          "entry"
+        ],
+        "properties": {
+          "document": {
+            "type": "string",
+            "description": "The statement."
+          },
+          "entry": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The entry's position in it, from 1.",
+            "minimum": 0
+          }
+        }
+      },
+      "Field": {
+        "type": "object",
+        "description": "A field of a report.",
+        "required": [
+          "field",
+          "amount"
+        ],
+        "properties": {
+          "amount": {
+            "$ref": "#/components/schemas/Amount",
+            "description": "Its amount."
+          },
+          "field": {
+            "type": "string",
+            "description": "The field: `81`, `1.112`."
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Its name on the form."
+          }
+        }
+      },
+      "Figures": {
+        "type": "object",
+        "description": "The figures of a report – a draft until tax advisers have reviewed its mapping.",
+        "required": [
+          "id",
+          "name",
+          "law",
+          "fields"
+        ],
+        "properties": {
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Field"
+            },
+            "description": "The fields with an amount."
+          },
+          "id": {
+            "type": "string",
+            "description": "Its identity."
+          },
+          "law": {
+            "type": "string",
+            "description": "The law module it was derived with, `name/version`."
+          },
+          "name": {
+            "type": "string",
+            "description": "Its name."
+          }
+        }
+      },
+      "Imported": {
+        "type": "object",
+        "description": "What reading a file of statements did.",
+        "required": [
+          "documents",
+          "known",
+          "entries",
+          "shown_before"
+        ],
+        "properties": {
+          "documents": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The statements recorded."
+          },
+          "entries": {
+            "type": "integer",
+            "description": "Entries new to the books.",
+            "minimum": 0
+          },
+          "known": {
+            "type": "integer",
+            "description": "Statements read before, left out.",
+            "minimum": 0
+          },
+          "shown_before": {
+            "type": "integer",
+            "description": "Entries an earlier statement showed already.",
+            "minimum": 0
+          }
+        }
+      },
+      "InvoiceLineInput": {
+        "type": "object",
+        "description": "A line of a new invoice.",
+        "required": [
+          "name",
+          "quantity",
+          "unit",
+          "price"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "What was supplied."
+          },
+          "price": {
+            "type": "string",
+            "description": "The net price of one unit, with a decimal point."
+          },
+          "quantity": {
+            "type": "string",
+            "description": "How much, with a decimal point: `2.5`."
+          },
+          "tax": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`de-out-19`, `de-out-7`, `de-out-0`, `de-out-exempt`, `de-out-13b`, `de-out-eu-service`, `de-out-ig-supply`\nor `de-out-export`; none for a small business."
+          },
+          "unit": {
+            "type": "string",
+            "description": "The unit, UN/ECE Recommendation 20: `HUR` hour, `DAY` day, `C62` piece."
+          }
+        }
+      },
+      "InvoiceProfile": {
+        "type": "object",
+        "description": "The seller's details on invoices.",
+        "required": [
+          "name",
+          "street",
+          "postcode",
+          "city",
+          "country",
+          "contact",
+          "phone",
+          "email",
+          "iban",
+          "payment_days",
+          "prefix"
+        ],
+        "properties": {
+          "city": {
+            "type": "string",
+            "description": "The city."
+          },
+          "contact": {
+            "type": "string",
+            "description": "Whom to contact."
+          },
+          "country": {
+            "type": "string",
+            "description": "The country, ISO 3166-1 alpha-2: `DE`."
+          },
+          "email": {
+            "type": "string",
+            "description": "The e-mail address."
+          },
+          "iban": {
+            "type": "string",
+            "description": "The account to pay to."
+          },
+          "name": {
+            "type": "string",
+            "description": "The seller's name."
+          },
+          "payment_days": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The days until payment is due.",
+            "minimum": 0
+          },
+          "phone": {
+            "type": "string",
+            "description": "The phone number."
+          },
+          "postcode": {
+            "type": "string",
+            "description": "The postcode."
+          },
+          "prefix": {
+            "type": "string",
+            "description": "What invoice numbers start with: `RE-`."
+          },
+          "street": {
+            "type": "string",
+            "description": "Street and number."
+          },
+          "tax_number": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The tax number at the tax office."
+          },
+          "vat_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The VAT identification number, if there is one."
+          }
+        }
+      },
+      "Issued": {
+        "type": "object",
+        "description": "An invoice issued.",
+        "required": [
+          "document",
+          "number",
+          "name",
+          "due"
+        ],
+        "properties": {
+          "document": {
+            "type": "string",
+            "description": "The document, whose original is the XRechnung or the ZUGFeRD PDF."
+          },
+          "due": {
+            "$ref": "#/components/schemas/Amount",
+            "description": "The amount due."
+          },
+          "name": {
+            "type": "string",
+            "description": "The file name of its original: `RE-2026-001.xml`, `RE-2026-001.pdf`."
+          },
+          "number": {
+            "type": "string",
+            "description": "The invoice number."
+          }
+        }
+      },
+      "JournalEntry": {
+        "type": "object",
+        "description": "A booking as the journal shows it.",
+        "required": [
+          "event",
+          "date",
+          "text",
+          "amount",
+          "postings",
+          "documents"
+        ],
+        "properties": {
+          "amount": {
+            "$ref": "#/components/schemas/Amount",
+            "description": "What moved: the sum of its debits."
+          },
+          "date": {
+            "type": "string",
+            "description": "Its date."
+          },
+          "documents": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The documents it rests on."
+          },
+          "event": {
+            "type": "string",
+            "description": "The event that recorded it."
+          },
+          "postings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PostingView"
+            },
+            "description": "Its lines."
+          },
+          "reversed_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The event that reversed it."
+          },
+          "reverses": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "For a reversal, the event it reverses."
+          },
+          "text": {
+            "type": "string",
+            "description": "Its text."
+          }
+        }
+      },
+      "Line": {
+        "type": "object",
+        "description": "A line of a booking to write.",
+        "required": [
+          "account",
+          "amount"
+        ],
+        "properties": {
+          "account": {
+            "type": "string",
+            "description": "The account: its national number or identity."
+          },
+          "amount": {
+            "type": "string",
+            "description": "Debit positive, credit negative, with a decimal point."
+          },
+          "tax": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The tax code."
+          }
+        }
+      },
+      "LinesBooking": {
+        "type": "object",
+        "description": "A booking in lines.",
+        "required": [
+          "date",
+          "text",
+          "lines"
+        ],
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "`YYYY-MM-DD`."
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Line"
+            },
+            "description": "The lines; they balance."
+          },
+          "text": {
+            "type": "string",
+            "description": "What it is about."
+          }
+        }
+      },
+      "NewInvoice": {
+        "type": "object",
+        "description": "A new invoice.",
+        "required": [
+          "customer",
+          "date",
+          "lines"
+        ],
+        "properties": {
+          "customer": {
+            "type": "string",
+            "description": "The customer's identity."
+          },
+          "date": {
+            "type": "string",
+            "description": "`YYYY-MM-DD`."
+          },
+          "delivery": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "When the supply was made, `YYYY-MM-DD`; the invoice date when none."
+          },
+          "exemption": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why exempt lines (`de-out-exempt`) are exempt; a general statement when none."
+          },
+          "format": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`xrechnung` – XML – or `zugferd` – a PDF with the XRechnung attached; `xrechnung` when none."
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InvoiceLineInput"
+            },
+            "description": "The lines."
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A note on the invoice."
+          }
+        }
+      },
+      "NextNumber": {
+        "type": "object",
+        "description": "The number the next invoice gets.",
+        "required": [
+          "number"
+        ],
+        "properties": {
+          "number": {
+            "type": "string",
+            "description": "`RE-2026-004`."
+          }
+        }
+      },
+      "OpenEntry": {
+        "type": "object",
+        "description": "An entry of a bank statement not booked yet.",
+        "required": [
+          "document",
+          "entry",
+          "iban",
+          "date",
+          "text",
+          "amount"
+        ],
+        "properties": {
+          "amount": {
+            "$ref": "#/components/schemas/Amount",
+            "description": "Positive money in, negative money out."
+          },
+          "date": {
+            "type": "string",
+            "description": "The day booked."
+          },
+          "document": {
+            "type": "string",
+            "description": "The statement."
+          },
+          "entry": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The entry's position in it, from 1.",
+            "minimum": 0
+          },
+          "iban": {
+            "type": "string",
+            "description": "The IBAN of the account."
+          },
+          "suggestion": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SuggestionView",
+                "description": "A proposal."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "text": {
+            "type": "string",
+            "description": "The other party and the purpose."
+          }
+        }
+      },
+      "Opening": {
+        "type": "object",
+        "description": "Opening balances to book, once, against the opening balance sheet.",
+        "required": [
+          "lines"
+        ],
+        "properties": {
+          "date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`YYYY-MM-DD`; the first day of the books when none."
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OpeningLine"
+            },
+            "description": "One per account."
+          },
+          "text": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The text of the booking; \"Anfangsbestände\" when none."
+          }
+        }
+      },
+      "OpeningBalance": {
+        "type": "object",
+        "description": "An opening balance booked.",
+        "required": [
+          "account",
+          "name",
+          "amount"
+        ],
+        "properties": {
+          "account": {
+            "type": "string",
+            "description": "The account's identity."
+          },
+          "amount": {
+            "$ref": "#/components/schemas/Amount",
+            "description": "What it held, debit positive."
+          },
+          "name": {
+            "type": "string",
+            "description": "Its name."
+          },
+          "number": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Its national number, if it has one."
+          }
+        }
+      },
+      "OpeningLine": {
+        "type": "object",
+        "description": "An opening balance to book.",
+        "required": [
+          "account",
+          "amount"
+        ],
+        "properties": {
+          "account": {
+            "type": "string",
+            "description": "The account: its national number or identity."
+          },
+          "amount": {
+            "type": "string",
+            "description": "What it held on the first day, with a decimal point: holdings positive, debts negative."
+          }
+        }
+      },
+      "OpeningView": {
+        "type": "object",
+        "description": "The opening balances of the books.",
+        "required": [
+          "balances"
+        ],
+        "properties": {
+          "balances": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OpeningBalance"
+            },
+            "description": "The balances booked, by account."
+          },
+          "start": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The first day of the books, `YYYY-MM-DD`."
+          }
+        }
+      },
+      "Overview": {
+        "type": "object",
+        "description": "The books at a glance.",
+        "required": [
+          "year",
+          "open_entries",
+          "issues"
+        ],
+        "properties": {
+          "bank": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Amount",
+                "description": "The bank balance today."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cash": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Amount",
+                "description": "The cash balance today."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "closed_until": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The last day closed."
+          },
+          "expenses": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Amount",
+                "description": "Expenses of the year."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "income": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Amount",
+                "description": "Income of the year."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "issues": {
+            "type": "integer",
+            "description": "Items on the review list.",
+            "minimum": 0
+          },
+          "next_vat_return": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/VatReturnDue",
+                "description": "The next advance VAT return from today."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "open_entries": {
+            "type": "integer",
+            "description": "Entries of bank statements not booked yet.",
+            "minimum": 0
+          },
+          "year": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The year.",
+            "minimum": 0
+          }
+        }
+      },
+      "PairRequest": {
+        "type": "object",
+        "description": "Exchanging a pairing code for a token.",
+        "required": [
+          "code",
+          "name"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "The code `spezado serve` shows."
+          },
+          "name": {
+            "type": "string",
+            "description": "What the device is called, to recognise it later: `\"Laptop browser\"`."
+          }
+        }
+      },
+      "Paired": {
+        "type": "object",
+        "description": "A token for a device, to send as `Authorization: Bearer <token>`.",
+        "required": [
+          "token",
+          "device"
+        ],
+        "properties": {
+          "device": {
+            "type": "string",
+            "description": "The device's identity, to revoke it."
+          },
+          "token": {
+            "type": "string",
+            "description": "The token; shown once, stored only as its hash."
+          }
+        }
+      },
+      "PostingView": {
+        "type": "object",
+        "description": "A line of a booking.",
+        "required": [
+          "account",
+          "name",
+          "amount"
+        ],
+        "properties": {
+          "account": {
+            "type": "string",
+            "description": "The account's identity."
+          },
+          "amount": {
+            "$ref": "#/components/schemas/Amount",
+            "description": "Debit positive, credit negative."
+          },
+          "name": {
+            "type": "string",
+            "description": "Its name."
+          },
+          "number": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Its national number."
+          },
+          "tax": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The tax code."
+          }
+        }
+      },
+      "Problem": {
+        "type": "object",
+        "description": "An error: what was refused or went wrong.",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "What happened, in English."
+          }
+        }
+      },
+      "ReadDocument": {
+        "type": "object",
+        "description": "A file read as a document: waiting to be recorded, with a proposal if it is an e-invoice.",
+        "required": [
+          "pending",
+          "document"
+        ],
+        "properties": {
+          "document": {
+            "$ref": "#/components/schemas/DocumentView",
+            "description": "The document."
+          },
+          "not_an_invoice": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why an XML file was not read as an e-invoice."
+          },
+          "pending": {
+            "type": "string",
+            "description": "What to name when recording it, within the hour."
+          },
+          "proposal": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/BookingView",
+                "description": "The booking proposed from an e-invoice."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "Record": {
+        "type": "object",
+        "description": "Recording a document read: alone, or with its proposal – dated and worded as given.",
+        "required": [
+          "book"
+        ],
+        "properties": {
+          "book": {
+            "type": "boolean",
+            "description": "Whether to book the proposal with it."
+          },
+          "date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The booking's date, `YYYY-MM-DD` – on a cash basis the day paid."
+          },
+          "text": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The booking's text."
+          }
+        }
+      },
+      "RegionView": {
+        "type": "object",
+        "description": "A state whose public holidays move deadlines.",
+        "required": [
+          "code",
+          "name"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Its code, ISO 3166-2: `DE-BY`."
+          },
+          "name": {
+            "type": "string",
+            "description": "Its name in the language asked for."
+          }
+        }
+      },
+      "ReportItem": {
+        "type": "object",
+        "description": "A report of the year.",
+        "required": [
+          "id",
+          "name",
+          "from",
+          "to"
+        ],
+        "properties": {
+          "due": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "When an advance VAT return is due."
+          },
+          "from": {
+            "type": "string",
+            "description": "The first day of its period."
+          },
+          "id": {
+            "type": "string",
+            "description": "Its identity: `de-ustva`."
+          },
+          "name": {
+            "type": "string",
+            "description": "Its name."
+          },
+          "to": {
+            "type": "string",
+            "description": "The last day of its period."
+          }
+        }
+      },
+      "Reversal": {
+        "type": "object",
+        "description": "A reversal of a booking.",
+        "required": [
+          "event",
+          "date",
+          "text"
+        ],
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "`YYYY-MM-DD`."
+          },
+          "event": {
+            "type": "string",
+            "description": "The event that recorded the booking."
+          },
+          "text": {
+            "type": "string",
+            "description": "Why."
+          }
+        }
+      },
+      "Saved": {
+        "type": "object",
+        "description": "A customer kept.",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Its identity."
+          }
+        }
+      },
+      "SetUp": {
+        "type": "object",
+        "description": "Setting up books for a person.",
+        "required": [
+          "name",
+          "from",
+          "accounting",
+          "vat_scheme",
+          "vat_basis",
+          "vat_period",
+          "chart"
+        ],
+        "properties": {
+          "accounting": {
+            "type": "string",
+            "description": "`de-cash-basis` or `de-double-entry`."
+          },
+          "chart": {
+            "type": "string",
+            "description": "`de-skr03` or `de-skr04`."
+          },
+          "from": {
+            "type": "string",
+            "description": "The first day, `YYYY-MM-DD`."
+          },
+          "name": {
+            "type": "string",
+            "description": "The person's name."
+          },
+          "region": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The state whose public holidays move deadlines, ISO 3166-2 (`DE-BY`); none when not given."
+          },
+          "vat_basis": {
+            "type": "string",
+            "description": "`accrual` or `cash`."
+          },
+          "vat_extended": {
+            "type": "boolean",
+            "description": "Whether the deadlines of advance returns are extended for good (§ 46 UStDV)."
+          },
+          "vat_period": {
+            "type": "string",
+            "description": "`month`, `quarter` or `year`."
+          },
+          "vat_scheme": {
+            "type": "string",
+            "description": "`de-regular` or `de-small-business`."
+          }
+        }
+      },
+      "SimpleBooking": {
+        "type": "object",
+        "description": "A booking from a gross amount.",
+        "required": [
+          "date",
+          "text",
+          "account",
+          "gross",
+          "payment"
+        ],
+        "properties": {
+          "account": {
+            "type": "string",
+            "description": "The account: its national number or identity."
+          },
+          "date": {
+            "type": "string",
+            "description": "`YYYY-MM-DD`."
+          },
+          "documents": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The documents it rests on: identities of documents recorded."
+          },
+          "gross": {
+            "type": "string",
+            "description": "The gross amount, VAT included, with a decimal point; negative for a refund."
+          },
+          "payment": {
+            "type": "string",
+            "description": "`bank` or `cash`."
+          },
+          "tax": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The tax code; none for what VAT does not touch."
+          },
+          "text": {
+            "type": "string",
+            "description": "What it is about."
+          }
+        }
+      },
+      "SuggestionView": {
+        "type": "object",
+        "description": "A proposal for an entry.",
+        "required": [
+          "source",
+          "booking"
+        ],
+        "properties": {
+          "booking": {
+            "$ref": "#/components/schemas/BookingView",
+            "description": "The booking proposed."
+          },
+          "number": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The invoice's number, for `invoice`."
+          },
+          "source": {
+            "type": "string",
+            "description": "`booked` – the payment booked before the statement came, booked again naming the entry –, `invoice` – an\nunbooked invoice it pays – or `history` – as the same party's last entry."
+          }
+        }
+      },
+      "TaxCodeView": {
+        "type": "object",
+        "description": "A tax code to choose from.",
+        "required": [
+          "code",
+          "name"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "The code: `de-in-19`."
+          },
+          "name": {
+            "type": "string",
+            "description": "Its name."
+          }
+        }
+      },
+      "VatReturnDue": {
+        "type": "object",
+        "description": "An advance VAT return and when it is due.",
+        "required": [
+          "from",
+          "to",
+          "due"
+        ],
+        "properties": {
+          "due": {
+            "type": "string",
+            "description": "The day it is due."
+          },
+          "from": {
+            "type": "string",
+            "description": "The first day of its period."
+          },
+          "to": {
+            "type": "string",
+            "description": "The last day of its period."
+          }
+        }
+      },
+      "Written": {
+        "type": "object",
+        "description": "What was written.",
+        "required": [
+          "events"
+        ],
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The events, `sha256:…`."
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+[package]
+name = "spezado-store"
+description = "Storage of spezado: events in SQLite, originals in the file system"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+librotenado.workspace = true
+rusqlite = { version = "0.41.1", features = ["bundled"] }
+thiserror = "2.0.21"

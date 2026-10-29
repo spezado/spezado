@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+[package]
+name = "spezado-tui"
+description = "The terminal interface of spezado"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+spezado-core.workspace = true
+librotenado.workspace = true
+ratatui = "0.30.2"
+spezado-app.workspace = true
+thiserror = "2.0.21"
+serde_json = "1.0.154"
