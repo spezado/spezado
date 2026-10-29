@@ -24,6 +24,7 @@ use spezado_law::{Facts, LawModule, Report, ReportBasis};
 use spezado_store::{Store, StoreError};
 
 mod bank;
+mod filing;
 mod invoice_pdf;
 mod invoicing;
 mod opening;
@@ -32,6 +33,7 @@ mod sync;
 mod workflows;
 
 pub use bank::{ImportedStatements, OpenEntry, Source, Suggestion};
+pub use filing::FilingItem;
 pub use invoicing::{Customer, INVOICE_TAX_CODES, InvoiceFormat, InvoiceProfile, NewInvoice, NewLine, WrittenInvoice};
 pub use spezado_law_de::STATES as GERMAN_STATES;
 pub use sync::{SyncMember, SyncReport, parse_invitation};
@@ -115,6 +117,9 @@ pub enum AppError {
     /// Synchronising through a relay failed.
     #[error("{0}")]
     Sync(String),
+    /// Preparing, submitting or asking about a filing failed.
+    #[error("{0}")]
+    Adapter(String),
     /// Books this device may only read.
     #[error("this device may only read the books {0}")]
     ReadOnly(BooksId),
@@ -455,7 +460,7 @@ impl Workspace {
     ) -> Result<ReportFigures, AppError> {
         let (configuration, country, legal_form, module) = self.law_for(books, owner, from)?;
         let facts = Facts::new(&configuration, country, legal_form.as_deref());
-        let Report { id, name, basis, mapping } = module
+        let Report { id, name, basis, mapping, .. } = module
             .reports(&facts, from, to)
             .into_iter()
             .find(|candidate| candidate.id == report)

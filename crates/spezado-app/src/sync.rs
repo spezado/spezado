@@ -24,7 +24,7 @@ use crate::{AppError, Books, Workspace, now_ms};
 /// Where the state of synchronising a set of books is kept.
 const SYNC: &str = "sync";
 /// The service under which seeds are kept in the operating system's key store.
-const KEYCHAIN: &str = "spezado";
+pub(crate) const KEYCHAIN: &str = "spezado";
 /// Where the books are listed that this device has asked to join.
 const JOINING: &str = "joining";
 /// How long an invitation is good for, in seconds.

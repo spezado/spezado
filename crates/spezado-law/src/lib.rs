@@ -8,7 +8,9 @@
 
 use std::collections::BTreeMap;
 
-use librotenado::{AccountId, Chart, ChartTranslation, Configuration, Country, Date, ReportMapping, TaxCode, TaxTable};
+use librotenado::{
+    AccountId, Chart, ChartTranslation, Configuration, Country, Date, FilingKind, ReportMapping, TaxCode, TaxTable,
+};
 
 /// What a law module needs to know about an owner, on a date.
 #[derive(Debug, Clone, Copy)]
@@ -53,6 +55,8 @@ pub struct Report {
     pub basis: ReportBasis,
     /// The mapping of accounts and tax codes onto its positions.
     pub mapping: ReportMapping,
+    /// The kind of filing it is submitted as on its own; none when it is not filed, or only with others.
+    pub filing: Option<FilingKind>,
 }
 
 /// The accounts of a national chart that workflows book on when nobody chose others: where money is, what is sold

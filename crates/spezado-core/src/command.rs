@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 
 use librotenado::{
     Account, Booking, BookingError, BooksId, Chart, Closing, Configuration, Date, Document, DocumentId, EventHash,
-    Invoicing, Organisation, PartyId, Payload, Person, Series,
+    Filing, FilingId, FilingState, Invoicing, Organisation, PartyId, Payload, Person, Series, SubmissionState,
 };
 
 use crate::Books;
@@ -45,6 +45,17 @@ pub enum Command {
     ConfigureInvoicing(Invoicing),
     /// Gives a device a series of invoice numbers of an owner.
     AssignSeries(Series),
+    /// Records a filing derived from the books as they are now (spec part 0007 of librotenado).
+    PrepareFiling(Filing),
+    /// Records where a prepared filing stands at the authority, with the documents of what it returned.
+    RecordFiling {
+        /// The prepared filing.
+        filing: FilingId,
+        /// Where it stands.
+        state: SubmissionState,
+        /// The recorded documents of what the authority returned.
+        documents: Vec<DocumentId>,
+    },
     /// Closes an owner's books up to a date.
     Close {
         /// The owner.
@@ -143,6 +154,25 @@ pub enum CommandError {
         /// The reversal's event.
         by: EventHash,
     },
+    /// A filing of that identity is prepared already.
+    #[error("filing {0} is prepared already")]
+    FilingExists(FilingId),
+    /// No filing of that identity is prepared.
+    #[error("filing {0} is not prepared")]
+    UnknownFiling(FilingId),
+    /// A filing must be derived from the books as they are when it is prepared.
+    #[error("filing {0} was not derived from the books as they are")]
+    FilingBasis(FilingId),
+    /// The filing cannot move to that state from where it stands.
+    #[error("filing {filing} is {from:?} and cannot become {to:?}")]
+    FilingState {
+        /// The filing.
+        filing: FilingId,
+        /// Where it stands.
+        from: FilingState,
+        /// Where it was to move.
+        to: SubmissionState,
+    },
     /// A closing must close more than the last one.
     #[error("the books of {owner} are closed up to {closed} already")]
     ClosedAlready {
@@ -238,6 +268,43 @@ impl Books {
                     return Err(CommandError::NotAnOwner(series.owner));
                 }
                 Payload::SeriesAssigned { series }
+            }
+            Command::PrepareFiling(filing) => {
+                if !self.is_owner(&filing.filer) {
+                    return Err(CommandError::NotAnOwner(filing.filer));
+                }
+                let filings = events.filings();
+                if filings.contains_key(&filing.id) {
+                    return Err(CommandError::FilingExists(filing.id));
+                }
+                if let Some(corrects) = filing.corrects.as_ref().filter(|id| !filings.contains_key(*id)) {
+                    return Err(CommandError::UnknownFiling(corrects.clone()));
+                }
+                if filing.basis != events.state() {
+                    return Err(CommandError::FilingBasis(filing.id));
+                }
+                Payload::FilingPrepared { filing }
+            }
+            Command::RecordFiling { filing, state, documents } => {
+                let Some((_, from)) = events.filings().get(&filing).cloned() else {
+                    return Err(CommandError::UnknownFiling(filing));
+                };
+                // Submitted again after a rejection, or answered after a submission; an answer is final.
+                let moves = match state {
+                    SubmissionState::Submitted => matches!(from, FilingState::Prepared | FilingState::Rejected),
+                    SubmissionState::Accepted | SubmissionState::Rejected => from == FilingState::Submitted,
+                };
+                if !moves {
+                    return Err(CommandError::FilingState { filing, from, to: state });
+                }
+                if let Some(document) = documents.iter().find(|d| !self.document_recorded(d)) {
+                    return Err(CommandError::UnknownDocument(document.clone()));
+                }
+                match state {
+                    SubmissionState::Submitted => Payload::FilingSubmitted { filing, documents },
+                    SubmissionState::Accepted => Payload::FilingAccepted { filing, documents },
+                    SubmissionState::Rejected => Payload::FilingRejected { filing, documents },
+                }
             }
             Command::Close { owner, to, software } => {
                 if !self.is_owner(&owner) {
@@ -392,6 +459,51 @@ mod tests {
         desk.run(Command::Book(booking("2026-10-28", 1240))).unwrap();
         assert_eq!(desk.books.review(&desk.chart), vec![]);
         assert_eq!(desk.books.journal(Some(&owner()), None, None).len(), 1);
+    }
+
+    /// A filing is prepared from the books as they are, and moves on only as an authority's answers allow.
+    #[test]
+    fn filings_move_on_in_order() {
+        let mut desk = Desk::new();
+        desk.run(Command::Book(booking("2026-03-15", 1240))).unwrap();
+        let filing = |id: &str, basis, corrects: Option<&str>| -> Filing {
+            let mut json = serde_json::json!({
+                "id": id, "kind": "cash_basis_statement", "jurisdiction": "DE", "filer": OWNER,
+                "from": "2026-01-01", "to": "2026-12-31", "basis": basis,
+                "content": [{"report": "de-euer", "version": "2026", "fields": {"27": {"base_units": "1240", "currency": "EUR"}}}],
+            });
+            if let Some(corrects) = corrects {
+                json["corrects"] = corrects.into();
+            }
+            serde_json::from_value(json).unwrap()
+        };
+        let first: FilingId = "0192f1e4-0000-7000-8000-0000000000f1".parse().unwrap();
+        let stale = filing(first.as_str(), "sha256:".to_owned() + &"0".repeat(64), None);
+        assert_eq!(desk.run(Command::PrepareFiling(stale)), Err(CommandError::FilingBasis(first.clone())));
+        let state = desk.books.events().state().to_string();
+        desk.run(Command::PrepareFiling(filing(first.as_str(), state.clone(), None))).unwrap();
+        let again =
+            desk.run(Command::PrepareFiling(filing(first.as_str(), desk.books.events().state().to_string(), None)));
+        assert_eq!(again, Err(CommandError::FilingExists(first.clone())));
+
+        let record = |state| Command::RecordFiling { filing: first.clone(), state, documents: vec![] };
+        let early = desk.run(record(SubmissionState::Accepted));
+        assert!(matches!(early, Err(CommandError::FilingState { from: FilingState::Prepared, .. })));
+        desk.run(record(SubmissionState::Submitted)).unwrap();
+        desk.run(record(SubmissionState::Rejected)).unwrap();
+        desk.run(record(SubmissionState::Submitted)).unwrap();
+        desk.run(record(SubmissionState::Accepted)).unwrap();
+        let after = desk.run(record(SubmissionState::Rejected));
+        assert!(matches!(after, Err(CommandError::FilingState { from: FilingState::Accepted, .. })));
+
+        // A correction names the filing it corrects, which must be prepared.
+        let second = "0192f1e4-0000-7000-8000-0000000000f2";
+        let unknown =
+            filing(second, desk.books.events().state().to_string(), Some("0192f1e4-0000-7000-8000-0000000000f9"));
+        assert!(matches!(desk.run(Command::PrepareFiling(unknown)), Err(CommandError::UnknownFiling(_))));
+        let correction = filing(second, desk.books.events().state().to_string(), Some(first.as_str()));
+        desk.run(Command::PrepareFiling(correction)).unwrap();
+        assert_eq!(desk.books.events().filings().len(), 2);
     }
 
     #[test]

@@ -2557,8 +2557,8 @@ dependencies = [
 
 [[package]]
 name = "librotenado"
-version = "0.6.0"
-source = "git+https://github.com/librotenado/librotenado?tag=v0.6.0#597cca16a15cf84ab58491e82f2d1d44629a8799"
+version = "0.7.0"
+source = "git+https://github.com/librotenado/librotenado?tag=v0.7.0#fc40c96b533918ddfc7b77ea8f91794fd86439d6"
 dependencies = [
  "base64 0.23.1",
  "chacha20poly1305",
@@ -4677,7 +4677,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.3",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",

@@ -9,7 +9,7 @@
 
 use std::collections::BTreeMap;
 
-use librotenado::{AccountId, Chart, ChartTranslation, Date, ReportMapping, ReturnPeriod, TaxTable};
+use librotenado::{AccountId, Chart, ChartTranslation, Date, FilingKind, ReportMapping, ReturnPeriod, TaxTable};
 use spezado_law::{Facts, LawModule, Report, ReportBasis, StandardAccounts};
 
 use crate::holidays::{next_day, weekday};
@@ -79,13 +79,20 @@ impl LawModule for Germany {
                 name: "Umsatzsteuer-Voranmeldung",
                 basis: ReportBasis::Period,
                 mapping,
+                filing: Some(FilingKind::VatReturn),
             });
         }
         match configuration.accounting.as_ref().map(|code| code.as_str()) {
             Some("de-cash-basis") if matches!(year, Some(2025 | 2026)) => {
                 let mapping =
                     if year == Some(2025) { ReportMapping::de_euer_2025() } else { ReportMapping::de_euer_2026() };
-                reports.push(Report { id: "de-euer", name: "Anlage EÜR", basis: ReportBasis::Period, mapping });
+                reports.push(Report {
+                    id: "de-euer",
+                    name: "Anlage EÜR",
+                    basis: ReportBasis::Period,
+                    mapping,
+                    filing: Some(FilingKind::CashBasisStatement),
+                });
             }
             Some("de-double-entry") if year == Some(2026) => {
                 reports.push(Report {
@@ -93,12 +100,15 @@ impl LawModule for Germany {
                     name: "Bilanz (§ 266 HGB)",
                     basis: ReportBasis::Balances,
                     mapping: ReportMapping::de_hgb_266_2026(),
+                    // Filed as the E-Bilanz, with mappings of their own (OPEN).
+                    filing: None,
                 });
                 reports.push(Report {
                     id: "de-hgb-275-gkv",
                     name: "Gewinn- und Verlustrechnung (§ 275 Abs. 2 HGB)",
                     basis: ReportBasis::Period,
                     mapping: ReportMapping::de_hgb_275_gkv_2026(),
+                    filing: None,
                 });
             }
             _ => {}
