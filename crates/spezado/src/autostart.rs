@@ -37,6 +37,7 @@ pub fn arguments(directory: Option<&Path>, port: u16) -> Vec<String> {
     arguments
 }
 
+#[cfg(not(target_os = "windows"))]
 fn home() -> Result<PathBuf> {
     dirs::home_dir().context("no home directory")
 }

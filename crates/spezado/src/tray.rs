@@ -30,12 +30,15 @@ enum Message {
 /// Runs the server and the icon until "Quit" is chosen. `again` are the arguments that start this again at login.
 pub fn run(workspace: Workspace, listen: SocketAddr, pairing: Option<String>, again: Vec<String>) -> Result<()> {
     let program = std::env::current_exe().context("the path of this program")?;
-    let mut event_loop = EventLoopBuilder::<Message>::with_user_event().build();
+    let event_loop = EventLoopBuilder::<Message>::with_user_event().build();
+    // On macOS an accessory: the icon in the menu bar, nothing in the Dock.
     #[cfg(target_os = "macos")]
-    {
+    let event_loop = {
         use tao::platform::macos::{ActivationPolicy, EventLoopExtMacOS};
+        let mut event_loop = event_loop;
         event_loop.set_activation_policy(ActivationPolicy::Accessory);
-    }
+        event_loop
+    };
     let proxy = event_loop.create_proxy();
     MenuEvent::set_event_handler(Some(move |event| {
         let _ = proxy.send_event(Message::Menu(event));
