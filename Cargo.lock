@@ -2564,6 +2564,7 @@ dependencies = [
 [[package]]
 name = "librotenado"
 version = "0.7.2"
+source = "git+https://github.com/librotenado/librotenado?tag=v0.7.2#3dff6cfe43602b1c36665bbe90255233772a3734"
 dependencies = [
  "base64 0.23.1",
  "chacha20poly1305",
