@@ -9,13 +9,13 @@ precedence = "aggregate"
 SPDX-FileCopyrightText = "falkOSS – Falcon Lake Open Source Software gUG (haftungsbeschränkt) i. G. and the spezado contributors"
 
 [[annotations]]
-path = ["**/*.md", "**/.gitignore", ".gitattributes", "api/openapi.json", "Cargo.lock", "brand/svg/**", "brand/png/**", "brand/web/**"]
+path = ["**/*.md", "**/.gitignore", ".gitattributes", "api/openapi.json", "Cargo.lock", "brand/svg/**", "brand/png/**", "brand/web/**", "docs/src/openapi.json", "docs/theme/favicon.*"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "falkOSS – Falcon Lake Open Source Software gUG (haftungsbeschränkt) i. G. and the spezado contributors"
 SPDX-License-Identifier = "AGPL-3.0-or-later"
 
 [[annotations]]
-path = ["brand/fonts/**", "brand/web/fonts/**"]
+path = ["brand/fonts/**", "brand/web/fonts/**", "docs/src/fonts/**"]
 precedence = "override"
 SPDX-FileCopyrightText = ["2014, 2015 (URW)++ Design & Development", "2019-2020 Daniel Benjamin Miller"]
 SPDX-License-Identifier = "OFL-1.1"

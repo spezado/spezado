@@ -4,3 +4,9 @@
 # The web app: its packages and its build, which the binary embeds and CI builds.
 /web/node_modules
 /web/dist
+
+# The documentation: its build, and what docs/build.sh copies in.
+/docs/book
+/docs/src/fonts
+/docs/src/openapi.json
+/docs/theme/favicon.*

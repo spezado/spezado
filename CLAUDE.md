@@ -10,9 +10,13 @@ modules. The data model and protocol live in [librotenado](https://github.com/li
 CC BY 4.0 specification); the design is in [docs/spec.md](docs/spec.md).
 
 Version 0.1.0, a preview (`CHANGELOG.md`): milestones 0 to 3 – core, terminal interface, bank, API and web app – on
-librotenado 0.4 (tag `v0.4.0`). The crates and what goes where are listed in CONTRIBUTING.md; the plan is in
+librotenado 0.4 (tag `v0.4.1`). The crates and what goes where are listed in CONTRIBUTING.md; the plan is in
 [docs/spec.md](docs/spec.md). Releases: a tag `v*` runs `.github/workflows/release.yml` – binaries with the web app
 embedded for Linux, macOS and Windows, published as a pre-release with the notes of `CHANGELOG.md`.
+
+Documentation (`docs/`, mdBook, published to spezado.dev by `.github/workflows/docs.yml`): guides in `docs/src/`;
+the design (`docs/spec.md`) and the changelog are only included there – each has one home. Keep the guides in step
+with the terminal, the web app, the command line and the API.
 
 - `spezado-core` – pure: `Books` over librotenado's `EventSet`, `Command` → checked → one event payload, journal,
   review list. No I/O, no clock.

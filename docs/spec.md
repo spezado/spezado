@@ -145,7 +145,7 @@ advisers have reviewed them. On top of milestones 0 to 3:
 - Releases: binaries for Linux (x86_64, arm64), macOS (arm64) and Windows (x86_64) with the web app embedded.
 
 Milestone 3: `spezado serve` – the open API on the device itself, described in
-[api/openapi.json](../api/openapi.json): pairing, books and their set-up, overview, journal, accounts, balances, tax
+[api/openapi.json](https://github.com/spezado/spezado/blob/main/api/openapi.json): pairing, books and their set-up, overview, journal, accounts, balances, tax
 codes, bookings from a gross amount and in lines, reversals, documents (read with a booking proposal, filed with or
 without a booking, the original fetched again), bank statements and their open entries (booked by hand, by a proposal,
 all proposals at once; FinTS answers 501 until registered), reports, the review list, closing, the GoBD export as a

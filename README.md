@@ -18,8 +18,8 @@ installations, and keeps working offline: data is local first and synchronised e
 > English: bank statements, documents and e-invoices, invoices written as XRechnung or ZUGFeRD, the advance VAT returns
 > and the Anlage EÜR. Not yet for a real tax return – the German mappings are drafts until tax advisers have reviewed
 > them.
-> The design is in [docs/spec.md](docs/spec.md); data follows the open protocol
-> [librotenado](https://github.com/librotenado/librotenado).
+> The documentation is at [spezado.dev](https://spezado.dev), the design in [docs/spec.md](docs/spec.md); data
+> follows the open protocol [librotenado](https://github.com/librotenado/librotenado).
 
 ## Trying it out
 
