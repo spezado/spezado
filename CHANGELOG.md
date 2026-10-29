@@ -2,7 +2,12 @@
 
 ## Unreleased
 
-- **`spezado serve` for apps that start it themselves:** it creates the workspace if there is none, and takes the
+- **`spezado tray`:** the server with an icon in the menu bar (macOS) or the system tray (Windows) – open the web
+  app, pair a device, start at login, quit. Built into the releases for macOS and Windows; Linux keeps `serve`
+  without GTK.
+- **`spezado autostart on|off`:** starts spezado at login – a launch agent on macOS, the Run key on Windows, an XDG
+  autostart entry on Linux.
+- **For apps that start spezado themselves:** `serve` and `tray` create the workspace if there is none and take the
   pairing code from `SPEZADO_PAIRING_CODE` (at least 16 letters, digits, `-` or `_`) – in the environment rather
   than on the command line, where others on the device could read it.
 

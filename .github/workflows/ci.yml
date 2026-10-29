@@ -47,6 +47,20 @@ jobs:
       - run: cargo clippy --locked --all-targets
       - run: cargo test --locked
 
+  # The menu bar and the system tray (`spezado tray`), built where the release has them.
+  tray:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Rust toolchain from rust-toolchain.toml
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@2201cc584a476d1b508be977bbe4b7d1c7a52e9c # v2.9.3
+      - run: cargo clippy --locked -p spezado --all-targets --features tray
+
   licences:
     runs-on: ubuntu-latest
     steps:

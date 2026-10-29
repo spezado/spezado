@@ -5,7 +5,8 @@ copy, never here:
 
 - `fonts/` – Domitian (OFL-1.1), embedded in invoice PDFs;
 - `web/` – icons and web fonts for the documentation;
-- `svg/` – the lockups shown in the README.
+- `svg/` – the lockups shown in the README;
+- `png/` – the icons of `spezado tray`: the mark in black (a template for the macOS menu bar) and the small icon.
 
 The artwork is licensed CC BY-ND 4.0, the fonts OFL-1.1; spezado's name and brand belong to falkOSS – see the brand
 repository for the terms.

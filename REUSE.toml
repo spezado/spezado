@@ -23,7 +23,7 @@ SPDX-License-Identifier = "MIT"
 
 # Copies of the brand's artwork from spezado/brand – to be passed on unchanged; name and brand are falkOSS's.
 [[annotations]]
-path = ["brand/svg/**", "brand/web/**", "docs/theme/favicon.*", "web/public/*.svg"]
+path = ["brand/svg/**", "brand/png/**", "brand/web/**", "docs/theme/favicon.*", "web/public/*.svg"]
 precedence = "override"
 SPDX-FileCopyrightText = "falkOSS – Falcon Lake Open Source Software gUG (haftungsbeschränkt) i. G."
 SPDX-License-Identifier = "CC-BY-ND-4.0"

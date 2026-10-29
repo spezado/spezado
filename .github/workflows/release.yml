@@ -65,7 +65,10 @@ jobs:
       - name: Rust toolchain from rust-toolchain.toml
         run: rustup toolchain install && rustup target add ${{ matrix.target }}
       - name: Binary
-        run: cargo build --release --locked -p spezado --target ${{ matrix.target }}
+        # With the menu bar or the system tray on macOS and Windows; on Linux it would need GTK even on servers.
+        run: |
+          features=$([[ "${{ matrix.target }}" == *linux* ]] && echo "" || echo "--features tray")
+          cargo build --release --locked -p spezado --target ${{ matrix.target }} $features
       - name: Pack and upload, with a checksum
         env:
           GH_TOKEN: ${{ github.token }}

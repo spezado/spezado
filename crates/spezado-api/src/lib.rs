@@ -295,18 +295,32 @@ pub struct Serving {
     pub code: String,
     /// The fingerprint of the certificate, with TLS.
     pub fingerprint: Option<String>,
+    /// Makes new pairing codes while the server runs.
+    pub pairing: Pairing,
+}
+
+/// Makes new pairing codes for a running server – for a menu that pairs one more device.
+#[derive(Debug, Clone)]
+pub struct Pairing(Api);
+
+impl Pairing {
+    /// A new code, valid for a quarter of an hour; the one before stops being valid.
+    pub fn new_code(&self) -> String {
+        self.0.pairing_code()
+    }
 }
 
 /// Serves the API and the web app for a workspace at `listen` until interrupted. On the device itself (a loopback
 /// address) it speaks HTTP; to other devices only TLS, with a certificate of the workspace's own made for `host` –
 /// the name other devices reach this one by. The pairing code is `pairing` when given, else made up. `ready` is told
-/// what to show.
+/// what to show; the server stops gracefully when `stop` completes – Ctrl-C on the command line.
 pub fn serve(
     workspace: Workspace,
     listen: SocketAddr,
     host: &str,
     pairing: Option<String>,
     ready: impl FnOnce(&Serving),
+    stop: impl Future<Output = ()> + Send + 'static,
 ) -> Result<(), ServeError> {
     let runtime = tokio::runtime::Builder::new_multi_thread().enable_all().build()?;
     let tls = if listen.ip().is_loopback() { None } else { Some(tls::configuration(&workspace, host)?) };
@@ -324,29 +338,28 @@ pub fn serve(
             None => {
                 let listener = tokio::net::TcpListener::bind(listen).await?;
                 let address = listener.local_addr()?;
-                ready(&Serving { link: format!("http://{address}/#pair={code}"), code, fingerprint: None });
-                axum::serve(listener, router(api))
-                    .with_graceful_shutdown(async {
-                        let _ = tokio::signal::ctrl_c().await;
-                    })
-                    .await?;
+                let pairing = Pairing(api.clone());
+                ready(&Serving { link: format!("http://{address}/#pair={code}"), code, fingerprint: None, pairing });
+                axum::serve(listener, router(api)).with_graceful_shutdown(stop).await?;
             }
             Some((config, fingerprint)) => {
                 let handle = axum_server::Handle::new();
-                let stop = handle.clone();
+                let stopping = handle.clone();
                 tokio::spawn(async move {
-                    let _ = tokio::signal::ctrl_c().await;
-                    stop.graceful_shutdown(Some(std::time::Duration::from_secs(5)));
+                    stop.await;
+                    stopping.graceful_shutdown(Some(std::time::Duration::from_secs(5)));
                 });
                 let server =
                     axum_server::bind_rustls(listen, axum_server::tls_rustls::RustlsConfig::from_config(config))
                         .handle(handle.clone());
+                let pairing = Pairing(api.clone());
                 let serving = tokio::spawn(server.serve(router(api).into_make_service()));
                 let address = handle.listening().await.unwrap_or(listen);
                 ready(&Serving {
                     link: format!("https://{host}:{}/#pair={code}&fingerprint={fingerprint}", address.port()),
                     code,
                     fingerprint: Some(fingerprint),
+                    pairing,
                 });
                 serving.await.map_err(std::io::Error::other)??;
             }

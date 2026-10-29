@@ -13,6 +13,10 @@ use librotenado::{
 use spezado_app::{Party, Workspace, new_id};
 use spezado_core::{Command, format_amount, parse_amount};
 
+mod autostart;
+#[cfg(feature = "tray")]
+mod tray;
+
 /// Free accounting for everyone.
 #[derive(Debug, Parser)]
 #[command(name = "spezado", version, about)]
@@ -25,6 +29,13 @@ struct Cli {
     books: Option<BooksId>,
     #[command(subcommand)]
     command: Commands,
+}
+
+/// On or off.
+#[derive(Debug, Clone, Copy, clap::ValueEnum)]
+enum Switch {
+    On,
+    Off,
 }
 
 #[derive(Debug, Subcommand)]
@@ -132,6 +143,23 @@ enum Commands {
         /// The name other devices reach this one by; default: the name of this computer.
         #[arg(long)]
         host: Option<String>,
+    },
+    /// Runs the server on this device with an icon in the menu bar or the system tray: open the web app, pair a
+    /// device, start at login, quit. Creates the workspace if there is none; takes the pairing code from
+    /// SPEZADO_PAIRING_CODE if set.
+    #[cfg(feature = "tray")]
+    Tray {
+        /// The port on this device.
+        #[arg(long, default_value_t = 8048)]
+        port: u16,
+    },
+    /// Whether spezado starts at login – with its icon where this build has one, else as the server alone.
+    Autostart {
+        /// on or off; without, tells whether it does.
+        state: Option<Switch>,
+        /// The port the server listens on.
+        #[arg(long, default_value_t = 8048)]
+        port: u16,
     },
     /// Writes the description of the API in OpenAPI to standard output.
     Openapi,
@@ -250,9 +278,19 @@ fn pairing_code_given() -> Result<Option<String>> {
     code.map(Some).context("SPEZADO_PAIRING_CODE: at least 16 letters, digits, - or _")
 }
 
+/// Whether a command creates the workspace if there is none: the terminal interface and the server.
+fn starts_from_nothing(command: &Commands) -> bool {
+    match command {
+        Commands::Tui { .. } | Commands::Serve { .. } => true,
+        #[cfg(feature = "tray")]
+        Commands::Tray { .. } => true,
+        _ => false,
+    }
+}
+
 fn main() -> Result<()> {
     let cli = Cli::parse();
-    let directory = match cli.dir {
+    let directory = match cli.dir.clone() {
         Some(directory) => directory,
         None => match std::env::var_os("SPEZADO_DIR") {
             Some(directory) => directory.into(),
@@ -275,6 +313,18 @@ fn main() -> Result<()> {
         })?;
         return Ok(());
     }
+    if let Commands::Autostart { state, port } = cli.command {
+        match state {
+            Some(Switch::On) => {
+                let program = std::env::current_exe().context("the path of this program")?;
+                autostart::enable(&program, &autostart::arguments(cli.dir.as_deref(), port))?;
+            }
+            Some(Switch::Off) => autostart::disable()?,
+            None => {}
+        }
+        println!("{}", if autostart::enabled()? { "on" } else { "off" });
+        return Ok(());
+    }
     if let Commands::Init { device } = cli.command {
         let device = device.unwrap_or_else(|| {
             let id: String = uuid_suffix();
@@ -285,16 +335,14 @@ fn main() -> Result<()> {
         return Ok(());
     }
     // The terminal interface and the server start from nothing: a workspace for this device, then setting up books.
-    if matches!(cli.command, Commands::Tui { .. } | Commands::Serve { .. })
-        && !directory.join("spezado.sqlite").exists()
-    {
+    if starts_from_nothing(&cli.command) && !directory.join("spezado.sqlite").exists() {
         let device = format!("device-{}", uuid_suffix()).parse().expect("a valid device name");
         Workspace::create(&directory, device)?;
     }
     let mut workspace = Workspace::open(&directory)
         .with_context(|| format!("{} – create one with `spezado init`", directory.display()))?;
     match cli.command {
-        Commands::Init { .. } => unreachable!("handled above"),
+        Commands::Init { .. } | Commands::Autostart { .. } => unreachable!("handled above"),
         Commands::Books => list_books(&workspace),
         Commands::SetUp(setup) => {
             let id = set_up(&mut workspace, setup)?;
@@ -305,21 +353,39 @@ fn main() -> Result<()> {
             let listen = listen.unwrap_or_else(|| std::net::SocketAddr::from(([127, 0, 0, 1], port)));
             let host = host.unwrap_or_else(|| gethostname::gethostname().to_string_lossy().into_owned());
             let pairing = pairing_code_given()?;
-            spezado_api::serve(workspace, listen, &host, pairing, |serving| {
-                println!("spezado serves at {}", serving.link.split('#').next().unwrap_or_default());
-                println!("Pair a device with the code {} – or open {}", serving.code, serving.link);
-                if let Some(fingerprint) = &serving.fingerprint {
-                    println!("The certificate's fingerprint is {fingerprint}; apps check it, browsers ask once.");
-                    if let Ok(code) = qrcode::QrCode::new(serving.link.as_bytes()) {
-                        use qrcode::render::unicode::Dense1x2;
-                        let image =
-                            code.render::<Dense1x2>().dark_color(Dense1x2::Light).light_color(Dense1x2::Dark).build();
-                        println!("{image}");
+            spezado_api::serve(
+                workspace,
+                listen,
+                &host,
+                pairing,
+                |serving| {
+                    println!("spezado serves at {}", serving.link.split('#').next().unwrap_or_default());
+                    println!("Pair a device with the code {} – or open {}", serving.code, serving.link);
+                    if let Some(fingerprint) = &serving.fingerprint {
+                        println!("The certificate's fingerprint is {fingerprint}; apps check it, browsers ask once.");
+                        if let Ok(code) = qrcode::QrCode::new(serving.link.as_bytes()) {
+                            use qrcode::render::unicode::Dense1x2;
+                            let image = code
+                                .render::<Dense1x2>()
+                                .dark_color(Dense1x2::Light)
+                                .light_color(Dense1x2::Dark)
+                                .build();
+                            println!("{image}");
+                        }
                     }
-                }
-                println!("The code is valid for 15 minutes. Stop with Ctrl-C.");
-            })?;
+                    println!("The code is valid for 15 minutes. Stop with Ctrl-C.");
+                },
+                async {
+                    let _ = tokio::signal::ctrl_c().await;
+                },
+            )?;
             Ok(())
+        }
+        #[cfg(feature = "tray")]
+        Commands::Tray { port } => {
+            let pairing = pairing_code_given()?;
+            let again = autostart::arguments(cli.dir.as_deref(), port);
+            tray::run(workspace, std::net::SocketAddr::from(([127, 0, 0, 1], port)), pairing, again)
         }
         Commands::Tui { lang } => {
             let lang = spezado_tui::language(&workspace, lang.as_deref());
@@ -391,7 +457,9 @@ fn run(workspace: &mut Workspace, books: &BooksId, command: Commands) -> Result<
             }
         }
         Commands::Export => std::io::stdout().write_all(&workspace.export(books)?)?,
-        Commands::Tui { .. } => unreachable!("handled in main"),
+        Commands::Tui { .. } | Commands::Autostart { .. } => unreachable!("handled in main"),
+        #[cfg(feature = "tray")]
+        Commands::Tray { .. } => unreachable!("handled in main"),
         Commands::Serve { .. } | Commands::Openapi | Commands::Sync { .. } | Commands::Relay { .. } => {
             unreachable!("handled in main")
         }

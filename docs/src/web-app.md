@@ -9,6 +9,21 @@ spezado serve
 # Pair a device with the code 6958d36774 – or open http://127.0.0.1:8048/#pair=6958d36774
 ```
 
+## In the menu bar
+
+`spezado tray` runs the same server with an icon in the menu bar (macOS) or the system tray (Windows): **Open
+spezado** opens the web app, **Pair a device …** makes a new pairing code and opens the pairing link, **Start at
+login** starts it whenever you log in, **Quit spezado** stops it. Like `serve`, it creates the workspace if there is
+none. The release builds have it on macOS and Windows; on Linux, `spezado serve` runs without an icon.
+
+```sh
+spezado tray
+spezado autostart on      # start at login: `tray` where there is one, else `serve`; `off` to stop, none to ask
+```
+
+Apps that start spezado themselves give it the pairing code in `SPEZADO_PAIRING_CODE` – at least 16 letters, digits,
+`-` or `_` – and pair with it at once.
+
 ## Other devices
 
 To reach spezado from a phone, a tablet or an app in the same network, let it listen there – only over TLS:
