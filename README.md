@@ -67,7 +67,7 @@ The workspace lives in spezado's folder in your data directory, or wherever `--d
 ## Licence
 
 [GNU Affero General Public License v3.0 or later](LICENSE), except the description of the API, `api/openapi.json`
-(MIT), and the copies of the brand in `brand/` – the artwork under CC BY-ND 4.0, Domitian under OFL-1.1, from
+(MIT), the documentation's text in `docs/` ([CC BY 4.0](LICENSES/CC-BY-4.0.txt)), and the copies of the brand in `brand/` – the artwork under CC BY-ND 4.0, Domitian under OFL-1.1, from
 [spezado/brand](https://github.com/spezado/brand); spezado's name and brand belong to falkOSS. Contributions with a
 [DCO](https://developercertificate.org) sign-off (`git commit -s`), no CLA – see [CONTRIBUTING.md](CONTRIBUTING.md).
 

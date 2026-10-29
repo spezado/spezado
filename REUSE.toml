@@ -15,6 +15,14 @@ SPDX-FileCopyrightText = "falkOSS – Falcon Lake Open Source Software gUG (haft
 SPDX-License-Identifier = "AGPL-3.0-or-later"
 
 # The description of the API: MIT, so that clients generated from it – like spezado/apps – can be licensed freely.
+# The documentation's text, under CC BY 4.0 like librotenado's specification and whitepaper, so that text moves
+# freely between them.
+[[annotations]]
+path = ["docs/**/*.md"]
+precedence = "override"
+SPDX-FileCopyrightText = "falkOSS – Falcon Lake Open Source Software gUG (haftungsbeschränkt) i. G. and the spezado contributors"
+SPDX-License-Identifier = "CC-BY-4.0"
+
 [[annotations]]
 path = ["api/openapi.json", "docs/src/openapi.json"]
 precedence = "override"

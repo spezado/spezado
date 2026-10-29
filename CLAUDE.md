@@ -90,7 +90,8 @@ README. Change the brand there and copy; never edit the copies.
 
 - Everything here: **AGPL-3.0-or-later**, an SPDX header in every own source file. Exceptions (see `REUSE.toml`):
   the description of the API, `api/openapi.json`, is **MIT**, so that clients generated from it can be licensed
-  freely; the brand's artwork is CC BY-ND 4.0 and the Domitian fonts OFL-1.1, as in spezado/brand.
+  freely; the documentation's text in `docs/` is **CC BY 4.0**, like librotenado's specification, so that text moves
+  freely between them; the brand's artwork is CC BY-ND 4.0 and the Domitian fonts OFL-1.1, as in spezado/brand.
 - Never copy core or business logic into the MIT repositories: the librotenado library, and the Flutter apps in
   `spezado/apps`, which talk to spezado through its open API only.
 

@@ -53,7 +53,7 @@ protocol, librotenado, not here.
 ## Rules
 
 - **Licence:** AGPL-3.0-or-later, an SPDX header in every source file; files that cannot carry one are listed in
-  `REUSE.toml`. Code that belongs in the protocol goes to librotenado (MIT) – written there, never copied from here.
+  `REUSE.toml`. The documentation's text in `docs/` is CC BY 4.0. Code that belongs in the protocol goes to librotenado (MIT) – written there, never copied from here.
   The brand is changed in [spezado/brand](https://github.com/spezado/brand) and copied to `brand/`, never edited here.
 - **Everything included:** no feature behind a payment, licence key or unlock; law modules are free software only.
 - **No telemetry:** only connections that are technically needed or that users start themselves.
