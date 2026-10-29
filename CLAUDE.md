@@ -10,7 +10,7 @@ modules. The data model and protocol live in [librotenado](https://github.com/li
 CC BY 4.0 specification); the design is in [docs/spec.md](docs/spec.md).
 
 Version 0.1.0, a preview (`CHANGELOG.md`): milestones 0 to 3 – core, terminal interface, bank, API and web app – on
-librotenado 0.5 (tag `v0.5.0`). The crates and what goes where are listed in CONTRIBUTING.md; the plan is in
+librotenado 0.6 (tag `v0.6.0`). The crates and what goes where are listed in CONTRIBUTING.md; the plan is in
 [docs/spec.md](docs/spec.md). Releases: a tag `v*` runs `.github/workflows/release.yml` – binaries with the web app
 embedded for Linux, macOS and Windows, published as a pre-release with the notes of `CHANGELOG.md`.
 
