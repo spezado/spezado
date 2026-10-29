@@ -113,9 +113,9 @@ One core, three roles, one protocol:
 | M1 Terminal interface | a freelancer books a year: cash basis, VAT returns, SKR 03/04, e-invoices read with booking proposals, reversals, GoBD export | done |
 | M2 Bank | bank statements (camt.053, MT940, CSV, read in librotenado), booking their entries, proposals from invoices and earlier entries; FinTS as a placeholder | done |
 | M3 API and web app | `spezado serve`, OpenAPI, the web app | done |
-| 0.1.0 | a preview for a freelancer's year: opening balances, VAT deadlines with public holidays and the permanent extension, payments booked before their statement, invoices written as XRechnung; binaries per platform | this version |
+| 0.1.0 | a preview for a freelancer's year: opening balances, VAT deadlines with public holidays and the permanent extension, payments booked before their statement, invoices written as XRechnung or ZUGFeRD; binaries per platform | released |
 | M4 Apps | Flutter desktop and mobile apps in spezado/apps | |
-| M5 Sync | devices, relay, end-to-end encryption (librotenado 0006) | first stage: a person's own devices |
+| M5 Sync | devices, relay, end-to-end encryption (librotenado 0006), sharing with rights, TLS to other devices | done, released as 0.2.0 |
 | then | ELSTER (ERiC), E-Bilanz (XBRL), payroll | |
 
 ## 9. State
@@ -140,7 +140,7 @@ Milestone 5, first stage – a person's own devices, after librotenado 0006:
 
 
 Version 0.1.0, a preview – for trying out, not for a real tax return: the German mappings are drafts until tax
-advisers have reviewed them. On top of milestones 0 to 3:
+advisers have reviewed them. On top of milestones 0 to 3 (version 0.2.0 adds milestone 5, above):
 
 - **Opening balances**, booked once against the opening balance sheet (librotenado 0004), so that statements close
   at the books' balance; balances carry on between years by themselves.

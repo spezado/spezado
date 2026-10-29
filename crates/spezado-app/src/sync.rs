@@ -471,7 +471,8 @@ impl Workspace {
         let mut report = SyncReport::default();
         let mut list = relay.members(books)?;
         if list.member(&keys.id()).is_none() {
-            if state.joined {
+            let was_added = list.records().iter().any(|r| r.add.iter().any(|m| m.id == keys.id()));
+            if state.joined || was_added {
                 return Err(failed("this device was removed from the books"));
             }
             report.waiting = true;

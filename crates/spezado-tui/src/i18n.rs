@@ -249,7 +249,7 @@ texts! {
     // Reports
     VatReturn => "Umsatzsteuer-Voranmeldung", "Advance VAT return";
     Draft => "Entwurf – von Steuerberatern noch nicht geprüft", "Draft – not yet reviewed by tax advisers";
-    Preview => "Vorschau 0.1 – Zuordnungen sind Entwürfe ohne Prüfung durch Steuerberater, nicht für die echte Steuererklärung", "Preview 0.1 – the mappings are drafts not reviewed by tax advisers, not for a real tax return";
+    Preview => "Vorschau – Zuordnungen sind Entwürfe ohne Prüfung durch Steuerberater, nicht für die echte Steuererklärung", "Preview – the mappings are drafts not reviewed by tax advisers, not for a real tax return";
     Field => "Kennzahl", "Field";
     Exported => "Exportiert nach", "Exported to";
     NoReports => "Keine Berichte für dieses Jahr", "No reports for this year";

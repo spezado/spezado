@@ -211,6 +211,14 @@ fn books_are_shared_with_rights_and_members_removed() {
     bookkeeper.sync(&books).unwrap();
     assert_eq!(owner.sync(&books).unwrap().received, 1);
 
+    // A device removed before it ever synchronised learns it, too.
+    let latecomer_dir = Scratch::new("latecomer");
+    let mut latecomer = device(&latecomer_dir, "latecomer");
+    latecomer.join(&owner.invite(&books, librotenado::Rights::Read).unwrap(), Some("Aushilfe")).unwrap();
+    owner.sync(&books).unwrap();
+    owner.remove_member(&books, "Aushilfe").unwrap();
+    assert!(latecomer.sync(&books).is_err(), "removed, not waiting");
+
     // The adviser is removed: the key changes, and nothing new reaches her.
     assert_eq!(owner.remove_member(&books, "Steuerberaterin").unwrap(), "Steuerberaterin");
     assert!(owner.remove_member(&books, "Laptop").is_err(), "not itself");

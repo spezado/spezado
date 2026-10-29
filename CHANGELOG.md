@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 – 2026-10-29
+
+Books on several devices, and shared with other people: synchronised through a relay, end-to-end encrypted. Still a
+preview – the German mappings are drafts until tax advisers have reviewed them. Data follows librotenado 0.6.
 
 - **Synchronisation** between a person's own devices through a relay, end-to-end encrypted after librotenado 0006:
   `spezado relay`; starting it for books with a recovery code, inviting another device, joining, recovering;
