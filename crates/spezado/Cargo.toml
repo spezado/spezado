@@ -33,7 +33,5 @@ tray-icon = { version = "0.26.1", optional = true }
 [features]
 # `spezado tray`: the server with an icon in the menu bar or the system tray. Needs GTK on Linux, so the release builds
 # it for macOS and Windows; elsewhere `spezado serve` runs without an icon.
-tray = ["dep:tray-icon", "dep:tao", "dep:png", "dep:windows-sys"]
+tray = ["dep:tray-icon", "dep:tao", "dep:png"]
 
-[target."cfg(windows)".dependencies]
-windows-sys = { version = "0.61.2", features = ["Win32_System_Console"], optional = true }

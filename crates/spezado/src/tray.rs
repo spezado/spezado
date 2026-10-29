@@ -29,7 +29,6 @@ enum Message {
 
 /// Runs the server and the icon until "Quit" is chosen. `again` are the arguments that start this again at login.
 pub fn run(workspace: Workspace, listen: SocketAddr, pairing: Option<String>, again: Vec<String>) -> Result<()> {
-    hide_console();
     let program = std::env::current_exe().context("the path of this program")?;
     let mut event_loop = EventLoopBuilder::<Message>::with_user_event().build();
     #[cfg(target_os = "macos")]
@@ -99,9 +98,13 @@ pub fn run(workspace: Workspace, listen: SocketAddr, pairing: Option<String>, ag
         match event {
             // The icon is made once the event loop runs – on macOS it needs the application.
             Event::NewEvents(StartCause::Init) => match icon() {
-                Ok((image, template)) => {
+                Ok(image) => {
                     let builder = TrayIconBuilder::new().with_menu(Box::new(menu.clone())).with_tooltip("spezado");
-                    let builder = if template { builder.with_icon_templated(image) } else { builder.with_icon(image) };
+                    // On macOS a template, which the menu bar colours itself.
+                    #[cfg(target_os = "macos")]
+                    let builder = builder.with_icon_templated(image);
+                    #[cfg(not(target_os = "macos"))]
+                    let builder = builder.with_icon(image);
                     tray = builder.build().map_err(|error| eprintln!("spezado tray: {error}")).ok();
                 }
                 Err(error) => eprintln!("spezado tray: {error}"),
@@ -182,17 +185,17 @@ async fn terminated() {
 }
 
 /// The icon: on macOS the mark in black, a template the menu bar colours itself; elsewhere the small icon in colour.
-fn icon() -> Result<(Icon, bool)> {
+fn icon() -> Result<Icon> {
     #[cfg(target_os = "macos")]
-    let (bytes, template) = (&include_bytes!("../../../brand/png/spezado-mark-black-256.png")[..], true);
+    let bytes = &include_bytes!("../../../brand/png/spezado-mark-black-256.png")[..];
     #[cfg(not(target_os = "macos"))]
-    let (bytes, template) = (&include_bytes!("../../../brand/png/spezado-icon-small-32.png")[..], false);
+    let bytes = &include_bytes!("../../../brand/png/spezado-icon-small-32.png")[..];
     let mut reader = png::Decoder::new(std::io::Cursor::new(bytes)).read_info()?;
     let mut rgba = vec![0; reader.output_buffer_size().context("the size of the icon")?];
     let info = reader.next_frame(&mut rgba)?;
     anyhow::ensure!(info.color_type == png::ColorType::Rgba, "the icon is not RGBA");
     rgba.truncate(info.buffer_size());
-    Ok((Icon::from_rgba(rgba, info.width, info.height)?, template))
+    Ok(Icon::from_rgba(rgba, info.width, info.height)?)
 }
 
 /// Opens an address in the default browser.
@@ -205,14 +208,5 @@ fn browse(address: &str) {
     let result = std::process::Command::new("xdg-open").arg(address).spawn();
     if let Err(error) = result {
         eprintln!("spezado tray: {address}: {error}");
-    }
-}
-
-/// On Windows, a program started at login gets a console window; the tray has no use for it.
-fn hide_console() {
-    #[cfg(target_os = "windows")]
-    // SAFETY: FreeConsole only detaches this process from its console.
-    unsafe {
-        windows_sys::Win32::System::Console::FreeConsole();
     }
 }
