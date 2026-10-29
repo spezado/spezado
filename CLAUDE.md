@@ -33,8 +33,8 @@ terminal, the web app, the command line and the API.
   seller's details and customers (settings per books), invoice numbers and invoices written as XRechnung (UBL).
 - `spezado-tui` – the terminal interface (ratatui): `app.rs` is the state and what each key and click does (tested
   without a terminal, `TestBackend`), `view.rs` draws it and returns what was drawn where (`Hits`) – a click is
-  mapped to the key or row under it –, `form.rs` the forms and the account search, `i18n.rs` every text in German and
-  English – a text missing a language does not build. The mouse is on by default, `m` switches it off (the
+  mapped to the key or row under it –, `form.rs` the forms and the account search, `i18n.rs` every text in
+  English, the source, and German – a text missing a language does not build. The mouse is on by default, `m` switches it off (the
   terminal's own text selection then works without a modifier key).
 - `spezado-app/src/bank.rs` – statements imported (one database document each, a bank account per IBAN opened on
   first sight), open entries with proposals (the payment booked before the statement – reversed and booked again
@@ -53,7 +53,7 @@ terminal, the web app, the command line and the API.
 - `web/` – the web app: Svelte 5 + Vite without SvelteKit, TypeScript 6, pnpm, Node 26. `pnpm api` writes
   `src/lib/api-types.ts` from `api/openapi.json` (CI checks it is current), `pnpm check` (svelte-check, no
   warnings), `pnpm build` → `dist/`. Own small components (the account search is a WAI-ARIA combobox), texts in
-  `src/lib/i18n.ts` – English must have every German key –, the brand in `src/brand.css`, a hash router
+  `src/lib/i18n.ts` – English is the source, German must have every English key –, the brand in `src/brand.css`, a hash router
   (`#/overview`, `#/journal`, `#/bank`, `#/documents`, `#/invoices`, `#/accounts`, `#/reports`,
   `#/review`, `#/closing`, `#/book`), live updates by Server-Sent Events. Develop with `spezado serve` running and
   `pnpm dev`, which passes `/api` on to it. `spezado` – the command line; `spezado tui` creates a workspace on
