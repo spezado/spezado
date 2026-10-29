@@ -3,7 +3,7 @@
 //! XDG autostart entry on Linux. What starts is this program with the arguments given – `tray` where there is a
 //! menu bar, else `serve`.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use anyhow::{Context, Result};
 
@@ -38,13 +38,14 @@ pub fn arguments(directory: Option<&Path>, port: u16) -> Vec<String> {
 }
 
 #[cfg(not(target_os = "windows"))]
-fn home() -> Result<PathBuf> {
+fn home() -> Result<std::path::PathBuf> {
     dirs::home_dir().context("no home directory")
 }
 
 #[cfg(target_os = "macos")]
 mod platform {
     use super::*;
+    use std::path::PathBuf;
 
     fn agent() -> Result<PathBuf> {
         Ok(home()?.join("Library/LaunchAgents").join(format!("{NAME}.plist")))
@@ -129,6 +130,7 @@ mod platform {
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 mod platform {
     use super::*;
+    use std::path::PathBuf;
 
     fn entry() -> Result<PathBuf> {
         let config = dirs::config_dir().map(Ok).unwrap_or_else(|| home().map(|home| home.join(".config")))?;
