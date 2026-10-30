@@ -58,6 +58,18 @@ The workspace lives in spezado's folder in your data directory, or wherever `--d
 - **One core, many front ends** – a Rust core with a command line and a terminal interface, an open API with a web
   app, desktop and mobile apps ([spezado/apps](https://github.com/spezado/apps)); relays and a server for teams.
 
+## The name
+
+```
+SPEZo + ADO → spezado
+```
+
+*spezado* is Esperanto. *Spezo* is turnover – money coming in and going out (*enspezo*, income; *elspezo*,
+expenditure) – and *-ado* makes it an ongoing action: spezado is the turnover that goes on all year, and what an
+accounting program keeps track of. Its protocol, librotenado, is Esperanto for bookkeeping. Esperanto belongs to no
+nation and takes its roots mostly from European languages – fitting for software that keeps books across Europe.
+Say *spe-ZA-do*.
+
 ## Same rules as falkOSS
 
 - **Free licences** – AGPL-3.0-or-later; the protocol library and the apps under MIT.
