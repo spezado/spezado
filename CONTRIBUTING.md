@@ -13,7 +13,7 @@ Thank you for helping. spezado is free accounting for everyone; its data follows
 ## Setting up
 
 spezado builds against the protocol library [librotenado](https://github.com/librotenado/librotenado), which Cargo
-fetches from its repository (`Cargo.toml`). To work on both at once, point the dependency at a local checkout with a
+fetches from crates.io (`Cargo.toml`). To work on both at once, point the dependency at a local checkout with a
 `[patch]` section in your own `.cargo/config.toml` – never commit it.
 
 ```sh

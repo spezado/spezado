@@ -14,8 +14,8 @@ publish = false
 [workspace.dependencies]
 # Each crate names its other dependencies with exact versions, each the newest that is at least 14 days old
 # (scripts/check-age.py); a fix for a security advisory may be younger.
-# The protocol (MIT), by its tag.
-librotenado = { git = "https://github.com/librotenado/librotenado", tag = "v0.7.2" }
+# The protocol (MIT, its reference data CC BY 4.0).
+librotenado = "=0.7.3"
 spezado-api = { path = "crates/spezado-api" }
 spezado-app = { path = "crates/spezado-app" }
 spezado-core = { path = "crates/spezado-core" }

@@ -26,6 +26,8 @@ SECURITY_FIXES: dict = {
     ("rustls-webpki", "0.103.16"): "RUSTSEC-2026-0382",
     ("webpki-roots", "1.0.10"): "RUSTSEC-2026-0381",
 }
+# The protocol library is ours and released together with spezado: it may be as young as it is.
+OWN = {"librotenado"}
 HEADERS = {"User-Agent": "spezado check-age (https://github.com/spezado/spezado)"}
 
 
@@ -46,7 +48,7 @@ def young(limit):
         if not package.get("source", "").startswith("registry+"):
             continue
         name, version = package["name"], package["version"]
-        if (name, version) in SECURITY_FIXES:
+        if (name, version) in SECURITY_FIXES or name in OWN:
             continue
         published = date(get(f"https://crates.io/api/v1/crates/{name}/{version}")["version"]["created_at"])
         if published > limit:

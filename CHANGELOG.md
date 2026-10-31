@@ -10,7 +10,7 @@
   runs the relay unless told otherwise; `deploy/compose.yaml` starts one behind a reverse proxy.
 - The documentation at spezado.dev is built with Jekyll and Just the Docs, as falkOSS projects build theirs; the
   addresses stay, the old introduction forwards.
-- Data follows librotenado 0.7.2.
+- Data follows librotenado 0.7.3, now from crates.io instead of its repository.
 
 ## 0.3.0 – 2026-10-29
 
