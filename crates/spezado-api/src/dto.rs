@@ -828,7 +828,7 @@ pub struct BooksRef {
 pub struct FilingView {
     /// Its identity.
     pub id: String,
-    /// What it is: `vat_return`, `cash_basis_statement`, `annual_accounts`.
+    /// What it is: `vat_return`, `cash_basis_statement`, `annual_accounts`, `recapitulative_statement`.
     pub kind: String,
     /// The report it carries: `de-ustva`.
     pub report: String,

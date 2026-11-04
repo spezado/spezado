@@ -993,7 +993,7 @@ export interface components {
             from: string;
             /** @description Its identity. */
             id: string;
-            /** @description What it is: `vat_return`, `cash_basis_statement`, `annual_accounts`. */
+            /** @description What it is: `vat_return`, `cash_basis_statement`, `annual_accounts`, `recapitulative_statement`. */
             kind: string;
             /** @description The books changed since it was prepared so that its content would differ now. */
             outdated: boolean;

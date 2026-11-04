@@ -2954,7 +2954,7 @@
           },
           "kind": {
             "type": "string",
-            "description": "What it is: `vat_return`, `cash_basis_statement`, `annual_accounts`."
+            "description": "What it is: `vat_return`, `cash_basis_statement`, `annual_accounts`, `recapitulative_statement`."
           },
           "outdated": {
             "type": "boolean",

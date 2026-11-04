@@ -52,6 +52,7 @@ fn kind(kind: FilingKind) -> &'static str {
         FilingKind::VatReturn => "vat_return",
         FilingKind::CashBasisStatement => "cash_basis_statement",
         FilingKind::AnnualAccounts => "annual_accounts",
+        FilingKind::RecapitulativeStatement => "recapitulative_statement",
         FilingKind::Unknown => "unknown",
     }
 }
