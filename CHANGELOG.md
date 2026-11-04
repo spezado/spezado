@@ -10,7 +10,9 @@
   runs the relay unless told otherwise; `deploy/compose.yaml` starts one behind a reverse proxy.
 - The documentation at spezado.dev is built with Jekyll and Just the Docs, as falkOSS projects build theirs; the
   addresses stay, the old introduction forwards.
-- Data follows librotenado 0.9.0, from crates.io instead of its repository.
+- Data follows librotenado 0.10.0, from crates.io instead of its repository.
+- **Short financial years:** a configuration that changes the start of the financial year ends the current one
+  early (librotenado 0008); the review list names a change on a day that does not begin the new year.
 - The review list names a reopening of something that is not a closing, and a closing reopened twice (librotenado
   0002). Reopening a period from spezado itself is still to come.
 - **The balance sheet shows the result on equity:** the result of the financial year so far as the result for the

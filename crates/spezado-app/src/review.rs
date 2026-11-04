@@ -346,6 +346,18 @@ impl Words<'_> {
                     ),
                 )
             }
+            PartyProblem::YearChangedWithin { event, owner } => self.say(
+                format!(
+                    "{} verlegt das Wirtschaftsjahr von {} nicht auf den Beginn des neuen Jahres – das ergäbe zwei Rumpfwirtschaftsjahre statt einem.",
+                    self.event(event),
+                    self.party(owner)
+                ),
+                format!(
+                    "{} moves the financial year of {} on a day that does not begin the new year – two short years instead of one.",
+                    self.event(event),
+                    self.party(owner)
+                ),
+            ),
             PartyProblem::ConfigurationOfNonOwner { event, owner } => self.say(
                 format!(
                     "{0} gilt {1} – {1} ist aber kein Eigentümer der Bücher.",
