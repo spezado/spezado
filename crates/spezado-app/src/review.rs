@@ -415,6 +415,14 @@ impl Words<'_> {
                 format!("{} ändert die Einrichtung im abgeschlossenen Zeitraum (abgeschlossen bis {}).", self.event(event), self.closing(closing)),
                 format!("{} changes the set-up in the closed period (closed up to {}).", self.event(event), self.closing(closing)),
             ),
+            ClosingProblem::UnknownClosing { event, closing } => self.say(
+                format!("{} öffnet einen Abschluss wieder, den es hier nicht gibt ({}) – vielleicht ist er noch nicht angekommen.", short(event), short(closing)),
+                format!("{} reopens a closing that is not here ({}) – perhaps it has not arrived yet.", short(event), short(closing)),
+            ),
+            ClosingProblem::ReopenedTwice { event, closing } => self.say(
+                format!("{} öffnet den Abschluss bis {} noch einmal, der schon wieder geöffnet ist – es gilt die erste Wiedereröffnung.", short(event), self.closing(closing)),
+                format!("{} reopens the closing up to {} again, which is reopened already – the first reopening applies.", short(event), self.closing(closing)),
+            ),
         }
     }
 
