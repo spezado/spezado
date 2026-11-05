@@ -39,7 +39,7 @@ IBAN.
 | Accounts | `↵` ledger, `o` opening balances | the balance of every account |
 | Reports | `↵` open, then `e` export as CSV, `p` prepare as a filing; `↵` on a filing submits it or asks where it stands | the reports that apply to the year, then the filings ([Filings](filings.md)) |
 | Review | | what needs review, in words |
-| Closing | `c` close a period, `g` GoBD data transfer | |
+| Closing | `c` close a period, `u` reopen the latest closing, `g` GoBD data transfer | |
 
 **A new booking** (`n`) is date, text, account, gross amount, tax code and payment from the bank or the cash:
 spezado books the net amount, the VAT and the payment. **A booking in lines** (`z`) takes lines of `account=amount[@code]`,

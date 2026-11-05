@@ -192,7 +192,9 @@ fn keys(app: &App) -> Vec<(Text, KeyCode)> {
         }
         (Mode::Normal, Tab::Accounts) => vec![(Text::KeyOpen, KeyCode::Enter), (Text::KeyOpening, char('o'))],
         (Mode::Normal, Tab::Reports) => vec![(Text::KeyOpen, KeyCode::Enter)],
-        (Mode::Normal, Tab::Closing) => vec![(Text::KeyClose, char('c')), (Text::KeyGobd, char('g'))],
+        (Mode::Normal, Tab::Closing) => {
+            vec![(Text::KeyClose, char('c')), (Text::KeyReopen, char('u')), (Text::KeyGobd, char('g'))]
+        }
         (Mode::Normal, _) => vec![(Text::KeyNew, char('n')), (Text::KeyImport, char('i'))],
     };
     if matches!(app.mode, Mode::Normal) {

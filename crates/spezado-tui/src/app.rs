@@ -89,6 +89,7 @@ pub enum Purpose {
     ReadDocument,
     /// Closing a period.
     Close,
+    Reopen,
     /// The GoBD data transfer.
     Gobd,
     /// Exporting the figures shown.
@@ -644,6 +645,10 @@ impl App<'_> {
                     Form::new(Text::ClosePeriod, vec![Field::text(Text::CloseUpTo, self.lang.date(last_month_end()))]);
                 self.mode = Mode::Form(Purpose::Close, form);
             }
+            KeyCode::Char('u') if self.tab == Tab::Closing => {
+                let form = Form::new(Text::ReopenPeriod, vec![Field::text(Text::Reason, "")]);
+                self.mode = Mode::Form(Purpose::Reopen, form);
+            }
             KeyCode::Char('g') if self.tab == Tab::Closing => {
                 let fields = vec![
                     Field::text(Text::Directory, format!("gobd-{}", self.year)),
@@ -977,6 +982,13 @@ impl App<'_> {
                 let software = self.workspace.software();
                 self.execute(Command::Close { owner, to, software })?;
                 self.say(format!("{} {}", self.t(Text::Closed), self.lang.date(to)));
+                Ok(())
+            }
+            Purpose::Reopen => {
+                let reason = form.field(Text::Reason).value.clone();
+                let owner = self.owner.clone().ok_or("no owner")?;
+                self.execute(Command::Reopen { owner, reason })?;
+                self.say(self.t(Text::Reopened));
                 Ok(())
             }
             Purpose::Gobd => {

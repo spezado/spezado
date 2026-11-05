@@ -61,7 +61,7 @@ the token it receives; another browser needs a code of its own.
 | Accounts | balances, ledgers, opening balances |
 | Reports | the reports of the year, as CSV, too; the filings prepared from them ([Filings](filings.md)) |
 | Review | what needs review, in words |
-| Closing | closing periods, the GoBD data transfer |
+| Closing | closing periods and reopening the latest, the GoBD data transfer |
 
 Without books, the web app sets up new ones – or brings them from another device, with an invitation or the recovery
 code. While `serve` runs, it synchronises every minute.

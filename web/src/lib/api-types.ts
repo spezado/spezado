@@ -500,6 +500,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/books/{books}/reopenings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reopens the latest closing of the owner of the books: the period it closed is open again; nothing is deleted. */
+        post: operations["reopen"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/books/{books}/reports": {
         parameters: {
             query?: never;
@@ -1284,6 +1301,11 @@ export interface components {
         Removed: {
             /** @description Its name. */
             name: string;
+        };
+        /** @description Reopening the latest closing. */
+        Reopen: {
+            /** @description Why it is reopened. */
+            reason: string;
         };
         /** @description A report of the year. */
         ReportItem: {
@@ -2527,6 +2549,39 @@ export interface operations {
                 };
             };
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    reopen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                books: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Reopen"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Written"];
+                };
+            };
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

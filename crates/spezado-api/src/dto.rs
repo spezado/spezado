@@ -329,6 +329,13 @@ pub struct Close {
     pub to: String,
 }
 
+/// Reopening the latest closing.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct Reopen {
+    /// Why it is reopened.
+    pub reason: String,
+}
+
 /// Something changed in a set of books – read again what is shown.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Change {

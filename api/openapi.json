@@ -1688,6 +1688,53 @@
         }
       }
     },
+    "/api/v1/books/{books}/reopenings": {
+      "post": {
+        "tags": [],
+        "summary": "Reopens the latest closing of the owner of the books: the period it closed is open again; nothing is deleted.",
+        "operationId": "reopen",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Reopen"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Written"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/books/{books}/reports": {
       "get": {
         "tags": [],
@@ -3780,6 +3827,19 @@
           "name": {
             "type": "string",
             "description": "Its name."
+          }
+        }
+      },
+      "Reopen": {
+        "type": "object",
+        "description": "Reopening the latest closing.",
+        "required": [
+          "reason"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Why it is reopened."
           }
         }
       },

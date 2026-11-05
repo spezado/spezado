@@ -32,6 +32,19 @@
     else failure = problem(error, response);
   }
 
+  let reason = $state("");
+
+  async function reopen(event: SubmitEvent) {
+    event.preventDefault();
+    if (!app.books) return;
+    const body = { reason };
+    const { error, response } = await api.POST("/api/v1/books/{books}/reopenings", { params: { path: { books: app.books } }, body });
+    if (response.ok) {
+      message = t("reopened");
+      reason = "";
+    } else failure = problem(error, response);
+  }
+
   async function exportZip(event: SubmitEvent) {
     event.preventDefault();
     const query = new URLSearchParams(period);
@@ -48,6 +61,13 @@
     <label>{t("closeUpTo")} <input type="date" bind:value={to} required /></label>
     <div class="row-actions"><button type="submit">{t("close")}</button></div>
   </form>
+  {#if closed}
+    <form class="panel" onsubmit={reopen}>
+      <h2>{t("reopenLatest")}</h2>
+      <label>{t("reason")} <input bind:value={reason} required /></label>
+      <div class="row-actions"><button type="submit">{t("reopen")}</button></div>
+    </form>
+  {/if}
   <h2>{t("gobd")}</h2>
   <form class="panel" onsubmit={exportZip}>
     <label>{t("from")} <input type="date" bind:value={period.from} required /></label>

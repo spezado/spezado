@@ -18,7 +18,9 @@
 - **Short financial years:** a configuration that changes the start of the financial year ends the current one
   early (librotenado 0008); the review list names a change on a day that does not begin the new year.
 - The review list names a reopening of something that is not a closing, and a closing reopened twice (librotenado
-  0002). Reopening a period from spezado itself is still to come.
+  0002).
+- **Reopening a period:** the latest closing is reopened with a reason – in the terminal (`u`), the web app, the API
+  and with `spezado reopen`; nothing is deleted, the reopening is an event of its own.
 - **The balance sheet shows the result on equity:** the result of the financial year so far as the result for the
   year, earlier years as retained earnings – without a closing booking (librotenado 0004). It balances now, also
   as a filing.

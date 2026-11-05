@@ -154,7 +154,8 @@ advisers have reviewed them. On top of milestones 0 to 3 (version 0.2.0 adds mil
 - **VAT deadlines** move on public holidays of the state where the tax office sits (§ 108 Abs. 3 AO; holidays of
   only some municipalities left out) and by a month with the permanent extension (§ 46 UStDV); both are part of the
   configuration (librotenado 0008) and can be changed from a date on, in the terminal, the API and the web app.
-  **OPEN:** whether the current AEAO to § 108 names the seat of the tax office.
+  The AEAO 2026 on § 108 does not say whose holidays apply (librotenado 0008); spezado takes the state the
+  configuration names.
 - **Payments booked before their statement**: the first proposal for an entry; accepting it reverses the booking and
   books it again on the statement's bank account, naming the entry, on the same day.
 - **Invoices** written as XRechnung 3.0 (UBL) or as ZUGFeRD (profile XRECHNUNG): a PDF/A-3b set in Domitian with the

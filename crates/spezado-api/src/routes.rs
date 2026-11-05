@@ -47,6 +47,7 @@ use crate::{Api, ApiError, dto};
         report,
         review,
         close,
+        reopen,
         crate::records::documents,
         crate::records::read_document,
         crate::records::record,
@@ -110,6 +111,7 @@ pub fn protected() -> Router<Api> {
         .route("/books/{books}/reports/{report}", get(report))
         .route("/books/{books}/review", get(review))
         .route("/books/{books}/closings", post(close))
+        .route("/books/{books}/reopenings", post(reopen))
 }
 
 /// The states whose public holidays can move deadlines.
@@ -856,6 +858,27 @@ async fn close(
             let owner = owner(workspace, &books)?;
             let software = workspace.software();
             let command = Command::Close { owner, to: date(&request.to)?, software };
+            Ok(dto::Written { events: vec![workspace.execute(&books, command)?.to_string()] })
+        })
+        .await?;
+    api.changed(&id);
+    Ok(Json(written))
+}
+
+/// Reopens the latest closing of the owner of the books: the period it closed is open again; nothing is deleted.
+#[utoipa::path(post, path = "/api/v1/books/{books}/reopenings", params(("books" = String, Path)),
+    request_body = dto::Reopen, responses((status = 200, body = dto::Written), (status = 422, body = dto::Problem)))]
+async fn reopen(
+    State(api): State<Api>,
+    Path(books): Path<String>,
+    Json(request): Json<dto::Reopen>,
+) -> Result<Json<dto::Written>, ApiError> {
+    let id = books.clone();
+    let written = api
+        .run(move |workspace| {
+            let books = books_id(&books)?;
+            let owner = owner(workspace, &books)?;
+            let command = Command::Reopen { owner, reason: request.reason };
             Ok(dto::Written { events: vec![workspace.execute(&books, command)?.to_string()] })
         })
         .await?;

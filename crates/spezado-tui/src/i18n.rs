@@ -118,6 +118,7 @@ texts! {
     KeyOpen => "↵ open", "↵ öffnen";
     KeyExport => "e export", "e exportieren";
     KeyClose => "c close period", "c festschreiben";
+    KeyReopen => "u reopen", "u aufheben";
     KeyGobd => "g GoBD export", "g GoBD-Export";
     KeyEarlier => "[ previous year", "[ Vorjahr";
     KeyLater => "] next year", "] Folgejahr";
@@ -272,6 +273,8 @@ texts! {
     NothingToReview => "Nothing to review", "Nichts zu klären";
     // Closing
     ClosePeriod => "Close period", "Zeitraum festschreiben";
+    ReopenPeriod => "Reopen the latest closing", "Letzte Festschreibung aufheben";
+    Reopened => "Reopened – the period is open again", "Aufgehoben – der Zeitraum ist wieder offen";
     CloseUpTo => "close up to", "festschreiben bis";
     Closed => "Closed up to", "Festgeschrieben bis";
     GobdExport => "GoBD data transfer (Z3)", "GoBD-Datenüberlassung (Z3)";

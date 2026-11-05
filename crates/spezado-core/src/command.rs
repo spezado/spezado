@@ -65,6 +65,14 @@ pub enum Command {
         /// The software the figures were derived with, name → version.
         software: BTreeMap<String, String>,
     },
+    /// Reopens the latest closing of an owner that is not reopened yet: the period it closed is open again, nothing
+    /// is deleted (librotenado spec part 0002).
+    Reopen {
+        /// The owner.
+        owner: PartyId,
+        /// Why it is reopened.
+        reason: String,
+    },
 }
 
 /// Why a command was refused. Nothing is written.
@@ -101,6 +109,12 @@ pub enum CommandError {
         /// The last day closed.
         closed: Date,
     },
+    /// Nothing is closed in the owner's books.
+    #[error("nothing is closed in the books of {0}")]
+    NothingClosed(PartyId),
+    /// A reopening needs a reason.
+    #[error("a reopening needs a reason")]
+    NoReason,
     /// The books select a chart already.
     #[error("the books use the chart {0} already")]
     ChartSelected(String),
@@ -314,6 +328,23 @@ impl Books {
                     return Err(CommandError::ClosedAlready { owner, closed });
                 }
                 Payload::PeriodClosed { closing: Closing { owner, to, state: events.state(), software } }
+            }
+            Command::Reopen { owner, reason } => {
+                if !self.is_owner(&owner) {
+                    return Err(CommandError::NotAnOwner(owner));
+                }
+                let reason = reason.trim();
+                if reason.is_empty() {
+                    return Err(CommandError::NoReason);
+                }
+                let reopened = events.reopenings();
+                let latest = events
+                    .closings()
+                    .into_iter()
+                    .filter(|(hash, closing)| closing.owner == owner && !reopened.contains_key(hash))
+                    .max_by_key(|(_, closing)| closing.to);
+                let Some((closing, _)) = latest else { return Err(CommandError::NothingClosed(owner)) };
+                Payload::PeriodReopened { closing, reason: reason.to_owned() }
             }
         })
     }
@@ -597,6 +628,18 @@ mod tests {
         assert_eq!(desk.run(close("2026-02-28")), Err(CommandError::ClosedAlready { owner: owner(), closed }));
         desk.run(Command::Book(booking("2026-04-01", 100))).unwrap();
         desk.run(close("2026-06-30")).unwrap();
+        assert_eq!(desk.books.review(&desk.chart), vec![]);
+
+        // Reopening opens the latest closing: up to March is closed again, then nothing.
+        let reopen = |reason: &str| Command::Reopen { owner: owner(), reason: reason.into() };
+        assert_eq!(desk.run(reopen("  ")), Err(CommandError::NoReason));
+        desk.run(reopen("a missing invoice")).unwrap();
+        assert_eq!(desk.books.events().closed_until(&owner()), Some(closed));
+        desk.run(Command::Book(booking("2026-05-15", 100))).unwrap();
+        desk.run(reopen("a correction")).unwrap();
+        assert_eq!(desk.books.events().closed_until(&owner()), None);
+        assert_eq!(desk.run(reopen("again")), Err(CommandError::NothingClosed(owner())));
+        desk.run(Command::Book(booking("2026-03-15", 100))).unwrap();
         assert_eq!(desk.books.review(&desk.chart), vec![]);
     }
 }

@@ -115,6 +115,15 @@ enum Commands {
         #[arg(long)]
         owner: Option<PartyId>,
     },
+    /// Reopens the latest closing of an owner: the period it closed is open again; nothing is deleted.
+    Reopen {
+        /// Why it is reopened.
+        #[arg(long)]
+        reason: String,
+        /// The owner; may be left out while the books have one.
+        #[arg(long)]
+        owner: Option<PartyId>,
+    },
     /// Lists the filings of the books, or prepares, submits or asks about one.
     Filing {
         #[command(subcommand)]
@@ -502,6 +511,10 @@ fn run(workspace: &mut Workspace, books: &BooksId, command: Commands) -> Result<
             let owner = choose_owner(workspace, books, owner)?;
             let software = workspace.software();
             println!("{}", workspace.execute(books, Command::Close { owner, to, software })?);
+        }
+        Commands::Reopen { reason, owner } => {
+            let owner = choose_owner(workspace, books, owner)?;
+            println!("{}", workspace.execute(books, Command::Reopen { owner, reason })?);
         }
         Commands::Filing { action } => filing(workspace, books, action)?,
         Commands::Check => {
