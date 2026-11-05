@@ -62,6 +62,8 @@ use crate::{Api, ApiError, dto};
         crate::invoices::profile,
         crate::invoices::set_profile,
         crate::invoices::customers,
+        crate::invoices::contacts,
+        crate::invoices::save_contact,
         crate::invoices::save_customer,
         crate::invoices::next_number,
         crate::invoices::issue,
@@ -281,8 +283,14 @@ async fn set_up(State(api): State<Api>, Json(setup): Json<dto::SetUp>) -> Result
                 configuration["region"] = region.as_str().into();
             }
             let configuration = serde_json::from_value(configuration).map_err(|e| ApiError::bad(e.to_string()))?;
-            let person =
-                Person { id: id.clone(), name: setup.name.clone(), tax_ids: vec![], roles: vec![], contact: None };
+            let person = Person {
+                id: id.clone(),
+                name: setup.name.clone(),
+                tax_ids: vec![],
+                roles: vec![],
+                contact: None,
+                bank_accounts: vec![],
+            };
             let books = workspace.set_up(Party::Person(person), configuration)?;
             Ok(dto::BooksSummary {
                 id: books.to_string(),

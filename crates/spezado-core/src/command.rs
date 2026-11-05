@@ -5,7 +5,8 @@ use std::collections::BTreeMap;
 
 use librotenado::{
     Account, Booking, BookingError, BooksId, Chart, Closing, Configuration, Date, Document, DocumentId, EventHash,
-    Filing, FilingId, FilingState, Invoicing, Organisation, PartyId, Payload, Person, Series, SubmissionState,
+    Filing, FilingId, FilingState, Invoicing, Organisation, PartyId, Payload, Person, Relation, Series,
+    SubmissionState,
 };
 
 use crate::Books;
@@ -20,6 +21,8 @@ pub enum Command {
     DescribeOrganisation(Organisation),
     /// Describes a person, or changes their description.
     DescribePerson(Person),
+    /// Records what an organisation or a person is to an owner – customer, supplier – and the owner's number for them.
+    DescribeRelation(Relation),
     /// Makes a described organisation or person an owner of the books.
     AddOwner(PartyId),
     /// Records how an owner keeps its books from a date on.
@@ -215,6 +218,16 @@ impl Books {
             Command::Found(_) => unreachable!("handled above"),
             Command::DescribeOrganisation(organisation) => Payload::OrganisationDescribed { organisation },
             Command::DescribePerson(person) => Payload::PersonDescribed { person },
+            Command::DescribeRelation(relation) => {
+                if !self.is_owner(&relation.owner) {
+                    return Err(CommandError::NotAnOwner(relation.owner));
+                }
+                let (organisations, persons) = events.parties();
+                if !organisations.contains_key(&relation.party) && !persons.contains_key(&relation.party) {
+                    return Err(CommandError::UnknownParty(relation.party));
+                }
+                Payload::RelationDescribed { relation }
+            }
             Command::AddOwner(owner) => {
                 let (organisations, persons) = events.parties();
                 if !organisations.contains_key(&owner) && !persons.contains_key(&owner) {

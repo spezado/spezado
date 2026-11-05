@@ -662,6 +662,86 @@
         }
       }
     },
+    "/api/v1/books/{books}/contacts": {
+      "get": {
+        "tags": [
+          "crate::invoices"
+        ],
+        "summary": "The customers and suppliers of the owner, by name.",
+        "operationId": "contacts",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Contact"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "crate::invoices"
+        ],
+        "summary": "Keeps a customer or supplier – new without an identity, else replacing the one with it – with its contact persons\nand its relation to the owner.",
+        "operationId": "save_contact",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Contact"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Saved"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/books/{books}/customers": {
       "get": {
         "tags": [
@@ -2704,6 +2784,152 @@
           }
         }
       },
+      "Contact": {
+        "type": "object",
+        "description": "A customer or a supplier of the owner, or both.",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "bic": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The BIC."
+          },
+          "city": {
+            "type": "string",
+            "description": "The city."
+          },
+          "country": {
+            "type": "string",
+            "description": "The country, ISO 3166-1 alpha-2."
+          },
+          "customer": {
+            "type": "boolean",
+            "description": "The owner supplies it."
+          },
+          "email": {
+            "type": "string",
+            "description": "The e-mail address."
+          },
+          "iban": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The bank account, an IBAN."
+          },
+          "id": {
+            "type": "string",
+            "description": "Its identity; empty for a new one."
+          },
+          "name": {
+            "type": "string",
+            "description": "The name."
+          },
+          "number": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The owner's number for it; a new one gets the next free one when left out."
+          },
+          "persons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContactPerson"
+            },
+            "description": "Whom to contact there."
+          },
+          "phone": {
+            "type": "string",
+            "description": "The telephone number."
+          },
+          "postcode": {
+            "type": "string",
+            "description": "The postcode."
+          },
+          "reference": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What it asks to be named on invoices – a Leitweg-ID."
+          },
+          "street": {
+            "type": "string",
+            "description": "Street and number."
+          },
+          "supplier": {
+            "type": "boolean",
+            "description": "It supplies the owner."
+          },
+          "tax_number": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Another tax number."
+          },
+          "vat_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The VAT identification number."
+          }
+        }
+      },
+      "ContactPerson": {
+        "type": "object",
+        "description": "Whom to contact at a customer or a supplier.",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "The e-mail address."
+          },
+          "id": {
+            "type": "string",
+            "description": "Their identity; empty for a new one."
+          },
+          "name": {
+            "type": "string",
+            "description": "The name."
+          },
+          "phone": {
+            "type": "string",
+            "description": "The telephone number."
+          }
+        }
+      },
+      "ContactSuggestion": {
+        "type": "object",
+        "description": "A contact the other party of a document may be.",
+        "required": [
+          "party",
+          "name",
+          "by"
+        ],
+        "properties": {
+          "by": {
+            "type": "string",
+            "description": "What matched: `vat_id`, `tax_number`, `bank_account` or `name`."
+          },
+          "name": {
+            "type": "string",
+            "description": "Its name."
+          },
+          "party": {
+            "type": "string",
+            "description": "The contact's identity."
+          }
+        }
+      },
       "Customer": {
         "type": "object",
         "description": "A customer.",
@@ -3728,12 +3954,31 @@
         "description": "A file read as a document: waiting to be recorded, with a proposal if it is an e-invoice.",
         "required": [
           "pending",
-          "document"
+          "document",
+          "contacts"
         ],
         "properties": {
+          "contacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContactSuggestion"
+            },
+            "description": "The contacts the other party of an e-invoice may be, the most certain first; the first is named already."
+          },
           "document": {
             "$ref": "#/components/schemas/DocumentView",
             "description": "The document."
+          },
+          "new_contact": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Contact",
+                "description": "The other party as a new contact, kept when `contact` is `new` on recording."
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "not_an_invoice": {
             "type": [
@@ -3769,6 +4014,13 @@
           "book": {
             "type": "boolean",
             "description": "Whether to book the proposal with it."
+          },
+          "contact": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The contact of the other party of an e-invoice: a contact's identity, `new` to keep the new contact, empty\nfor none; left out, the first suggestion stays."
           },
           "date": {
             "type": [

@@ -227,6 +227,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/books/{books}/contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The customers and suppliers of the owner, by name. */
+        get: operations["contacts"];
+        put?: never;
+        /**
+         * Keeps a customer or supplier – new without an identity, else replacing the one with it – with its contact persons
+         *     and its relation to the owner.
+         */
+        post: operations["save_contact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/books/{books}/customers": {
         parameters: {
             query?: never;
@@ -907,6 +928,63 @@ export interface components {
             /** @description The last day closed, `YYYY-MM-DD`. */
             to: string;
         };
+        /** @description A customer or a supplier of the owner, or both. */
+        Contact: {
+            /** @description The BIC. */
+            bic?: string | null;
+            /** @description The city. */
+            city?: string;
+            /** @description The country, ISO 3166-1 alpha-2. */
+            country?: string;
+            /** @description The owner supplies it. */
+            customer?: boolean;
+            /** @description The e-mail address. */
+            email?: string;
+            /** @description The bank account, an IBAN. */
+            iban?: string | null;
+            /** @description Its identity; empty for a new one. */
+            id?: string;
+            /** @description The name. */
+            name: string;
+            /** @description The owner's number for it; a new one gets the next free one when left out. */
+            number?: string | null;
+            /** @description Whom to contact there. */
+            persons?: components["schemas"]["ContactPerson"][];
+            /** @description The telephone number. */
+            phone?: string;
+            /** @description The postcode. */
+            postcode?: string;
+            /** @description What it asks to be named on invoices – a Leitweg-ID. */
+            reference?: string | null;
+            /** @description Street and number. */
+            street?: string;
+            /** @description It supplies the owner. */
+            supplier?: boolean;
+            /** @description Another tax number. */
+            tax_number?: string | null;
+            /** @description The VAT identification number. */
+            vat_id?: string | null;
+        };
+        /** @description Whom to contact at a customer or a supplier. */
+        ContactPerson: {
+            /** @description The e-mail address. */
+            email?: string;
+            /** @description Their identity; empty for a new one. */
+            id?: string;
+            /** @description The name. */
+            name: string;
+            /** @description The telephone number. */
+            phone?: string;
+        };
+        /** @description A contact the other party of a document may be. */
+        ContactSuggestion: {
+            /** @description What matched: `vat_id`, `tax_number`, `bank_account` or `name`. */
+            by: string;
+            /** @description Its name. */
+            name: string;
+            /** @description The contact's identity. */
+            party: string;
+        };
         /** @description A customer. */
         Customer: {
             /** @description The city. */
@@ -1268,8 +1346,11 @@ export interface components {
         };
         /** @description A file read as a document: waiting to be recorded, with a proposal if it is an e-invoice. */
         ReadDocument: {
+            /** @description The contacts the other party of an e-invoice may be, the most certain first; the first is named already. */
+            contacts: components["schemas"]["ContactSuggestion"][];
             /** @description The document. */
             document: components["schemas"]["DocumentView"];
+            new_contact?: components["schemas"]["Contact"] | null;
             /** @description Why an XML file was not read as an e-invoice. */
             not_an_invoice?: string | null;
             /** @description What to name when recording it, within the hour. */
@@ -1280,6 +1361,11 @@ export interface components {
         Record: {
             /** @description Whether to book the proposal with it. */
             book: boolean;
+            /**
+             * @description The contact of the other party of an e-invoice: a contact's identity, `new` to keep the new contact, empty
+             *     for none; left out, the first suggestion stays.
+             */
+            contact?: string | null;
             /** @description The booking's date, `YYYY-MM-DD` – on a cash basis the day paid. */
             date?: string | null;
             /** @description The booking's text. */
@@ -1919,6 +2005,60 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Written"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    contacts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                books: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Contact"][];
+                };
+            };
+        };
+    };
+    save_contact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                books: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Contact"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Saved"];
                 };
             };
             422: {

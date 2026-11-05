@@ -24,6 +24,7 @@ use spezado_law::{Facts, LawModule, Report, ReportBasis};
 use spezado_store::{Store, StoreError};
 
 mod bank;
+mod contacts;
 mod filing;
 mod invoice_pdf;
 mod invoicing;
@@ -33,6 +34,7 @@ mod sync;
 mod workflows;
 
 pub use bank::{ImportedStatements, OpenEntry, Source, Suggestion};
+pub use contacts::{ContactCard, ContactPerson, ContactSuggestion};
 pub use filing::FilingItem;
 pub use invoicing::{Customer, INVOICE_TAX_CODES, InvoiceFormat, InvoiceProfile, NewInvoice, NewLine, WrittenInvoice};
 pub use spezado_law_de::STATES as GERMAN_STATES;

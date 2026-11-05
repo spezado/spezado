@@ -39,7 +39,14 @@ fn books(scratch: &Scratch, accounting: &str, vat: &str) -> (Workspace, libroten
         "accounting": accounting, "vat": {"scheme": vat, "basis": "cash", "period": period},
     }))
     .unwrap();
-    let person = Person { id: ada.clone(), name: "Ada".into(), tax_ids: vec![], roles: vec![], contact: None };
+    let person = Person {
+        id: ada.clone(),
+        name: "Ada".into(),
+        tax_ids: vec![],
+        roles: vec![],
+        contact: None,
+        bank_accounts: vec![],
+    };
     let books = workspace.set_up(Party::Person(person), configuration).unwrap();
     let profile = InvoiceProfile {
         name: "Ada Beispiel".into(),
@@ -192,7 +199,14 @@ fn with_double_entry_the_receivable_is_booked_when_issued() {
         "accounting": "de-cash-basis", "vat": {"scheme": "de-regular", "basis": "cash", "period": "quarter"},
     }))
     .unwrap();
-    let person = Person { id: ada.clone(), name: "Ada".into(), tax_ids: vec![], roles: vec![], contact: None };
+    let person = Person {
+        id: ada.clone(),
+        name: "Ada".into(),
+        tax_ids: vec![],
+        roles: vec![],
+        contact: None,
+        bank_accounts: vec![],
+    };
     let books = bare.set_up(Party::Person(person), configuration).unwrap();
     assert!(bare.write_invoice(&books, &ada, &invoice).is_err());
 }

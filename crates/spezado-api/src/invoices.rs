@@ -19,6 +19,7 @@ pub fn routes() -> Router<Api> {
     Router::new()
         .route("/books/{books}/invoicing/profile", get(profile).put(set_profile))
         .route("/books/{books}/customers", get(customers).post(save_customer))
+        .route("/books/{books}/contacts", get(contacts).post(save_contact))
         .route("/books/{books}/invoices", post(issue))
         .route("/books/{books}/invoices/next-number", get(next_number))
 }
@@ -78,6 +79,42 @@ pub(crate) async fn save_customer(
 ) -> Result<Json<dto::Saved>, ApiError> {
     api.run(move |workspace| Ok(Json(dto::Saved { id: workspace.save_customer(&books_id(&books)?, customer.into())? })))
         .await
+}
+
+/// The customers and suppliers of the owner, by name.
+#[utoipa::path(get, path = "/api/v1/books/{books}/contacts", params(("books" = String, Path)),
+    responses((status = 200, body = Vec<dto::Contact>)))]
+pub(crate) async fn contacts(
+    State(api): State<Api>,
+    Path(books): Path<String>,
+) -> Result<Json<Vec<dto::Contact>>, ApiError> {
+    api.run(move |workspace| {
+        let books = books_id(&books)?;
+        let owner = owner(workspace, &books)?;
+        Ok(Json(workspace.contacts(&books, &owner)?.into_iter().map(Into::into).collect()))
+    })
+    .await
+}
+
+/// Keeps a customer or supplier – new without an identity, else replacing the one with it – with its contact persons
+/// and its relation to the owner.
+#[utoipa::path(post, path = "/api/v1/books/{books}/contacts", params(("books" = String, Path)),
+    request_body = dto::Contact, responses((status = 200, body = dto::Saved), (status = 422, body = dto::Problem)))]
+pub(crate) async fn save_contact(
+    State(api): State<Api>,
+    Path(books): Path<String>,
+    Json(contact): Json<dto::Contact>,
+) -> Result<Json<dto::Saved>, ApiError> {
+    let id = books.clone();
+    let saved = api
+        .run(move |workspace| {
+            let books = books_id(&books)?;
+            let owner = owner(workspace, &books)?;
+            Ok(dto::Saved { id: workspace.save_contact(&books, &owner, contact.into())? })
+        })
+        .await?;
+    api.changed(&id);
+    Ok(Json(saved))
 }
 
 /// A year.

@@ -39,11 +39,13 @@ pub enum Tab {
     Review,
     /// Closing periods and the data transfer.
     Closing,
+    /// Customers and suppliers.
+    Contacts,
 }
 
 impl Tab {
     /// All tabs.
-    pub const ALL: [Tab; 8] = [
+    pub const ALL: [Tab; 9] = [
         Tab::Overview,
         Tab::Journal,
         Tab::Bank,
@@ -52,6 +54,7 @@ impl Tab {
         Tab::Reports,
         Tab::Review,
         Tab::Closing,
+        Tab::Contacts,
     ];
 
     /// Its title.
@@ -65,6 +68,7 @@ impl Tab {
             Tab::Reports => Text::Reports,
             Tab::Review => Text::Review,
             Tab::Closing => Text::Closing,
+            Tab::Contacts => Text::Contacts,
         }
     }
 
@@ -104,6 +108,8 @@ pub enum Purpose {
     Profile,
     /// A new customer.
     Customer,
+    /// A contact kept: new when the identity is empty.
+    Contact(String),
     /// Writing an invoice.
     Invoice,
     /// Changing what moves the deadlines.
@@ -140,6 +146,8 @@ pub struct Proposal {
     pub source: Option<Source>,
     /// Date and text, to change before booking.
     pub form: Form,
+    /// The other party of an e-invoice read as a new contact, kept when chosen; and whether it is the seller.
+    pub new_contact: Option<(spezado_app::ContactCard, bool)>,
 }
 
 /// What is on the screen besides the tab.
@@ -181,6 +189,8 @@ pub struct View {
     pub journal: Vec<JournalEntry>,
     /// The documents.
     pub documents: Vec<(EventHash, Document)>,
+    /// The customers and suppliers of the owner.
+    pub contacts: Vec<spezado_app::ContactCard>,
     /// Number, name and balance of every account with one.
     pub balances: Vec<(AccountId, String, String, Money)>,
     /// The reports of the year.
@@ -225,7 +235,7 @@ pub struct App<'w> {
     /// The tab shown.
     pub tab: Tab,
     /// The row selected in each tab.
-    pub selected: [usize; 8],
+    pub selected: [usize; Tab::ALL.len()],
     /// What is shown besides.
     pub mode: Mode,
     /// A message: whether it is an error, and what it says.
@@ -258,7 +268,7 @@ impl<'w> App<'w> {
             owner: None,
             year: today().year(),
             tab: Tab::Overview,
-            selected: [0; 8],
+            selected: [0; Tab::ALL.len()],
             mode: Mode::Normal,
             status: None,
             view: View::default(),
@@ -309,6 +319,7 @@ impl<'w> App<'w> {
         self.view.closed = events.closed_until(&owner);
         self.view.relay = self.workspace.sync_relay(&books).ok().flatten();
         self.view.documents = self.workspace.documents(&books).unwrap_or_default();
+        self.view.contacts = self.workspace.contacts(&books, &owner).unwrap_or_default();
         self.view.accounts = self.workspace.account_choices(&books, &owner, date, self.lang.code()).unwrap_or_default();
         let by_id: BTreeMap<&AccountId, &AccountChoice> = self.view.accounts.iter().map(|a| (&a.id, a)).collect();
         let balances = events.functional_balances(Some(last)).unwrap_or_default();
@@ -448,6 +459,7 @@ impl App<'_> {
             Tab::Accounts => self.view.balances.len(),
             Tab::Reports => self.view.reports.len() + self.view.filings.len(),
             Tab::Review => self.view.issues.len(),
+            Tab::Contacts => self.view.contacts.len(),
             Tab::Overview | Tab::Closing => 0,
         }
     }
@@ -457,7 +469,7 @@ impl App<'_> {
         let selected = self.selected[self.tab.index()];
         match key.code {
             KeyCode::Char('q') => self.quit = true,
-            KeyCode::Char(c @ '1'..='8') => self.tab = Tab::ALL[c as usize - '1' as usize],
+            KeyCode::Char(c @ '1'..='9') => self.tab = Tab::ALL[c as usize - '1' as usize],
             KeyCode::Tab => self.tab = Tab::ALL[(self.tab.index() + 1) % Tab::ALL.len()],
             KeyCode::BackTab => self.tab = Tab::ALL[(self.tab.index() + Tab::ALL.len() - 1) % Tab::ALL.len()],
             KeyCode::Char('[') => {
@@ -530,6 +542,10 @@ impl App<'_> {
                 .map(|label| Field::text(label, if label == Text::Country { "DE" } else { "" }))
                 .collect();
                 self.mode = Mode::Form(Purpose::Customer, Form::new(Text::NewCustomer, fields));
+            }
+            KeyCode::Char('k') if self.tab == Tab::Contacts => {
+                let form = self.contact_form(&spezado_app::ContactCard { customer: true, ..Default::default() });
+                self.mode = Mode::Form(Purpose::Contact(String::new()), form);
             }
             KeyCode::Char('r') if self.tab == Tab::Documents => {
                 let Some(books) = self.books.clone() else { return };
@@ -664,6 +680,11 @@ impl App<'_> {
 
     fn open(&mut self, selected: usize) {
         match self.tab {
+            Tab::Contacts => {
+                let Some(card) = self.view.contacts.get(selected).cloned() else { return };
+                let form = self.contact_form(&card);
+                self.mode = Mode::Form(Purpose::Contact(card.id), form);
+            }
             Tab::Bank => {
                 let Some(item) = self.view.open_entries.get(selected).cloned() else { return };
                 match &item.suggestion {
@@ -674,7 +695,13 @@ impl App<'_> {
                         ];
                         let form = Form::new(Text::Proposal, fields);
                         let (booking, source) = (suggestion.booking.clone(), Some(suggestion.source.clone()));
-                        self.mode = Mode::Proposal(Box::new(Proposal { document: None, booking, source, form }));
+                        self.mode = Mode::Proposal(Box::new(Proposal {
+                            document: None,
+                            booking,
+                            source,
+                            form,
+                            new_contact: None,
+                        }));
                     }
                     None => {
                         let fields = vec![
@@ -837,7 +864,10 @@ impl App<'_> {
         let Some(books) = self.books.clone() else { return };
         match key.code {
             KeyCode::Char('a') if proposal.form.matches.is_empty() && proposal.document.is_some() => {
-                let document = proposal.document.expect("a document");
+                let document = match self.with_contact(&books, &proposal) {
+                    Ok(document) => document.expect("a document"),
+                    Err(error) => return self.fail(error),
+                };
                 match self.workspace.record_document(&books, document, None) {
                     Ok(_) => {
                         self.say(self.t(Text::Filed));
@@ -858,7 +888,15 @@ impl App<'_> {
                     let mut booking = proposal.booking.clone();
                     booking.date = date;
                     booking.text = proposal.form.field(Text::Text_).value.clone();
-                    let written = match (proposal.document.clone(), proposal.source.clone()) {
+                    let document = match self.with_contact(&books, &proposal) {
+                        Ok(document) => document,
+                        Err(error) => {
+                            self.fail(error);
+                            self.mode = Mode::Proposal(Box::new(proposal));
+                            return;
+                        }
+                    };
+                    let written = match (document, proposal.source.clone()) {
                         (Some(document), _) => self.workspace.record_document(&books, document, Some(booking)),
                         (None, Some(source)) => {
                             self.workspace.accept_suggestion(&books, &Suggestion { source, booking })
@@ -879,6 +917,30 @@ impl App<'_> {
                 _ => self.mode = Mode::Proposal(Box::new(proposal)),
             },
         }
+    }
+
+    /// The document of a proposal with the contact chosen for its other party – a new one kept first.
+    fn with_contact(&mut self, books: &BooksId, proposal: &Proposal) -> Result<Option<Document>, String> {
+        let Some(mut document) = proposal.document.clone() else { return Ok(None) };
+        let (Some((card, seller)), Some(invoice)) = (&proposal.new_contact, document.invoice.as_deref_mut()) else {
+            return Ok(Some(document));
+        };
+        let chosen = proposal.form.fields.iter().find(|f| f.label == Text::Counterparty).map(|f| f.get().to_owned());
+        let party = match chosen.as_deref() {
+            None | Some("") => None,
+            Some("new") => {
+                let owner = self.owner.clone().ok_or("no owner")?;
+                let id = self.workspace.save_contact(books, &owner, card.clone()).map_err(|e| e.to_string())?;
+                Some(id.parse().map_err(|_| "a contact".to_owned())?)
+            }
+            Some(id) => Some(id.parse().map_err(|_| format!("not a contact: {id}"))?),
+        };
+        if *seller {
+            invoice.seller.party = party
+        } else {
+            invoice.buyer.party = party
+        }
+        Ok(Some(document))
     }
 
     fn submit(&mut self, purpose: &Purpose, form: &Form) -> Result<(), String> {
@@ -925,6 +987,44 @@ impl App<'_> {
                     reference: optional(Text::Reference),
                 };
                 self.workspace.save_customer(&books, customer).map_err(|e| e.to_string())?;
+                self.say(self.t(Text::Saved));
+                Ok(())
+            }
+            Purpose::Contact(id) => {
+                let (books, owner) = (self.books.clone().ok_or("no books")?, self.owner.clone().ok_or("no owner")?);
+                let earlier = self.view.contacts.iter().find(|c| c.id == *id).cloned().unwrap_or_default();
+                let value = |label: Text| form.field(label).value.trim().to_owned();
+                let optional = |label: Text| Some(value(label)).filter(|v| !v.is_empty());
+                let kind = form.field(Text::Kind).get().to_owned();
+                let mut persons = earlier.persons.clone();
+                match (optional(Text::Contact), persons.first_mut()) {
+                    (Some(name), Some(first)) => first.name = name,
+                    (Some(name), None) => persons.push(spezado_app::ContactPerson { name, ..Default::default() }),
+                    (None, Some(_)) => {
+                        persons.remove(0);
+                    }
+                    (None, None) => {}
+                }
+                let card = spezado_app::ContactCard {
+                    id: id.clone(),
+                    name: value(Text::Name),
+                    customer: kind != "supplier",
+                    supplier: kind != "customer",
+                    number: optional(Text::Number),
+                    street: value(Text::Street),
+                    postcode: value(Text::Postcode),
+                    city: value(Text::City),
+                    country: value(Text::Country).to_uppercase(),
+                    email: value(Text::Email),
+                    phone: value(Text::Phone),
+                    vat_id: optional(Text::VatId),
+                    tax_number: optional(Text::TaxNumber),
+                    iban: optional(Text::BankAccount),
+                    reference: optional(Text::Reference),
+                    persons,
+                    ..earlier
+                };
+                self.workspace.save_contact(&books, &owner, card).map_err(|e| e.to_string())?;
                 self.say(self.t(Text::Saved));
                 Ok(())
             }
@@ -1069,7 +1169,7 @@ impl App<'_> {
             configuration["region"] = form.field(Text::Region).get().into();
         }
         let configuration = serde_json::from_value(configuration).map_err(|e| e.to_string())?;
-        let person = Person { id, name, tax_ids: vec![], roles: vec![], contact: None };
+        let person = Person { id, name, tax_ids: vec![], roles: vec![], contact: None, bank_accounts: vec![] };
         let books = self.workspace.set_up(Party::Person(person), configuration).map_err(|e: AppError| e.to_string())?;
         self.books = Some(books);
         self.year = from.year();
@@ -1248,20 +1348,36 @@ impl App<'_> {
         let name = path.file_name().and_then(|n| n.to_str());
         let side = if form.field(Text::Direction).get() == "sale" { InvoiceSide::Sale } else { InvoiceSide::Purchase };
         let payment = self.payment(form)?;
-        let ReadDocument { document, proposal, not_an_invoice } =
+        let ReadDocument { document, proposal, not_an_invoice, contacts, new_contact } =
             self.workspace.read_document(&books, &owner, &bytes, name, side, &payment).map_err(|e| e.to_string())?;
         if let Some(reason) = not_an_invoice {
             self.say(format!("{}: {reason}", self.t(Text::NotAnInvoice)));
         }
         match proposal {
             Some(booking) => {
-                let fields = vec![
+                let mut fields = vec![
                     Field::text(Text::Date, self.lang.date(today())),
                     Field::text(Text::Text_, booking.text.clone()),
                 ];
+                // The contact of the other party: the suggestions, the most certain first, a new one, or none.
+                if let Some(card) = &new_contact {
+                    let mut options: Vec<(String, String)> = contacts
+                        .iter()
+                        .map(|c| (format!("{} ({})", c.name, self.t(match_text(c.by))), c.party.to_string()))
+                        .collect();
+                    options.push((format!("{} {}", self.t(Text::NewContact), card.name), "new".into()));
+                    options.push((self.t(Text::NoContact).to_owned(), String::new()));
+                    fields.push(Field::choice(Text::Counterparty, options, 0));
+                }
                 let form = Form::new(Text::Proposal, fields);
-                self.mode =
-                    Mode::Proposal(Box::new(Proposal { document: Some(document), booking, source: None, form }));
+                let new_contact = new_contact.map(|card| (card, side == InvoiceSide::Purchase));
+                self.mode = Mode::Proposal(Box::new(Proposal {
+                    document: Some(document),
+                    booking,
+                    source: None,
+                    form,
+                    new_contact,
+                }));
             }
             None => {
                 if self.status.is_none() {
@@ -1272,6 +1388,41 @@ impl App<'_> {
             }
         }
         Ok(())
+    }
+
+    /// The form of a contact, filled with what is known of it.
+    fn contact_form(&self, card: &spezado_app::ContactCard) -> Form {
+        let kinds = vec![
+            (self.t(Text::Customer).to_owned(), "customer".to_owned()),
+            (self.t(Text::Supplier).to_owned(), "supplier".to_owned()),
+            (self.t(Text::CustomerAndSupplier).to_owned(), "both".to_owned()),
+        ];
+        let kind = match (card.customer, card.supplier) {
+            (true, true) => 2,
+            (false, true) => 1,
+            _ => 0,
+        };
+        let text = |label: Text, value: &str| Field::text(label, value);
+        let optional = |label: Text, value: &Option<String>| Field::text(label, value.as_deref().unwrap_or(""));
+        let country = if card.country.is_empty() { "DE" } else { card.country.as_str() };
+        let fields = vec![
+            text(Text::Name, &card.name),
+            Field::choice(Text::Kind, kinds, kind),
+            optional(Text::Number, &card.number),
+            text(Text::Street, &card.street),
+            text(Text::Postcode, &card.postcode),
+            text(Text::City, &card.city),
+            text(Text::Country, country),
+            text(Text::Email, &card.email),
+            text(Text::Phone, &card.phone),
+            optional(Text::VatId, &card.vat_id),
+            optional(Text::TaxNumber, &card.tax_number),
+            optional(Text::BankAccount, &card.iban),
+            text(Text::Contact, card.persons.first().map_or("", |p| p.name.as_str())),
+            optional(Text::Reference, &card.reference),
+        ];
+        let title = if card.id.is_empty() { Text::NewContactTitle } else { Text::EditContact };
+        Form::new(title, fields)
     }
 
     /// The form of a booking from a gross amount.
@@ -1466,4 +1617,14 @@ fn last_month_end() -> Date {
     let today = today();
     let (year, month) = if today.month() == 1 { (today.year() - 1, 12) } else { (today.year(), today.month() - 1) };
     (28..=31).rev().find_map(|day| Date::new(year, month, day)).expect("a last day")
+}
+
+/// How a contact suggestion matched, in words.
+fn match_text(by: librotenado::MatchBy) -> Text {
+    match by {
+        librotenado::MatchBy::VatId => Text::ByVatId,
+        librotenado::MatchBy::TaxNumber => Text::ByTaxNumber,
+        librotenado::MatchBy::BankAccount => Text::ByBankAccount,
+        librotenado::MatchBy::Name => Text::ByName,
+    }
 }

@@ -283,38 +283,25 @@ impl Workspace {
         Ok(())
     }
 
-    /// The customers of a set of books, by name: the organisations and persons described in them who are not
-    /// owners. Customers kept on this device by spezado 0.1 are read where the books have none yet.
+    /// The customers of a set of books, by name: the contacts of the owner who writes invoices that are customers
+    /// (see [`Workspace::contacts`]). Customers kept on this device by spezado 0.1 are read where the books have none
+    /// yet.
     pub fn customers(&self, books: &BooksId) -> Result<Vec<Customer>, AppError> {
-        let events = self.get(books)?.events();
-        let owners = events.owners();
-        let (organisations, persons) = events.parties();
-        let parties = organisations
-            .iter()
-            .filter(|(id, _)| !owners.contains(id))
-            .map(|(id, o)| (*id, o.name.clone(), &o.tax_ids, o.contact.as_ref()))
-            .chain(
-                persons
-                    .iter()
-                    .filter(|(id, _)| !owners.contains(id))
-                    .map(|(id, p)| (*id, p.name.clone(), &p.tax_ids, p.contact.as_ref())),
-            );
-        let mut customers: Vec<Customer> = parties
-            .map(|(id, name, tax_ids, contact)| {
-                let address = contact.and_then(|c| c.address.as_ref());
-                Customer {
-                    id: id.to_string(),
-                    name,
-                    street: address.and_then(|a| a.lines.first().cloned()).unwrap_or_default(),
-                    postcode: address.and_then(|a| a.postcode.clone()).unwrap_or_default(),
-                    city: address.and_then(|a| a.city.clone()).unwrap_or_default(),
-                    country: address.map_or_else(|| "DE".to_owned(), |a| a.country.to_string()),
-                    email: contact
-                        .and_then(|c| c.endpoint.as_ref().map(|e| e.address.clone()).or_else(|| c.email.clone()))
-                        .unwrap_or_default(),
-                    vat_id: tax_ids.iter().find(|t| t.scheme == "vat").map(|t| t.number.clone()),
-                    reference: contact.and_then(|c| c.buyer_reference.clone()),
-                }
+        let owner = self.invoicing_owner(books)?;
+        let mut customers: Vec<Customer> = self
+            .contacts(books, &owner)?
+            .into_iter()
+            .filter(|card| card.customer)
+            .map(|card| Customer {
+                id: card.id,
+                name: card.name,
+                street: card.street,
+                postcode: card.postcode,
+                city: card.city,
+                country: card.country,
+                email: card.email,
+                vat_id: card.vat_id,
+                reference: card.reference,
             })
             .collect();
         if customers.is_empty()
@@ -322,51 +309,36 @@ impl Workspace {
         {
             customers = serde_json::from_str(&json).map_err(|e| AppError::Invoice(e.to_string()))?;
         }
-        customers.sort_by_key(|c| c.name.to_lowercase());
         Ok(customers)
     }
 
-    /// Keeps a customer as an organisation described in the books: a new one without an identity gets one, one with
-    /// an identity is described anew. Returns the identity.
+    /// Keeps a customer as a contact of the owner who writes invoices: a new one without an identity gets one, one
+    /// with an identity keeps what the customer form does not show – a supplier, contact persons, bank account.
+    /// Returns the identity.
     pub fn save_customer(&mut self, books: &BooksId, customer: Customer) -> Result<String, AppError> {
-        self.get(books)?;
+        let owner = self.invoicing_owner(books)?;
         if customer.name.trim().is_empty() {
             return Err(AppError::Invoice("a customer needs a name".into()));
         }
-        let id: PartyId = if customer.id.is_empty() {
-            new_id()
+        let earlier = if customer.id.is_empty() {
+            None
         } else {
-            customer.id.parse().map_err(|_| AppError::Invoice(format!("not a customer: {}", customer.id)))?
+            self.contacts(books, &owner)?.into_iter().find(|card| card.id == customer.id)
         };
-        if self.get(books)?.events().owners().contains(&&id) {
-            return Err(AppError::Invoice("an owner of the books is not a customer".into()));
-        }
-        let text = |t: &str| Some(t.trim().to_owned()).filter(|t| !t.is_empty());
-        let country = customer.country.trim().to_uppercase();
-        let organisation = Organisation {
-            id: id.clone(),
-            name: customer.name.trim().to_owned(),
-            legal_form: String::new(),
-            country: country.parse().map_err(|_| AppError::Invoice(format!("not a country: {country}")))?,
-            registrations: vec![],
-            tax_ids: customer
-                .vat_id
-                .as_deref()
-                .and_then(text)
-                .map(|number| vec![TaxId { scheme: "vat".into(), number }])
-                .unwrap_or_default(),
-            shares: vec![],
-            contact: Some(Contact {
-                address: Some(postal_address(&customer.street, &customer.postcode, &customer.city, &country)?),
-                name: None,
-                phone: None,
-                email: text(&customer.email),
-                endpoint: text(&customer.email).map(|address| librotenado::Endpoint { scheme: "EM".into(), address }),
-                buyer_reference: customer.reference.as_deref().and_then(text),
-            }),
+        let card = crate::ContactCard {
+            id: customer.id,
+            name: customer.name,
+            customer: true,
+            street: customer.street,
+            postcode: customer.postcode,
+            city: customer.city,
+            country: customer.country,
+            email: customer.email,
+            vat_id: customer.vat_id,
+            reference: customer.reference,
+            ..earlier.unwrap_or_default()
         };
-        self.execute(books, Command::DescribeOrganisation(organisation))?;
-        Ok(id.to_string())
+        self.save_contact(books, &owner, card)
     }
 
     /// Brings the seller's details and customers kept on this device by spezado 0.1 into the books, so that they
@@ -671,7 +643,12 @@ impl Workspace {
 type PartyDetails = (String, Vec<TaxId>, Option<Contact>);
 
 /// A postal address of one line, a postcode, a city and a country.
-fn postal_address(street: &str, postcode: &str, city: &str, country: &str) -> Result<PostalAddress, AppError> {
+pub(crate) fn postal_address(
+    street: &str,
+    postcode: &str,
+    city: &str,
+    country: &str,
+) -> Result<PostalAddress, AppError> {
     let text = |t: &str| Some(t.trim().to_owned()).filter(|t| !t.is_empty());
     Ok(PostalAddress {
         lines: text(street).into_iter().collect(),

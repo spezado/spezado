@@ -106,6 +106,7 @@ texts! {
     Overview => "Overview", "Übersicht";
     Journal => "Journal", "Journal";
     Documents => "Documents", "Belege";
+    Contacts => "Contacts", "Kontakte";
     Accounts => "Accounts", "Konten";
     Reports => "Reports", "Berichte";
     Review => "Review", "Klärung";
@@ -249,6 +250,20 @@ texts! {
     Balance => "Balance", "Saldo";
     // Reports
     VatReturn => "Advance VAT return", "Umsatzsteuer-Voranmeldung";
+    Counterparty => "Contact", "Kontakt";
+    Supplier => "Supplier", "Lieferant";
+    CustomerAndSupplier => "Customer and supplier", "Kunde und Lieferant";
+    BankAccount => "IBAN", "IBAN";
+    NewContactTitle => "New contact", "Neuer Kontakt";
+    EditContact => "Contact", "Kontakt bearbeiten";
+    NoContacts => "No contacts yet – k for a new one", "Noch keine Kontakte – k für einen neuen";
+    KeyNewContact => "k new contact", "k neuer Kontakt";
+    NewContact => "new contact:", "neuer Kontakt:";
+    NoContact => "none", "keiner";
+    ByVatId => "by VAT id", "über USt-IdNr.";
+    ByTaxNumber => "by tax number", "über Steuernummer";
+    ByBankAccount => "by IBAN", "über IBAN";
+    ByName => "by name", "über den Namen";
     RecapitulativeStatement => "Recapitulative statement", "Zusammenfassende Meldung";
     Draft => "Draft – not yet reviewed by tax advisers", "Entwurf – von Steuerberatern noch nicht geprüft";
     Preview => "Preview – the mappings are drafts not reviewed by tax advisers, not for a real tax return", "Vorschau – Zuordnungen sind Entwürfe ohne Prüfung durch Steuerberater, nicht für die echte Steuererklärung";

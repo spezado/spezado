@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Contacts – customers and suppliers** after librotenado 0008 (0.13): with a number (customers from 10001,
+  suppliers from 70001), address, e-mail and phone, VAT identification and tax number, bank account and contact
+  persons; in the terminal (tab 9), the web app (*Contacts*) and the API. The customers of the invoice form are the
+  contacts that are customers. **Reading an e-invoice offers its seller or buyer** among the contacts – by VAT
+  identification number, tax number, IBAN or name, the most certain first – or keeps it as a new contact; the document
+  names the contact chosen. The review list names a number given to two contacts.
 - **The recapitulative statement** (Zusammenfassende Meldung, § 18a UStG) as a report and a filing, `de-zm`: supplies
   to businesses in other EU member states per customer's VAT identification number, after librotenado 0009. The
   review list names a booking it cannot place – no VAT identification number of the customer, or several. The
@@ -14,7 +20,7 @@
   runs the relay unless told otherwise; `deploy/compose.yaml` starts one behind a reverse proxy.
 - The documentation at spezado.dev is built with Jekyll and Just the Docs, as falkOSS projects build theirs; the
   addresses stay, the old introduction forwards.
-- Data follows librotenado 0.12.0, from crates.io instead of its repository.
+- Data follows librotenado 0.13.0, from crates.io instead of its repository.
 - **Short financial years:** a configuration that changes the start of the financial year ends the current one
   early (librotenado 0008); the review list names a change on a day that does not begin the new year.
 - The review list names a reopening of something that is not a closing, and a closing reopened twice (librotenado

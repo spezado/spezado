@@ -51,6 +51,11 @@ pub struct ReadDocument {
     pub proposal: Option<Booking>,
     /// Why the file was not read as an e-invoice, if it looked like one.
     pub not_an_invoice: Option<String>,
+    /// The contacts the other party of an e-invoice may be – the seller of a purchase, the buyer of a sale –, the
+    /// most certain first. The document names the first already; a person may choose another, or none.
+    pub contacts: Vec<crate::ContactSuggestion>,
+    /// The other party as a new contact, to keep when it is none of the contacts.
+    pub new_contact: Option<crate::ContactCard>,
 }
 
 /// An advance VAT return of a period and the day it is due.
@@ -228,6 +233,26 @@ impl Workspace {
                 statement: None,
             },
         };
+        let mut document = document;
+        let (mut contacts, mut new_contact) = (Vec::new(), None);
+        if let Some(invoice) = document.invoice.as_deref_mut() {
+            let (other, accounts) = match side {
+                InvoiceSide::Purchase => {
+                    let accounts = invoice
+                        .payment
+                        .as_ref()
+                        .map(|p| p.transfers.iter().map(|t| t.account.clone()).collect())
+                        .unwrap_or_default();
+                    (&mut invoice.seller, accounts)
+                }
+                InvoiceSide::Sale => (&mut invoice.buyer, Vec::new()),
+            };
+            contacts = self.suggest_contacts(books, other, &accounts)?;
+            if other.party.is_none() {
+                other.party = contacts.first().map(|c| c.party.clone());
+            }
+            new_contact = Some(self.contact_from(other, side == InvoiceSide::Purchase, &accounts));
+        }
         let proposal = match &document.invoice {
             Some(_) => {
                 // The accounts of today's configuration: an invoice may be dated before the books begin.
@@ -254,7 +279,7 @@ impl Workspace {
             }
             None => None,
         };
-        Ok(ReadDocument { document, proposal, not_an_invoice })
+        Ok(ReadDocument { document, proposal, not_an_invoice, contacts, new_contact })
     }
 
     /// Records a document and – if given – a booking resting on it, all or none.

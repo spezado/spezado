@@ -390,6 +390,10 @@ pub struct ReadDocument {
     pub proposal: Option<BookingView>,
     /// Why an XML file was not read as an e-invoice.
     pub not_an_invoice: Option<String>,
+    /// The contacts the other party of an e-invoice may be, the most certain first; the first is named already.
+    pub contacts: Vec<ContactSuggestion>,
+    /// The other party as a new contact, kept when `contact` is `new` on recording.
+    pub new_contact: Option<Contact>,
 }
 
 /// Recording a document read: alone, or with its proposal – dated and worded as given.
@@ -401,6 +405,10 @@ pub struct Record {
     pub date: Option<String>,
     /// The booking's text.
     pub text: Option<String>,
+    /// The contact of the other party of an e-invoice: a contact's identity, `new` to keep the new contact, empty
+    /// for none; left out, the first suggestion stays.
+    #[serde(default)]
+    pub contact: Option<String>,
 }
 
 /// What reading a file of statements did.
@@ -657,6 +665,146 @@ impl From<Customer> for spezado_app::Customer {
         let Customer { id, name, street, postcode, city, country, email, vat_id, reference } = c;
         spezado_app::Customer { id, name, street, postcode, city, country, email, vat_id, reference }
     }
+}
+
+/// A customer or a supplier of the owner, or both.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
+pub struct Contact {
+    /// Its identity; empty for a new one.
+    #[serde(default)]
+    pub id: String,
+    /// The name.
+    pub name: String,
+    /// The owner supplies it.
+    #[serde(default)]
+    pub customer: bool,
+    /// It supplies the owner.
+    #[serde(default)]
+    pub supplier: bool,
+    /// The owner's number for it; a new one gets the next free one when left out.
+    #[serde(default)]
+    pub number: Option<String>,
+    /// Street and number.
+    #[serde(default)]
+    pub street: String,
+    /// The postcode.
+    #[serde(default)]
+    pub postcode: String,
+    /// The city.
+    #[serde(default)]
+    pub city: String,
+    /// The country, ISO 3166-1 alpha-2.
+    #[serde(default)]
+    pub country: String,
+    /// The e-mail address.
+    #[serde(default)]
+    pub email: String,
+    /// The telephone number.
+    #[serde(default)]
+    pub phone: String,
+    /// The VAT identification number.
+    #[serde(default)]
+    pub vat_id: Option<String>,
+    /// Another tax number.
+    #[serde(default)]
+    pub tax_number: Option<String>,
+    /// The bank account, an IBAN.
+    #[serde(default)]
+    pub iban: Option<String>,
+    /// The BIC.
+    #[serde(default)]
+    pub bic: Option<String>,
+    /// What it asks to be named on invoices – a Leitweg-ID.
+    #[serde(default)]
+    pub reference: Option<String>,
+    /// Whom to contact there.
+    #[serde(default)]
+    pub persons: Vec<ContactPerson>,
+}
+
+/// Whom to contact at a customer or a supplier.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
+pub struct ContactPerson {
+    /// Their identity; empty for a new one.
+    #[serde(default)]
+    pub id: String,
+    /// The name.
+    pub name: String,
+    /// The e-mail address.
+    #[serde(default)]
+    pub email: String,
+    /// The telephone number.
+    #[serde(default)]
+    pub phone: String,
+}
+
+impl From<spezado_app::ContactCard> for Contact {
+    fn from(c: spezado_app::ContactCard) -> Self {
+        let persons = c
+            .persons
+            .into_iter()
+            .map(|p| ContactPerson { id: p.id, name: p.name, email: p.email, phone: p.phone })
+            .collect();
+        Contact {
+            id: c.id,
+            name: c.name,
+            customer: c.customer,
+            supplier: c.supplier,
+            number: c.number,
+            street: c.street,
+            postcode: c.postcode,
+            city: c.city,
+            country: c.country,
+            email: c.email,
+            phone: c.phone,
+            vat_id: c.vat_id,
+            tax_number: c.tax_number,
+            iban: c.iban,
+            bic: c.bic,
+            reference: c.reference,
+            persons,
+        }
+    }
+}
+
+impl From<Contact> for spezado_app::ContactCard {
+    fn from(c: Contact) -> Self {
+        let persons = c
+            .persons
+            .into_iter()
+            .map(|p| spezado_app::ContactPerson { id: p.id, name: p.name, email: p.email, phone: p.phone })
+            .collect();
+        spezado_app::ContactCard {
+            id: c.id,
+            name: c.name,
+            customer: c.customer,
+            supplier: c.supplier,
+            number: c.number,
+            street: c.street,
+            postcode: c.postcode,
+            city: c.city,
+            country: c.country,
+            email: c.email,
+            phone: c.phone,
+            vat_id: c.vat_id,
+            tax_number: c.tax_number,
+            iban: c.iban,
+            bic: c.bic,
+            reference: c.reference,
+            persons,
+        }
+    }
+}
+
+/// A contact the other party of a document may be.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct ContactSuggestion {
+    /// The contact's identity.
+    pub party: String,
+    /// Its name.
+    pub name: String,
+    /// What matched: `vat_id`, `tax_number`, `bank_account` or `name`.
+    pub by: String,
 }
 
 /// A customer kept.

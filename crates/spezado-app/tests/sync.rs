@@ -75,7 +75,14 @@ fn own_devices_share_books_through_a_relay() {
         "accounting": "de-cash-basis", "vat": {"scheme": "de-regular", "basis": "cash", "period": "quarter"},
     }))
     .unwrap();
-    let person = Person { id: ada.clone(), name: "Ada".into(), tax_ids: vec![], roles: vec![], contact: None };
+    let person = Person {
+        id: ada.clone(),
+        name: "Ada".into(),
+        tax_ids: vec![],
+        roles: vec![],
+        contact: None,
+        bank_accounts: vec![],
+    };
     let books = laptop.set_up(Party::Person(person), configuration).unwrap();
     laptop.import_statements(&books, &ada, OCTOBER, Some("oktober.xml"), None).unwrap();
     let profile = InvoiceProfile {
@@ -187,7 +194,14 @@ fn books_are_shared_with_rights_and_members_removed() {
         "accounting": "de-cash-basis", "vat": {"scheme": "de-regular", "basis": "cash", "period": "quarter"},
     }))
     .unwrap();
-    let person = Person { id: ada.clone(), name: "Ada".into(), tax_ids: vec![], roles: vec![], contact: None };
+    let person = Person {
+        id: ada.clone(),
+        name: "Ada".into(),
+        tax_ids: vec![],
+        roles: vec![],
+        contact: None,
+        bank_accounts: vec![],
+    };
     let books = owner.set_up(Party::Person(person), configuration).unwrap();
     owner.start_sync(&books, &relay, Some("Laptop")).unwrap();
 

@@ -12,6 +12,7 @@
   let payment = $state("bank");
   let read = $state<Schemas["ReadDocument"] | null>(null);
   let booking = $state({ date: today(), text: "" });
+  let contact = $state("");
   let failure = $state<string | null>(null);
   let message = $state<string | null>(null);
 
@@ -32,13 +33,17 @@
     read = result.data;
     failure = result.failure;
     if (read) booking = { date: today(), text: read.proposal?.text ?? read.document.name ?? "" };
+    contact = read?.contacts[0]?.party ?? (read?.new_contact ? "new" : "");
   }
+
+  const byKey = (by: string) =>
+    (({ vat_id: "byVatId", tax_number: "byTaxNumber", bank_account: "byBankAccount" }) as const)[by as "vat_id"] ?? "byName";
 
   async function record(book: boolean) {
     if (!app.books || !read) return;
     const { error, response } = await api.POST("/api/v1/books/{books}/documents/pending/{pending}", {
       params: { path: { books: app.books, pending: read.pending } },
-      body: { book, date: booking.date, text: booking.text },
+      body: { book, date: booking.date, text: booking.text, contact: read.new_contact ? contact : null },
     });
     if (!response.ok) return void (failure = problem(error, response));
     message = book ? t("booked") : t("filed");
@@ -67,6 +72,15 @@
     <div class="panel read">
       <h2>{read.document.number ?? read.document.name ?? read.document.id}</h2>
       {#if read.not_an_invoice}<p class="error">{t("notAnInvoice")}: {read.not_an_invoice}</p>{/if}
+      {#if read.new_contact}
+        <label>{t("documentContact")}
+          <select bind:value={contact}>
+            {#each read.contacts as found (found.party)}<option value={found.party}>{found.name} ({t(byKey(found.by))})</option>{/each}
+            <option value="new">{read.new_contact.name} – {t("keepNewContact")}</option>
+            <option value="">{t("noContact")}</option>
+          </select>
+        </label>
+      {/if}
       {#if read.proposal}
         <label>{t("date")} <input type="date" bind:value={booking.date} /></label>
         <label>{t("text")} <input bind:value={booking.text} /></label>

@@ -55,7 +55,7 @@ Without a VAT identification number the seller's tax number is also its identifi
 BT-29, BT-30 or BT-31 (rule [BR-CO-26](https://docs.peppol.eu/poac/eu/pint-eu/trn-invoice/rule/BR-CO-26/)).
 
 The seller's details and the customers are part of the books – the owner's contact and invoicing settings, the
-customers as organisations – and travel with them to every device. Each device writes invoice numbers in a series of
+customers as organisations, contacts of the owner ([Contacts](contacts.md)) – and travel with them to every device. Each device writes invoice numbers in a series of
 its own, so that two devices offline never write the same number: the first `RE-2026-001`, the next ones
 `RE-2026-B001`, `RE-2026-C001` (librotenado 0008). Should two devices ever have taken the same series, the review list
 says so.

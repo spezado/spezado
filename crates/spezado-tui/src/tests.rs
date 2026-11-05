@@ -178,12 +178,49 @@ fn an_e_invoice_is_read_into_a_proposal_and_booked() {
     }
     assert!(matches!(app.mode, Mode::Proposal(_)), "{:?}", app.status);
     assert!(screen(&app).contains("Buchungsvorschlag"));
-    press(&mut app, KeyCode::Enter);
-    press(&mut app, KeyCode::Enter);
+    // Date, text, and the contact: a new one from the invoice, as no contact matches yet.
+    assert!(screen(&app).contains("neuer Kontakt: [Seller name]"), "{}", screen(&app));
+    for _ in 0..3 {
+        press(&mut app, KeyCode::Enter);
+    }
     assert!(matches!(app.mode, Mode::Normal), "{:?}", app.status);
     assert_eq!((app.view.documents.len(), app.view.journal.len()), (1, 1));
+    // The seller is a supplier now, and the document names it.
+    assert_eq!(app.view.contacts.len(), 1);
+    assert!(app.view.contacts[0].supplier);
+    let seller = app.view.documents[0].1.invoice.as_ref().unwrap().seller.party.clone();
+    assert_eq!(seller.map(|p| p.to_string()), Some(app.view.contacts[0].id.clone()));
     assert_eq!(app.view.journal[0].booking.documents, [app.view.documents[0].1.id.clone()]);
     assert!(screen(&app).contains("123456XX"));
+}
+
+#[test]
+fn contacts_are_kept_and_changed() {
+    let scratch = Scratch::new("contacts");
+    let mut workspace = Workspace::create(&scratch.0, "laptop".parse().unwrap()).unwrap();
+    let mut app = App::new(&mut workspace, Lang::De);
+    set_up(&mut app);
+    press(&mut app, KeyCode::Char('9'));
+    assert!(screen(&app).contains("Noch keine Kontakte"));
+    press(&mut app, KeyCode::Char('k'));
+    type_in(&mut app, "Kunde A GmbH");
+    for _ in 0..14 {
+        press(&mut app, KeyCode::Enter);
+    }
+    assert!(matches!(app.mode, Mode::Normal), "{:?}", app.status);
+    assert_eq!(app.view.contacts.len(), 1);
+    assert_eq!(app.view.contacts[0].number.as_deref(), Some("10001"));
+    assert!(screen(&app).contains("Kunde A GmbH"));
+    // Opened again: a supplier, too.
+    press(&mut app, KeyCode::Enter);
+    press(&mut app, KeyCode::Enter);
+    press(&mut app, KeyCode::Left);
+    for _ in 0..13 {
+        press(&mut app, KeyCode::Enter);
+    }
+    assert!(matches!(app.mode, Mode::Normal), "{:?}", app.status);
+    let contact = &app.view.contacts[0];
+    assert_eq!((contact.customer, contact.supplier, contact.number.as_deref()), (true, true, Some("10001")));
 }
 
 #[test]

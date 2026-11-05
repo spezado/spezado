@@ -396,6 +396,31 @@ impl Words<'_> {
                 ),
                 format!("{} is for {}, who is not an owner of the books.", self.event(event), self.party(owner)),
             ),
+            PartyProblem::UnknownParty { event, party } => self.say(
+                format!(
+                    "{} macht {} zum Kunden oder Lieferanten, der nicht beschrieben ist – vielleicht noch nicht übertragen.",
+                    self.event(event),
+                    short(party)
+                ),
+                format!(
+                    "{} makes {} a customer or supplier who is not described – perhaps not transferred yet.",
+                    self.event(event),
+                    short(party)
+                ),
+            ),
+            PartyProblem::NumberTaken { owner, number, parties } => {
+                let names = parties.iter().map(|p| self.party(p)).collect::<Vec<_>>().join(", ");
+                self.say(
+                    format!(
+                        "Die Nummer {number} von {} ist mehreren Kontakten gegeben ({names}) – einem eine andere geben.",
+                        self.party(owner)
+                    ),
+                    format!(
+                        "The number {number} of {} is given to several contacts ({names}) – give one of them another.",
+                        self.party(owner)
+                    ),
+                )
+            }
             PartyProblem::NotAnOwner { event, owner } => self.say(
                 format!(
                     "{0} bucht für {1} – {1} ist aber kein Eigentümer der Bücher.",

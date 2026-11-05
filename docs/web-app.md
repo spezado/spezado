@@ -58,6 +58,7 @@ the token it receives; another browser needs a code of its own.
 | Bank | read statements, book entries or accept the proposals |
 | Documents | read e-invoices into booking proposals, file other documents, download every original |
 | Invoices | the seller's details, customers, invoices written as XRechnung or ZUGFeRD ([Invoices](invoices.md)) |
+| Contacts | customers and suppliers with numbers, contact persons and bank account ([Contacts](contacts.md)) |
 | Accounts | balances, ledgers, opening balances |
 | Reports | the reports of the year, as CSV, too; the filings prepared from them ([Filings](filings.md)) |
 | Review | what needs review, in words |

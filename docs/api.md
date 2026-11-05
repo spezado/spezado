@@ -32,7 +32,7 @@ curl -s http://127.0.0.1:8048/api/v1/books -H "Authorization: Bearer $TOKEN"
 | Booking | `POST /books/{books}/bookings/simple`, `/bookings/lines`, `/reversals`; `GET` `POST /opening` |
 | Bank | `POST /books/{books}/bank/statements`; `GET /bank/entries`; `POST /bank/entries/book`, `/bank/entries/accept`, `/bank/accept-all` |
 | Documents | `GET` `POST /books/{books}/documents`; `GET /documents/{document}/original` |
-| Invoices | `GET` `PUT /books/{books}/invoicing/profile`; `GET` `POST /customers`; `POST /invoices`; `GET /invoices/next-number` |
+| Invoices | `GET` `PUT /books/{books}/invoicing/profile`; `GET` `POST /customers`; `GET` `POST /contacts`; `POST /invoices`; `GET /invoices/next-number` |
 | Reports | `GET /books/{books}/reports`, `/reports/{report}`; `GET` `PUT /deadlines`; `GET /review` |
 | Closing | `POST /books/{books}/closings`, `POST /books/{books}/reopenings`; `GET /gobd` |
 | Synchronisation | `GET` `POST /books/{books}/sync` – status, synchronise now; `POST /sync/start`, `/sync/invitations` (with `rights`); `GET /sync/devices`, `DELETE /sync/devices/{member}`; `POST /sync/join`, `/sync/recover` |

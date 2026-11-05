@@ -27,7 +27,8 @@ use crate::{Api, ApiError, dto};
 const WAITING: Duration = Duration::from_secs(60 * 60);
 
 /// Documents read and not recorded yet, by the identity handed out.
-pub type Pending = BTreeMap<String, (BooksId, Document, Option<Booking>, Instant)>;
+pub type Pending =
+    BTreeMap<String, (BooksId, Document, Option<Booking>, Instant, Option<(spezado_app::ContactCard, bool)>)>;
 
 /// The routes of documents, the bank and the data transfer.
 pub fn routes() -> Router<Api> {
@@ -166,10 +167,27 @@ async fn read_document(
             document: document_view(&read.document, false),
             proposal: read.proposal.as_ref().map(|b| booking_view(b, &names)),
             not_an_invoice: read.not_an_invoice,
+            contacts: read
+                .contacts
+                .iter()
+                .map(|c| dto::ContactSuggestion {
+                    party: c.party.to_string(),
+                    name: c.name.clone(),
+                    by: match c.by {
+                        librotenado::MatchBy::VatId => "vat_id",
+                        librotenado::MatchBy::TaxNumber => "tax_number",
+                        librotenado::MatchBy::BankAccount => "bank_account",
+                        librotenado::MatchBy::Name => "name",
+                    }
+                    .into(),
+                })
+                .collect(),
+            new_contact: read.new_contact.clone().map(Into::into),
         };
+        let new_contact = read.new_contact.map(|card| (card, side == InvoiceSide::Purchase));
         let mut waiting = pending.lock().expect("the documents waiting");
         waiting.retain(|_, entry| entry.3.elapsed() < WAITING);
-        waiting.insert(id, (books, read.document, read.proposal, Instant::now()));
+        waiting.insert(id, (books, read.document, read.proposal, Instant::now(), new_contact));
         Ok(Json(result))
     })
     .await
@@ -189,7 +207,7 @@ async fn record(
     let written = api
         .run(move |workspace| {
             let books = books_id(&books)?;
-            let (of, document, proposal, _) =
+            let (of, mut document, proposal, _, new_contact) =
                 waiting.lock().expect("the documents waiting").remove(&pending).ok_or_else(|| {
                     ApiError(axum::http::StatusCode::NOT_FOUND, "no document waits under this name".into())
                 })?;
@@ -209,6 +227,19 @@ async fn record(
                 (true, None) => return Err(ApiError::bad("there is no proposal to book")),
                 (false, _) => None,
             };
+            if let (Some(chosen), Some((card, seller)), Some(invoice)) =
+                (request.contact.as_deref(), new_contact, document.invoice.as_deref_mut())
+            {
+                let party = match chosen {
+                    "" => None,
+                    "new" => {
+                        let owner = owner(workspace, &books)?;
+                        Some(workspace.save_contact(&books, &owner, card)?.parse().expect("an identity"))
+                    }
+                    id => Some(id.parse().map_err(|_| ApiError::bad("not a contact"))?),
+                };
+                if seller { invoice.seller.party = party } else { invoice.buyer.party = party }
+            }
             let events = workspace.record_document(&books, document, booking)?;
             Ok(dto::Written { events: events.iter().map(ToString::to_string).collect() })
         })

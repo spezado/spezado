@@ -192,6 +192,7 @@ fn keys(app: &App) -> Vec<(Text, KeyCode)> {
         }
         (Mode::Normal, Tab::Accounts) => vec![(Text::KeyOpen, KeyCode::Enter), (Text::KeyOpening, char('o'))],
         (Mode::Normal, Tab::Reports) => vec![(Text::KeyOpen, KeyCode::Enter)],
+        (Mode::Normal, Tab::Contacts) => vec![(Text::KeyNewContact, char('k')), (Text::KeyOpen, KeyCode::Enter)],
         (Mode::Normal, Tab::Closing) => {
             vec![(Text::KeyClose, char('c')), (Text::KeyReopen, char('u')), (Text::KeyGobd, char('g'))]
         }
@@ -304,6 +305,39 @@ fn draw_tab(frame: &mut Frame, app: &App, area: Rect, hits: &mut Hits) {
             let mut state = TableState::new().with_selected(Some(selected_row));
             frame.render_stateful_widget(table, inner, &mut state);
             row_hits(hits, inner, 1, state.offset(), app.view.documents.len());
+        }
+        Tab::Contacts => {
+            if app.view.contacts.is_empty() {
+                frame.render_widget(Paragraph::new(t(Text::NoContacts)).style(dim()), inner);
+                return;
+            }
+            let rows = app.view.contacts.iter().map(|c| {
+                let kind = match (c.customer, c.supplier) {
+                    (true, true) => t(Text::CustomerAndSupplier),
+                    (false, true) => t(Text::Supplier),
+                    _ => t(Text::Customer),
+                };
+                Row::new(vec![
+                    c.number.clone().unwrap_or_default(),
+                    c.name.clone(),
+                    kind.to_owned(),
+                    c.vat_id.clone().unwrap_or_default(),
+                    c.city.clone(),
+                ])
+            });
+            let header = Row::new(vec![t(Text::Number), t(Text::Name), t(Text::Kind), t(Text::VatId), t(Text::City)])
+                .style(accent());
+            let widths = [
+                Constraint::Length(8),
+                Constraint::Min(20),
+                Constraint::Length(22),
+                Constraint::Length(16),
+                Constraint::Length(16),
+            ];
+            let table = Table::new(rows, widths).header(header).row_highlight_style(selected());
+            let mut state = TableState::new().with_selected(Some(selected_row));
+            frame.render_stateful_widget(table, inner, &mut state);
+            row_hits(hits, inner, 1, state.offset(), app.view.contacts.len());
         }
         Tab::Accounts => {
             let rows = app.view.balances.iter().map(|(_, number, name, balance)| {
