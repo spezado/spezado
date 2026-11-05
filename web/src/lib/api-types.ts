@@ -787,6 +787,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/books/{books}/trade-tax": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The trade tax multiplier of the owner's municipality today. */
+        get: operations["trade_tax"];
+        /** Changes the trade tax multiplier from a date on; everything else stays as configured. */
+        put: operations["change_trade_tax"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/devices": {
         parameters: {
             query?: never;
@@ -1737,6 +1755,16 @@ export interface components {
             unknown: components["schemas"]["Amount"];
             /** @description Due within a year. */
             up_to_one_year: components["schemas"]["Amount"];
+        };
+        /** @description The trade tax multiplier of the owner's municipality. */
+        TradeTax: {
+            /** @description From when it applies, `YYYY-MM-DD`: when changing, today if none. */
+            from?: string | null;
+            /**
+             * Format: int32
+             * @description The multiplier in percent, at least 200; none when the owner is not subject to trade tax.
+             */
+            multiplier?: number | null;
         };
         /** @description An advance VAT return and when it is due. */
         VatReturnDue: {
@@ -3372,6 +3400,60 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TaxCodeView"][];
+                };
+            };
+        };
+    };
+    trade_tax: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                books: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TradeTax"];
+                };
+            };
+        };
+    };
+    change_trade_tax: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                books: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TradeTax"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TradeTax"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
                 };
             };
         };

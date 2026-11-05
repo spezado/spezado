@@ -56,3 +56,9 @@ balance sheet notes per position how much is due within a year and after more th
 from the remaining terms of the SKR accounts, and – where bookings count in the commercial or the tax balance sheet
 only (`basis` in the API) – the reconciliation to the tax balance sheet. `--year-start-day` lets a financial year
 begin in the middle of a month.
+
+The taxes on profit over a financial year: `de-kst` (corporation tax and solidarity surcharge, for corporations)
+and `de-gewst` (trade tax, where the configuration has the multiplier of the municipality: `--trade-tax-multiplier`
+when setting up, `spezado trade-tax 410 --from 2026-01-01` later; `spezado trade-tax --from …` without a number for
+a freelancer). Losses carried forward, the reduction for business land and the size of holdings are not asked for
+yet (librotenado 0012, OPEN).

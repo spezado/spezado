@@ -118,6 +118,17 @@ pub struct Deadlines {
     pub vat_extended: bool,
 }
 
+/// The trade tax multiplier of the owner's municipality.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct TradeTax {
+    /// From when it applies, `YYYY-MM-DD`: when changing, today if none.
+    #[serde(default)]
+    pub from: Option<String>,
+    /// The multiplier in percent, at least 200; none when the owner is not subject to trade tax.
+    #[serde(default)]
+    pub multiplier: Option<u32>,
+}
+
 /// An advance VAT return and when it is due.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct VatReturnDue {

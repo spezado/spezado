@@ -11,7 +11,9 @@
 
 use std::collections::BTreeMap;
 
-use librotenado::{AccountId, Chart, ChartTranslation, Date, FilingKind, ReportMapping, ReturnPeriod, TaxTable};
+use librotenado::{
+    AccountId, Chart, ChartTranslation, Date, FilingKind, ReportMapping, ReturnPeriod, TaxSubject, TaxTable,
+};
 use spezado_law::{Facts, LawModule, Report, ReportBasis, StandardAccounts};
 
 use crate::holidays::{next_day, weekday};
@@ -175,6 +177,36 @@ impl LawModule for Germany {
                 });
             }
             _ => {}
+        }
+        // The taxes on profit of a business over a financial year (librotenado 0012): corporation tax for bodies
+        // under the KStG, trade tax where the configuration names the multiplier of the municipality.
+        if configuration.accounting.is_some() {
+            let subject = match facts.legal_form {
+                Some("de-gmbh" | "de-ug" | "de-ag" | "de-kgaa" | "de-se" | "de-eg") => TaxSubject::Corporation,
+                Some("de-ev" | "de-stiftung") => TaxSubject::Association,
+                Some("de-gbr" | "de-ohg" | "de-kg" | "de-gmbh-co-kg" | "de-partg") => TaxSubject::Partnership,
+                _ => TaxSubject::Individual,
+            };
+            if matches!(subject, TaxSubject::Corporation | TaxSubject::Association) {
+                reports.push(Report {
+                    id: "de-kst",
+                    name: "Körperschaftsteuer",
+                    basis: ReportBasis::ProfitTax { subject, trade: false },
+                    mapping: computed("de-kst"),
+                    filing: None,
+                    shortened: None,
+                });
+            }
+            if configuration.trade_tax_multiplier.is_some() {
+                reports.push(Report {
+                    id: "de-gewst",
+                    name: "Gewerbesteuer",
+                    basis: ReportBasis::ProfitTax { subject, trade: true },
+                    mapping: computed("de-gewst"),
+                    filing: None,
+                    shortened: None,
+                });
+            }
         }
         reports
     }
@@ -369,6 +401,15 @@ const SKR04_OF: &[(&str, &str)] = &[
 /// The legal forms of corporations and of partnerships without a natural person fully liable, which the shortened
 /// balance sheets of § 266 Abs. 1 HGB apply to (§ 264a HGB).
 const CORPORATIONS: [&str; 5] = ["de-gmbh", "de-ug", "de-ag", "de-kgaa", "de-gmbh-co-kg"];
+
+/// The mapping of a report computed rather than mapped – the taxes on profit –: only its name, which names its fields.
+fn computed(report: &str) -> ReportMapping {
+    serde_json::from_value(serde_json::json!({
+        "report": report, "country": "DE", "version": "2026", "valid_from": "2026-01-01",
+        "into": "librotenado/0.1", "status": "draft",
+    }))
+    .expect("a mapping without accounts")
+}
 
 /// The last day of a month.
 fn last_day(year: u16, month: u8) -> Option<Date> {

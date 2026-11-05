@@ -116,6 +116,18 @@ enum Commands {
         #[arg(long)]
         owner: Option<PartyId>,
     },
+    /// Sets the trade tax multiplier of the municipality (Hebesatz, in percent) from a date on; without one, the owner
+    /// is not subject to trade tax – a freelancer.
+    TradeTax {
+        /// The multiplier in percent, at least 200.
+        multiplier: Option<u32>,
+        /// From when it applies; default: today.
+        #[arg(long)]
+        from: Option<Date>,
+        /// The owner; may be left out while the books have one.
+        #[arg(long)]
+        owner: Option<PartyId>,
+    },
     /// Reopens the latest closing of an owner: the period it closed is open again; nothing is deleted.
     Reopen {
         /// Why it is reopened.
@@ -326,6 +338,9 @@ struct SetUp {
     /// The state whose public holidays move deadlines, ISO 3166-2: DE-BY, DE-NW, …
     #[arg(long)]
     region: Option<String>,
+    /// The trade tax multiplier of the municipality in percent (Hebesatz); none for a freelancer.
+    #[arg(long)]
+    trade_tax_multiplier: Option<u32>,
 }
 
 /// Whether a command creates the workspace if there is none: the terminal interface and the server.
@@ -518,6 +533,16 @@ fn run(workspace: &mut Workspace, books: &BooksId, command: Commands) -> Result<
             let owner = choose_owner(workspace, books, owner)?;
             let software = workspace.software();
             println!("{}", workspace.execute(books, Command::Close { owner, to, software })?);
+        }
+        Commands::TradeTax { multiplier, from, owner } => {
+            let owner = choose_owner(workspace, books, owner)?;
+            anyhow::ensure!(multiplier.is_none_or(|m| m >= 200), "a multiplier is at least 200 % (§ 16 Abs. 4 GewStG)");
+            let from = from.unwrap_or_else(spezado_app::today);
+            workspace.change_trade_tax(books, &owner, from, multiplier)?;
+            match multiplier {
+                Some(m) => println!("trade tax at {m} % from {from}"),
+                None => println!("no trade tax from {from}"),
+            }
         }
         Commands::Reopen { reason, owner } => {
             let owner = choose_owner(workspace, books, owner)?;
@@ -771,6 +796,9 @@ fn set_up(workspace: &mut Workspace, setup: SetUp) -> Result<BooksId> {
     }
     if let Some(region) = setup.region {
         configuration["region"] = region.into();
+    }
+    if let Some(multiplier) = setup.trade_tax_multiplier {
+        configuration["trade_tax_multiplier"] = multiplier.into();
     }
     let configuration: Configuration = serde_json::from_value(configuration).context("configuration")?;
     Ok(workspace.set_up(party, configuration)?)

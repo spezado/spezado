@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Corporation tax and trade tax** after librotenado 0012: the reports `de-kst` (Körperschaftsteuer and
+  solidarity surcharge, for GmbH, UG, AG, KGaA, SE, cooperatives, associations) and `de-gewst` (Gewerbesteuer, with
+  the additions of § 8 and reductions of § 9 GewStG, the allowance and the base amount) over a financial year, from
+  the tax balance sheet. The multiplier of the municipality: `spezado set-up --trade-tax-multiplier`,
+  `spezado trade-tax 410 --from 2026-01-01`, and `/trade-tax` in the API; without one, no trade tax – a freelancer.
+
 - **`spezado-tray` on Windows:** the server with its icon in the system tray as a program of its own, without a
   console window; it starts at login (`Start at login`, `spezado autostart on`).
 - **Tax codes of automatic accounts:** choosing an account of SKR 03 or SKR 04 on which DATEV computes VAT (AM, AV)

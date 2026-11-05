@@ -42,6 +42,8 @@ use crate::{Api, ApiError, dto};
         book_opening,
         deadlines,
         change_deadlines,
+        trade_tax,
+        change_trade_tax,
         reverse,
         reports,
         report,
@@ -113,6 +115,7 @@ pub fn protected() -> Router<Api> {
         .route("/books/{books}/bookings/lines", post(book_lines))
         .route("/books/{books}/opening", get(opening).post(book_opening))
         .route("/books/{books}/deadlines", get(deadlines).put(change_deadlines))
+        .route("/books/{books}/trade-tax", get(trade_tax).put(change_trade_tax))
         .route("/books/{books}/reversals", post(reverse))
         .route("/books/{books}/reports", get(reports))
         .route("/books/{books}/reports/{report}", get(report))
@@ -826,6 +829,51 @@ async fn deadlines(State(api): State<Api>, Path(books): Path<String>) -> Result<
         }))
     })
     .await
+}
+
+/// The trade tax multiplier of the owner's municipality today.
+#[utoipa::path(get, path = "/api/v1/books/{books}/trade-tax", params(("books" = String, Path)),
+    responses((status = 200, body = dto::TradeTax)))]
+async fn trade_tax(State(api): State<Api>, Path(books): Path<String>) -> Result<Json<dto::TradeTax>, ApiError> {
+    api.run(move |workspace| {
+        let books = books_id(&books)?;
+        let owner = owner(workspace, &books)?;
+        let events = workspace.get(&books)?.events();
+        let configuration = events.configuration(&owner, today());
+        Ok(Json(dto::TradeTax {
+            from: configuration.map(|c| c.from.to_string()),
+            multiplier: configuration.and_then(|c| c.trade_tax_multiplier),
+        }))
+    })
+    .await
+}
+
+/// Changes the trade tax multiplier from a date on; everything else stays as configured.
+#[utoipa::path(put, path = "/api/v1/books/{books}/trade-tax", params(("books" = String, Path)),
+    request_body = dto::TradeTax, responses((status = 200, body = dto::TradeTax), (status = 422, body = dto::Problem)))]
+async fn change_trade_tax(
+    State(api): State<Api>,
+    Path(books): Path<String>,
+    Json(request): Json<dto::TradeTax>,
+) -> Result<Json<dto::TradeTax>, ApiError> {
+    let id = books.clone();
+    let changed = api
+        .run(move |workspace| {
+            let books = books_id(&books)?;
+            let owner = owner(workspace, &books)?;
+            if request.multiplier.is_some_and(|m| m < 200) {
+                return Err(ApiError::bad("a multiplier is at least 200 % (§ 16 Abs. 4 GewStG)"));
+            }
+            let from = match &request.from {
+                Some(text) => date(text)?,
+                None => today(),
+            };
+            workspace.change_trade_tax(&books, &owner, from, request.multiplier)?;
+            Ok(dto::TradeTax { from: Some(from.to_string()), ..request })
+        })
+        .await?;
+    api.changed(&id);
+    Ok(Json(changed))
 }
 
 /// Changes the facts that move the owner's deadlines from a date on; everything else stays as configured.

@@ -380,6 +380,27 @@ impl Workspace {
         Ok(())
     }
 
+    /// Changes the trade tax multiplier of the owner's municipality from a date on (librotenado 0008); none when the
+    /// owner is not subject to trade tax. Everything else stays as configured.
+    pub fn change_trade_tax(
+        &mut self,
+        books: &BooksId,
+        owner: &PartyId,
+        from: Date,
+        multiplier: Option<u32>,
+    ) -> Result<(), AppError> {
+        let mut configuration = self
+            .get(books)?
+            .events()
+            .configuration(owner, from)
+            .cloned()
+            .ok_or_else(|| AppError::NotConfigured { owner: owner.clone(), date: from })?;
+        configuration.from = from;
+        configuration.trade_tax_multiplier = multiplier;
+        self.execute(books, Command::Configure(configuration))?;
+        Ok(())
+    }
+
     /// Records one business transaction in several sets of books, one booking each, all or none: the bookings are
     /// given a new transaction that names the other books (spec part 0002). Returns the events written.
     pub fn book_across(&mut self, bookings: Vec<(BooksId, Booking)>) -> Result<Vec<EventHash>, AppError> {
@@ -527,6 +548,26 @@ impl Workspace {
             ReportBasis::Balances => events.account_report(&mapping, &self.chart, owner, Some(to))?,
             ReportBasis::Customers => events.customer_report(&mapping, &self.chart, owner, from, to)?.0,
             ReportBasis::Assets => events.asset_report(&mapping, &self.chart, owner, from, to),
+            ReportBasis::ProfitTax { subject, trade } => {
+                let facts = librotenado::ProfitTaxFacts {
+                    subject,
+                    multiplier: configuration.trade_tax_multiplier,
+                    income_losses: 0,
+                    trade_losses: 0,
+                    land_reduction: 0,
+                    turnover_and_wages: None,
+                    holding: librotenado::Holding::default(),
+                    cash_basis: configuration.accounting.as_ref().is_some_and(|a| a.as_str() == "de-cash-basis"),
+                };
+                let tax = events
+                    .profit_tax(&self.chart, owner, from, to, &facts)
+                    .map_err(|e| AppError::UnknownReport(format!("{report}: {e}")))?;
+                match (trade, &tax.trade) {
+                    (true, Some(trade)) => trade.fields(),
+                    (true, None) => BTreeMap::new(),
+                    (false, _) => tax.fields(),
+                }
+            }
         };
         let (mut terms, mut reconciliation) = (BTreeMap::new(), BTreeMap::new());
         if basis == ReportBasis::Balances {

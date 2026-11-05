@@ -46,6 +46,14 @@ pub enum ReportBasis {
     Customers,
     /// From the register of fixed assets – the Anlage AVEÜR (librotenado spec part 0011).
     Assets,
+    /// The taxes on profit of a financial year (librotenado spec part 0012): corporation tax, or with `trade` the
+    /// trade tax, of an owner of this kind.
+    ProfitTax {
+        /// Who pays.
+        subject: librotenado::TaxSubject,
+        /// The trade tax rather than corporation tax.
+        trade: bool,
+    },
 }
 
 /// A report that applies to an owner for a period.

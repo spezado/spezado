@@ -2573,6 +2573,79 @@
         }
       }
     },
+    "/api/v1/books/{books}/trade-tax": {
+      "get": {
+        "tags": [],
+        "summary": "The trade tax multiplier of the owner's municipality today.",
+        "operationId": "trade_tax",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TradeTax"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [],
+        "summary": "Changes the trade tax multiplier from a date on; everything else stays as configured.",
+        "operationId": "change_trade_tax",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TradeTax"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TradeTax"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/devices": {
       "get": {
         "tags": [],
@@ -5028,6 +5101,28 @@
           "up_to_one_year": {
             "$ref": "#/components/schemas/Amount",
             "description": "Due within a year."
+          }
+        }
+      },
+      "TradeTax": {
+        "type": "object",
+        "description": "The trade tax multiplier of the owner's municipality.",
+        "properties": {
+          "from": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "From when it applies, `YYYY-MM-DD`: when changing, today if none."
+          },
+          "multiplier": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "The multiplier in percent, at least 200; none when the owner is not subject to trade tax.",
+            "minimum": 0
           }
         }
       },
