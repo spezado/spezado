@@ -634,7 +634,8 @@ async fn reverse(
     Ok(Json(written))
 }
 
-/// The reports of a year: the advance VAT returns with their deadlines, the annual ones.
+/// The reports of a year: the advance VAT returns and the recapitulative statements with something in them, with their
+/// deadlines; the annual ones.
 #[utoipa::path(get, path = "/api/v1/books/{books}/reports", params(("books" = String, Path), YearQuery),
     responses((status = 200, body = Vec<dto::ReportItem>)))]
 async fn reports(
@@ -657,8 +658,15 @@ async fn reports(
                 due: Some(r.due.to_string()),
             })
             .collect();
+        items.extend(workspace.customer_statements(&books, &owner, year)?.into_iter().map(|r| dto::ReportItem {
+            id: "de-zm".into(),
+            name: "Zusammenfassende Meldung".into(),
+            from: r.from.to_string(),
+            to: r.to.to_string(),
+            due: Some(r.due.to_string()),
+        }));
         for (id, name) in workspace.reports(&books, &owner, first, last)? {
-            if id != "de-ustva" {
+            if !["de-ustva", "de-zm"].contains(&id) {
                 items.push(dto::ReportItem {
                     id: id.into(),
                     name: name.into(),
@@ -692,13 +700,19 @@ async fn report(
             .iter()
             .map(|(field, units)| dto::Field {
                 field: field.clone(),
-                name: names.as_ref().and_then(|n| n.get(&format!("{}/{field}", figures.id))).map(str::to_owned),
+                name: names.as_ref().and_then(|n| field_name(n, figures.id, field)).map(str::to_owned),
                 amount: dto::Amount::from(&Money::new(*units, figures.currency.clone()).expect("an amount")),
             })
             .collect();
         Ok(Json(dto::Figures { id: figures.id.into(), name: figures.name.into(), law: figures.law, fields }))
     })
     .await
+}
+
+/// The name of a report's field: of its position, or – in a report per customer, `<VAT id>/<base>` – of its base.
+fn field_name<'a>(names: &'a Names, report: &str, field: &str) -> Option<&'a str> {
+    let base = field.rsplit('/').next().unwrap_or(field);
+    names.get(&format!("{report}/{field}")).or_else(|| names.get(&format!("{report}/{base}")))
 }
 
 /// The first day of the books and the opening balances booked.

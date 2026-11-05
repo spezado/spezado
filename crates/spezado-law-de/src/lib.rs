@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! German law for spezado – a first cut: the DATEV standard charts, the German tax codes, the VAT return, the
-//! income statement on a cash basis and the HGB statements, and the periods of advance VAT returns. The data comes
-//! from librotenado; the rules of what applies when are here. All of it is a draft for review by tax advisers.
+//! recapitulative statement, the income statement on a cash basis and the HGB statements, and the periods of advance
+//! VAT returns. The data comes from librotenado; the rules of what applies when are here. All of it is a draft for
+//! review by tax advisers.
 //!
-//! Sources: § 18 Abs. 1 and 2 UStG (advance returns, their periods and deadline), § 46 UStDV (the extension of the
-//! deadline), § 108 Abs. 3 AO (deadlines on a weekend or a public holiday), § 4 Abs. 3 EStG (cash basis), §§ 266, 275 HGB (statements). What is not covered yet is marked OPEN
+//! Sources: § 18 Abs. 1 and 2 UStG (advance returns, their periods and deadline), § 18a UStG (the recapitulative
+//! statement), § 46 UStDV (the extension of the deadline), § 108 Abs. 3 AO (deadlines on a weekend or a public
+//! holiday), § 4 Abs. 3 EStG (cash basis), §§ 266, 275 HGB (statements). What is not covered yet is marked OPEN
 //! where it would apply.
 
 use std::collections::BTreeMap;
@@ -81,6 +83,15 @@ impl LawModule for Germany {
                 mapping,
                 filing: Some(FilingKind::VatReturn),
             });
+            // Supplies to businesses in other member states, per customer (§ 18a UStG); none for small businesses
+            // (Abs. 4). Which period applies – month, quarter or year (Abs. 1, 2 and 9) – is the filer's.
+            reports.push(Report {
+                id: "de-zm",
+                name: "Zusammenfassende Meldung",
+                basis: ReportBasis::Customers,
+                mapping: ReportMapping::de_zm_2026(),
+                filing: Some(FilingKind::RecapitulativeStatement),
+            });
         }
         match configuration.accounting.as_ref().map(|code| code.as_str()) {
             Some("de-cash-basis") if matches!(year, Some(2025 | 2026)) => {
@@ -129,6 +140,46 @@ impl LawModule for Germany {
             day = next_day(day);
         }
         day
+    }
+
+    fn customer_periods(
+        &self,
+        facts: &Facts,
+        year: u16,
+        fields: &dyn Fn(Date, Date) -> BTreeMap<String, i128>,
+    ) -> Vec<(Date, Date, Date)> {
+        let (Some(first), Some(last)) = (Date::new(year, 1, 1), Date::new(year, 12, 31)) else { return Vec::new() };
+        if !self.reports(facts, first, last).iter().any(|report| report.basis == ReportBasis::Customers) {
+            return Vec::new();
+        }
+        let state = facts.configuration.region.as_ref().map(|region| region.as_str());
+        // Supplies of goods, triangular ones included, count towards the threshold; services do not (§ 18a Abs. 1
+        // Satz 2 UStG).
+        let goods = |(from, to): (Date, Date)| -> i128 {
+            fields(from, to)
+                .iter()
+                .filter(|(field, _)| field.ends_with("/L") || field.ends_with("/D"))
+                .map(|f| f.1)
+                .sum()
+        };
+        let mut periods = Vec::new();
+        for quarter in 0..4i32 {
+            // Quarterly while goods stay at 50,000 euros at most in this quarter and each of the four before it;
+            // monthly otherwise (§ 18a Abs. 1). Services alone are quarterly (Abs. 2). OPEN: a threshold crossed
+            // within the quarter, which the law reports from the month of crossing on, is shown monthly for the
+            // whole quarter; and the threshold in a functional currency other than the euro.
+            let monthly = (0..5).any(|back| quarter_of(year, quarter - back).is_some_and(|q| goods(q) > 5_000_000));
+            let Some((from, to)) = quarter_of(year, quarter) else { continue };
+            if monthly {
+                for month in from.month()..=to.month() {
+                    let (Some(start), Some(end)) = (Date::new(year, month, 1), last_day(year, month)) else { continue };
+                    periods.push((start, end, statement_deadline(end, state)));
+                }
+            } else {
+                periods.push((from, to, statement_deadline(to, state)));
+            }
+        }
+        periods
     }
 
     fn standard_accounts(&self, national: &ChartTranslation) -> Option<StandardAccounts> {
@@ -194,6 +245,26 @@ const STANDARD: &[(&str, &str, &str)] = &[
     ("reverse-charge-input", "1577", "1407"),
 ];
 
+/// A calendar quarter, counted from the first of `year` (0) – earlier ones negative.
+fn quarter_of(year: u16, quarter: i32) -> Option<(Date, Date)> {
+    let index = i32::from(year) * 4 + quarter;
+    let (year, first) = (u16::try_from(index.div_euclid(4)).ok()?, index.rem_euclid(4) as u8 * 3 + 1);
+    Some((Date::new(year, first, 1)?, last_day(year, first + 2)?))
+}
+
+/// The day a statement per customer of a period ending on `end` is due: the 25th day after it (§ 18a Abs. 1 and 2
+/// UStG) – not extended by § 46 UStDV, which names advance returns only –, on a weekend or a public holiday the next
+/// working day (§ 108 Abs. 3 AO).
+fn statement_deadline(end: Date, state: Option<&str>) -> Date {
+    let index = u32::from(end.month());
+    let (year, month) = (end.year() + (index / 12) as u16, (index % 12) as u8 + 1);
+    let mut day = Date::new(year, month, 25).expect("the 25th exists");
+    while weekday(day) >= 5 || holidays::is_holiday(day, state) {
+        day = next_day(day);
+    }
+    day
+}
+
 /// The last day of a month.
 fn last_day(year: u16, month: u8) -> Option<Date> {
     (28..=31).rev().find_map(|day| Date::new(year, month, day))
@@ -236,7 +307,7 @@ mod tests {
         let ids = |from, to| -> Vec<&str> {
             Germany.reports(&facts, date(from), date(to)).iter().map(|report| report.id).collect()
         };
-        assert_eq!(ids("2026-01-01", "2026-03-31"), ["de-ustva", "de-euer"]);
+        assert_eq!(ids("2026-01-01", "2026-03-31"), ["de-ustva", "de-zm", "de-euer"]);
         assert_eq!(ids("2025-01-01", "2025-12-31"), ["de-euer"]);
         assert!(ids("2025-12-01", "2026-01-31").is_empty());
         let quarters = Germany.vat_periods(&facts, 2026);
@@ -298,6 +369,48 @@ mod tests {
         assert_eq!(due(&monthly, "2026-12-31"), date("2027-02-10"));
         monthly.region = Some("DE-SN".parse().unwrap());
         assert_eq!(due(&monthly, "2026-10-31"), date("2026-12-10"));
+    }
+
+    #[test]
+    fn recapitulative_statements_are_quarterly_unless_goods_exceed_50000_euros() {
+        let regular = configuration("de-double-entry", Some(("de-regular", "month")));
+        let facts = Facts::new(&regular, None, None);
+        // Goods of 60,000 euros in the second quarter of 2026, services of 80,000 in the first.
+        let fields = |from: Date, to: Date| -> BTreeMap<String, i128> {
+            let mut fields = BTreeMap::new();
+            if from <= date("2026-05-15") && date("2026-05-15") <= to {
+                fields.insert("ATU12345678/L".into(), 6_000_000);
+            }
+            if from <= date("2026-02-15") && date("2026-02-15") <= to {
+                fields.insert("FR40303265045/S".into(), 8_000_000);
+            }
+            fields
+        };
+        let periods = Germany.customer_periods(&facts, 2026, &fields);
+        let ends: Vec<String> = periods.iter().map(|p| p.1.to_string()).collect();
+        // Services alone stay quarterly; from the quarter with goods over the threshold on, monthly for the four
+        // quarters after it, too – here the rest of the year.
+        assert_eq!(
+            ends,
+            [
+                "2026-03-31",
+                "2026-04-30",
+                "2026-05-31",
+                "2026-06-30",
+                "2026-07-31",
+                "2026-08-31",
+                "2026-09-30",
+                "2026-10-31",
+                "2026-11-30",
+                "2026-12-31"
+            ]
+        );
+        // The 25th day after the period; 25 April 2026 is a Saturday, 25 January 2027 a Monday.
+        assert_eq!(periods[0].2, date("2026-04-27"));
+        assert_eq!(periods[9].2, date("2027-01-25"));
+        // Small businesses file none (§ 18a Abs. 4 UStG).
+        let small = configuration("de-cash-basis", Some(("de-small-business", "year")));
+        assert!(Germany.customer_periods(&Facts::new(&small, None, None), 2026, &fields).is_empty());
     }
 
     #[test]

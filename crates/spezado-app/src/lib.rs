@@ -417,7 +417,45 @@ impl Workspace {
                 .filter(|problem| concerns(problem, books, &own))
                 .map(Issue::Transaction),
         );
+        for problem in self.customer_problems(books)? {
+            if !issues.contains(&Issue::Customer(problem.clone())) {
+                issues.push(Issue::Customer(problem));
+            }
+        }
         Ok(issues)
+    }
+
+    /// The bookings the reports per customer of the law that applies cannot place – a VAT identification number of
+    /// the customer missing, or several – over each calendar year with bookings.
+    fn customer_problems(&self, books: &BooksId) -> Result<Vec<librotenado::CustomerProblem>, AppError> {
+        let events = self.get(books)?.events();
+        let years: BTreeSet<u16> = events
+            .ordered()
+            .iter()
+            .filter_map(|(_, event)| match &event.payload {
+                librotenado::Payload::BookingRecorded { booking }
+                | librotenado::Payload::BookingReversed { booking, .. } => Some(booking.date.year()),
+                _ => None,
+            })
+            .collect();
+        let mut problems = Vec::new();
+        for owner in events.owners() {
+            for &year in &years {
+                let (Some(from), Some(to)) = (Date::new(year, 1, 1), Date::new(year, 12, 31)) else { continue };
+                // An owner not set up by the end of the year, or without law, has no reports to check here; the
+                // review names what is missing on its own.
+                let Ok((configuration, country, legal_form, module)) = self.law_for(books, owner, to) else {
+                    continue;
+                };
+                let facts = Facts::new(&configuration, country, legal_form.as_deref());
+                for report in module.reports(&facts, from, to) {
+                    if report.basis == ReportBasis::Customers {
+                        problems.extend(events.customer_report(&report.mapping, &self.chart, owner, from, to)?.1);
+                    }
+                }
+            }
+        }
+        Ok(problems)
     }
 
     /// The configuration of an owner on a date, the law module that applies to it, and its facts' parts.
@@ -472,6 +510,7 @@ impl Workspace {
                 events.period_report(&mapping, &taxes, &self.chart, owner, from, to)?
             }
             ReportBasis::Balances => events.account_report(&mapping, &self.chart, owner, Some(to))?,
+            ReportBasis::Customers => events.customer_report(&mapping, &self.chart, owner, from, to)?.0,
         };
         let law = format!("{}/{}", module.name(), module.version());
         Ok(ReportFigures { id, name, fields, currency: configuration.currency, law })

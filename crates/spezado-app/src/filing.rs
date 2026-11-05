@@ -5,8 +5,9 @@
 use std::time::Duration;
 
 use librotenado::{
-    AdapterError, Country, Date, Derivation, Document, DocumentId, DocumentKind, Filer, Filing, FilingId, FilingKind,
-    FilingState, Payload, ReportContent, Submission, SubmissionState, SubmissionStatus, from_root, to_root,
+    AdapterError, BalanceError, Country, Date, Derivation, Document, DocumentId, DocumentKind, Filer, Filing, FilingId,
+    FilingKind, FilingState, Money, Payload, ReportContent, Submission, SubmissionState, SubmissionStatus, from_root,
+    to_root,
 };
 use serde::{Deserialize, Serialize};
 use spezado_core::Command;
@@ -244,12 +245,29 @@ impl Workspace {
             .ok_or_else(|| AppError::UnknownReport(report.to_owned()))?;
         let kind = found.filing.ok_or_else(|| AppError::Adapter(format!("{report} is not filed on its own")))?;
         let jurisdiction = facts.country.ok_or_else(|| AppError::NoLaw(owner.clone()))?;
+        let events = self.get(books)?.events();
         let derivation = match found.basis {
             ReportBasis::Period => Derivation::Period,
             ReportBasis::Balances => Derivation::Balances,
+            ReportBasis::Customers => {
+                // Per customer: `<VAT identification number>/<base>` (spec part 0009). Bookings without a clear
+                // VAT identification number are left out; the review list names them.
+                let (units, _) = events.customer_report(&found.mapping, &self.chart, owner, from, to)?;
+                let fields = units
+                    .into_iter()
+                    .map(|(field, units)| Money::new(units, configuration.currency.clone()).map(|m| (field, m)))
+                    .collect::<Option<_>>()
+                    .ok_or(BalanceError::Overflow)?;
+                let content = ReportContent {
+                    report: found.mapping.report.clone(),
+                    version: found.mapping.version.clone(),
+                    fields,
+                };
+                return Ok((kind, content, jurisdiction));
+            }
         };
         let taxes = module.tax_table(to).ok_or_else(|| AppError::UnknownReport(report.to_owned()))?;
-        let content = self.get(books)?.events().report_content(
+        let content = events.report_content(
             &found.mapping,
             derivation,
             &taxes,

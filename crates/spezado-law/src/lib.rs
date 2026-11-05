@@ -42,6 +42,8 @@ pub enum ReportBasis {
     Period,
     /// From the balances at the end of the period – a balance sheet.
     Balances,
+    /// From the postings dated within the period, per customer – a recapitulative statement.
+    Customers,
 }
 
 /// A report that applies to an owner for a period.
@@ -111,6 +113,18 @@ pub trait LawModule: std::fmt::Debug + Send + Sync {
 
     /// The day the advance VAT return of a period ending on `end` is due.
     fn vat_deadline(&self, facts: &Facts, end: Date) -> Date;
+
+    /// The periods of the statements per customer in the calendar year `year` – `(first day, last day, due)` – given
+    /// the fields of the report per customer from one day to another; none when the owner files none.
+    fn customer_periods(
+        &self,
+        facts: &Facts,
+        year: u16,
+        fields: &dyn Fn(Date, Date) -> BTreeMap<String, i128>,
+    ) -> Vec<(Date, Date, Date)> {
+        let _ = (facts, year, fields);
+        Vec::new()
+    }
 
     /// The standard accounts of a national chart the module offers.
     fn standard_accounts(&self, national: &ChartTranslation) -> Option<StandardAccounts>;

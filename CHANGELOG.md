@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **The recapitulative statement** (Zusammenfassende Meldung, § 18a UStG) as a report and a filing, `de-zm`: supplies
+  to businesses in other EU member states per customer's VAT identification number, after librotenado 0009. The
+  review list names a booking it cannot place – no VAT identification number of the customer, or several. The
+  reports list its quarters – or months, above 50,000 euros of goods – with something to report and their deadlines.
 - **Filings** after librotenado 0007: the advance VAT return and the Anlage EÜR prepared from the books – again as
   a correction once one was submitted, outdated when the books change –, submitted through the adapter of their
   country, also as a test, and asked about; what the authority returns becomes a document. In the terminal, the web

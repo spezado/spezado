@@ -248,6 +248,7 @@ texts! {
     Balance => "Balance", "Saldo";
     // Reports
     VatReturn => "Advance VAT return", "Umsatzsteuer-Voranmeldung";
+    RecapitulativeStatement => "Recapitulative statement", "Zusammenfassende Meldung";
     Draft => "Draft – not yet reviewed by tax advisers", "Entwurf – von Steuerberatern noch nicht geprüft";
     Preview => "Preview – the mappings are drafts not reviewed by tax advisers, not for a real tax return", "Vorschau – Zuordnungen sind Entwürfe ohne Prüfung durch Steuerberater, nicht für die echte Steuererklärung";
     Field => "Field", "Kennzahl";

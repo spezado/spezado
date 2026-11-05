@@ -311,6 +311,41 @@ impl Workspace {
             .collect()
     }
 
+    /// The statements per customer of an owner in a calendar year – in Germany the Zusammenfassende Meldung – and
+    /// when each is due: only the periods with something in them, a supply to report or a booking the review list
+    /// names.
+    pub fn customer_statements(
+        &self,
+        books: &BooksId,
+        owner: &PartyId,
+        year: u16,
+    ) -> Result<Vec<VatReturnDue>, AppError> {
+        let last = Date::new(year, 12, 31).expect("a last of December");
+        let (configuration, country, legal_form, module) = self.law_for(books, owner, last)?;
+        let facts = Facts::new(&configuration, country, legal_form.as_deref());
+        let first = Date::new(year, 1, 1).expect("a first of January");
+        let Some(report) = module
+            .reports(&facts, first, last)
+            .into_iter()
+            .find(|report| report.basis == spezado_law::ReportBasis::Customers)
+        else {
+            return Ok(Vec::new());
+        };
+        let events = self.get(books)?.events();
+        let chart = &self.chart;
+        let content = |from, to| events.customer_report(&report.mapping, chart, owner, from, to).unwrap_or_default();
+        let fields = |from, to| content(from, to).0;
+        Ok(module
+            .customer_periods(&facts, year, &fields)
+            .into_iter()
+            .filter(|(from, to, _)| {
+                let (fields, problems) = content(*from, *to);
+                !fields.is_empty() || !problems.is_empty()
+            })
+            .map(|(from, to, due)| VatReturnDue { from, to, due })
+            .collect())
+    }
+
     /// The accounts an owner can book on: the national chart's, with their numbers, and the books' own; names in
     /// `language` (`de`, `en`), German where it has none.
     pub fn account_choices(

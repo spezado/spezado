@@ -851,7 +851,7 @@ pub struct FilingView {
 /// Preparing the filing of a report.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PrepareFiling {
-    /// The report: `de-ustva`, `de-euer`.
+    /// The report: `de-ustva`, `de-zm`, `de-euer`.
     pub report: String,
     /// The first day of the period, `YYYY-MM-DD`.
     pub from: String,

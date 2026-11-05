@@ -5,8 +5,8 @@ use std::collections::BTreeMap;
 
 use librotenado::{
     AccountId, AccountKind, AccountProblem, Booking, BookingProblem, BooksId, BooksProblem, ChainProblem, Chart,
-    ClosingProblem, Date, DocumentProblem, Event, EventHash, EventSet, FilingProblem, ObjectError, PartyId,
-    PartyProblem, Payload, StatementProblem, TransactionProblem,
+    ClosingProblem, CustomerProblem, Date, DocumentProblem, Event, EventHash, EventSet, FilingProblem, ObjectError,
+    PartyId, PartyProblem, Payload, StatementProblem, TransactionProblem,
 };
 
 /// Something in the books a person has to look at. Nothing on this list is resolved silently; it is resolved by a
@@ -49,6 +49,9 @@ pub enum Issue {
     /// Bank statements and the bookings of their entries (spec part 0005).
     #[error("{0}")]
     Statement(StatementProblem),
+    /// A booking a report per customer cannot place (spec part 0009); found by the law that applies to its owner.
+    #[error("{0}")]
+    Customer(CustomerProblem),
 }
 
 /// A booking as the journal shows it.

@@ -5,9 +5,9 @@
 use std::collections::BTreeMap;
 
 use librotenado::{
-    AccountProblem, BookingError, BookingProblem, BooksProblem, ChainProblem, ClosingProblem, Document, DocumentId,
-    DocumentProblem, EntryReference, EventHash, EventSet, FilingProblem, Money, PartyId, PartyProblem, Payload,
-    StatementProblem, TransactionId, TransactionProblem,
+    AccountProblem, BookingError, BookingProblem, BooksProblem, ChainProblem, ClosingProblem, CustomerProblem,
+    Document, DocumentId, DocumentProblem, EntryReference, EventHash, EventSet, FilingProblem, Money, PartyId,
+    PartyProblem, Payload, StatementProblem, TransactionId, TransactionProblem,
 };
 use spezado_core::{Issue, format_amount_in, format_date_in};
 
@@ -231,6 +231,36 @@ impl Words<'_> {
             ),
             Issue::Booking(problem) => self.booking(problem),
             Issue::Statement(problem) => self.statement(problem),
+            Issue::Customer(problem) => self.customer(problem),
+        }
+    }
+
+    fn customer(&self, problem: &CustomerProblem) -> String {
+        match problem {
+            CustomerProblem::NoVatId { event } => self.say(
+                format!(
+                    "{} ist eine Lieferung oder Leistung an einen Kunden in einem anderen EU-Staat, ihre Belege nennen \
+                     aber keine USt-IdNr. des Kunden – in der Zusammenfassenden Meldung fehlt sie deshalb.",
+                    self.event(event)
+                ),
+                format!(
+                    "{} is a supply to a customer in another EU member state, but its documents name no VAT \
+                     identification number of the customer – it is left out of the recapitulative statement.",
+                    self.event(event)
+                ),
+            ),
+            CustomerProblem::SeveralVatIds { event } => self.say(
+                format!(
+                    "Die Belege von {} nennen mehrere USt-IdNr. von Kunden – in der Zusammenfassenden Meldung fehlt \
+                     sie deshalb. Die Umsätze jedes Kunden getrennt buchen.",
+                    self.event(event)
+                ),
+                format!(
+                    "The documents of {} name several VAT identification numbers of customers – it is left out of \
+                     the recapitulative statement. Book each customer's supplies on their own.",
+                    self.event(event)
+                ),
+            ),
         }
     }
 

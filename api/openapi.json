@@ -1691,7 +1691,7 @@
     "/api/v1/books/{books}/reports": {
       "get": {
         "tags": [],
-        "summary": "The reports of a year: the advance VAT returns with their deadlines, the annual ones.",
+        "summary": "The reports of a year: the advance VAT returns and the recapitulative statements with something in them, with their\ndeadlines; the annual ones.",
         "operationId": "reports",
         "parameters": [
           {
@@ -3655,7 +3655,7 @@
           },
           "report": {
             "type": "string",
-            "description": "The report: `de-ustva`, `de-euer`."
+            "description": "The report: `de-ustva`, `de-zm`, `de-euer`."
           },
           "to": {
             "type": "string",

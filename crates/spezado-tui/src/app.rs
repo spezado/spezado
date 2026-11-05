@@ -340,8 +340,17 @@ impl<'w> App<'w> {
                 due: Some(r.due),
             })
             .collect();
+        let statements = self.workspace.customer_statements(&books, &owner, self.year).unwrap_or_default();
+        reports.extend(statements.iter().map(|r| ReportItem {
+            id: "de-zm",
+            name: self.t(Text::RecapitulativeStatement),
+            from: r.from,
+            to: r.to,
+            due: Some(r.due),
+        }));
         let annual = self.workspace.reports(&books, &owner, first, last).unwrap_or_default();
-        reports.extend(annual.into_iter().filter(|(id, _)| *id != "de-ustva").map(|(id, name)| ReportItem {
+        let periodic = ["de-ustva", "de-zm"];
+        reports.extend(annual.into_iter().filter(|(id, _)| !periodic.contains(id)).map(|(id, name)| ReportItem {
             id,
             name,
             from: first,
@@ -756,8 +765,16 @@ impl App<'_> {
                     .fields
                     .iter()
                     .map(|(field, units)| {
-                        let key = format!("{}/{field}", figures.id);
-                        let name = names.as_ref().and_then(|n| n.get(&key)).unwrap_or("").to_owned();
+                        // A report per customer has `<VAT id>/<base>`: named by its base.
+                        let base = field.rsplit('/').next().unwrap_or(field);
+                        let name = names
+                            .as_ref()
+                            .and_then(|n| {
+                                n.get(&format!("{}/{field}", figures.id))
+                                    .or_else(|| n.get(&format!("{}/{base}", figures.id)))
+                            })
+                            .unwrap_or("")
+                            .to_owned();
                         (field.clone(), name, Money::new(*units, figures.currency.clone()).expect("an amount"))
                     })
                     .collect();

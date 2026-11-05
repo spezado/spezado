@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! A freelancer writes invoices: the seller's details and a customer, an XRechnung in sequence, paid through the bank;
 //! a small business without VAT; with double entry, the receivable booked when issued; supplies without VAT – exempt,
-//! reverse charge, to other EU countries – with what the invoice has to state.
+//! reverse charge, to other EU countries – with what the invoice has to state, and the recapitulative statement.
 
 use std::fs;
 use std::path::PathBuf;
 
-use librotenado::{CurrencyTable, Money, PartyId, Person, en16931};
-use spezado_app::{Customer, InvoiceFormat, InvoiceProfile, NewInvoice, NewLine, Party, Source, Workspace, new_id};
+use librotenado::{CurrencyTable, FilingKind, Money, PartyId, Person, en16931};
+use spezado_app::{
+    Customer, InvoiceFormat, InvoiceProfile, NewInvoice, NewLine, Party, SimpleEntry, Source, Workspace, new_id,
+};
 
 const OCTOBER: &[u8] = include_bytes!("data/statement-001.08.xml");
 
@@ -285,11 +287,48 @@ fn supplies_without_vat_state_why_and_reach_their_fields() {
     );
     assert!(workspace.review(&books).unwrap().is_empty(), "{:?}", workspace.review(&books).unwrap());
 
+    // The recapitulative statement (§ 18a UStG): per customer in another member state, by the VAT identification
+    // number on the invoice – goods (L) and services (S) apart; filed as a filing of its own.
+    let (from, to) = ("2026-04-01".parse().unwrap(), "2026-06-30".parse().unwrap());
+    let zm = workspace.report(&books, &ada, "de-zm", from, to).unwrap();
+    assert_eq!(zm.fields, [("ATU12345678/L".to_owned(), 40_000), ("ATU12345678/S".to_owned(), 30_000)].into());
+    // Listed for the second quarter only, the one with supplies in it, due on the 25th day after it – a Saturday, so
+    // the Monday.
+    let statements = workspace.customer_statements(&books, &ada, 2026).unwrap();
+    assert_eq!(
+        statements.iter().map(|s| (s.from, s.to, s.due.to_string())).collect::<Vec<_>>(),
+        [(from, to, "2026-07-27".to_owned())]
+    );
+    let filing = workspace.prepare_filing(&books, &ada, "de-zm", from, to).unwrap();
+    assert_eq!(filing.kind, FilingKind::RecapitulativeStatement);
+    assert_eq!(filing.content[0].report, "de-zm");
+    assert_eq!(filing.content[0].fields["ATU12345678/L"], euros(40_000));
+
     // What § 14a UStG asks for is checked before anything is written.
     for (customer, code) in [(&wien, "de-out-13b"), (&berlin, "de-out-eu-service"), (&wien_without, "de-out-ig-supply")]
     {
         assert!(workspace.write_invoice(&books, &ada, &invoice(customer, code, 100, None)).is_err(), "{code}");
     }
+
+    // A supply to another member state booked without an invoice naming the customer's VAT identification number is
+    // left out of the statement – and goes to the review list.
+    let standard = workspace.standard_accounts(&books, &ada, "2026-05-01".parse().unwrap()).unwrap();
+    let entry = SimpleEntry {
+        owner: ada.clone(),
+        date: "2026-05-01".parse().unwrap(),
+        text: "Lieferung nach Wien".into(),
+        account: standard.sales.clone(),
+        gross: euros(5_000),
+        tax: Some("de-out-ig-supply".parse().unwrap()),
+        payment: standard.bank,
+        documents: vec![],
+    };
+    let booking = workspace.simple_booking(&books, &entry).unwrap();
+    workspace.execute(&books, spezado_core::Command::Book(booking)).unwrap();
+    assert_eq!(workspace.report(&books, &ada, "de-zm", from, to).unwrap().fields, zm.fields);
+    let review = workspace.review_in(&books, Some(&ada), "de").unwrap();
+    assert_eq!(review.len(), 1, "{review:?}");
+    assert!(review[0].contains("„Lieferung nach Wien“") && review[0].contains("keine USt-IdNr."), "{review:?}");
 }
 
 #[test]

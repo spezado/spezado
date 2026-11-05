@@ -241,7 +241,7 @@ enum SyncAction {
 enum FilingAction {
     /// Prepares the filing of a report for a period from the books as they are.
     Prepare {
-        /// The report: de-ustva, de-euer.
+        /// The report: de-ustva, de-zm, de-euer.
         report: String,
         /// The first day.
         #[arg(long)]
@@ -493,7 +493,7 @@ fn run(workspace: &mut Workspace, books: &BooksId, command: Commands) -> Result<
                     println!("{} ({}), {from} – {to}, {}", figures.name, figures.id, figures.law);
                     for (field, units) in &figures.fields {
                         let amount = librotenado::Money::new(*units, figures.currency.clone()).context("overflow")?;
-                        println!("{field:>12} {:>16}", format_amount(&amount));
+                        println!("{field:>16} {:>16}", format_amount(&amount));
                     }
                 }
             }

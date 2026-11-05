@@ -47,5 +47,6 @@ positive for debit and negative for credit, and optionally `@` and a tax code; t
 `--accounting` is `de-cash-basis` or `de-double-entry`, `--vat` `de-regular` or `de-small-business`, `--chart`
 `de-skr03` or `de-skr04`; `--vat-extended` and `--region` (`DE-BY`, `DE-NW`, …) move the deadlines.
 
-The reports for German books are `de-ustva` (advance VAT return) and `de-euer` (Anlage EÜR) on a cash basis, and
-the balance sheet and profit and loss account after the HGB with double entry.
+The reports for German books are `de-ustva` (advance VAT return) and `de-zm` (recapitulative statement, per
+customer); `de-euer` (Anlage EÜR) on a cash basis, and the balance sheet and profit and loss account after the HGB
+with double entry.

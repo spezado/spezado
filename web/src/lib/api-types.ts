@@ -507,7 +507,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The reports of a year: the advance VAT returns with their deadlines, the annual ones. */
+        /**
+         * The reports of a year: the advance VAT returns and the recapitulative statements with something in them, with their
+         *     deadlines; the annual ones.
+         */
         get: operations["reports"];
         put?: never;
         post?: never;
@@ -1236,7 +1239,7 @@ export interface components {
         PrepareFiling: {
             /** @description The first day of the period, `YYYY-MM-DD`. */
             from: string;
-            /** @description The report: `de-ustva`, `de-euer`. */
+            /** @description The report: `de-ustva`, `de-zm`, `de-euer`. */
             report: string;
             /** @description The last day of the period, `YYYY-MM-DD`. */
             to: string;

@@ -5,7 +5,8 @@ nav_order: 7
 
 # Filings
 
-A filing is what goes to an authority: in Germany the advance VAT return (`de-ustva`) and the Anlage EÜR (`de-euer`).
+A filing is what goes to an authority: in Germany the advance VAT return (`de-ustva`), the recapitulative statement
+(`de-zm`, Zusammenfassende Meldung) and the Anlage EÜR (`de-euer`).
 spezado derives it from the books, records it, and submits it through an **adapter** – a service of its own per
 country that talks to the authority, after
 [librotenado 0007](https://librotenado.dev/spec/0007-filings.html). spezado itself never talks to ELSTER.
@@ -18,6 +19,17 @@ recorded, and can be tried with any adapter that follows librotenado 0007.
 
 A filing is prepared from a report and its period: its fields as the books give them now, and the state of the books
 they were derived from. It is never changed afterwards.
+
+The recapitulative statement lists supplies to businesses in other EU member states per customer, as
+`<VAT identification number>/<kind>` – `L` goods, `S` services, `D` triangular transactions
+([§ 18a UStG](https://www.gesetze-im-internet.de/ustg_1980/__18a.html)). The VAT identification number is the one on
+the invoice the booking is based on, or that of the customer's organisation. A booking that names none, or several,
+is left out and named on the review list. The reports list it per quarter, due on the 25th day after it; per month
+once supplies of goods have exceeded 50,000 euros in the quarter or one of the four before it (Abs. 1 and 2) – and only
+the periods with something to report. Small businesses file none (Abs. 4).
+
+**OPEN:** a threshold crossed within a quarter is reported from the month of crossing on; spezado lists the whole
+quarter by month. The yearly statement (Abs. 9) is prepared from the command line or the API, for any period.
 
 - Asked again while nothing changed, spezado returns the same filing.
 - When the books change so that the fields would differ – a booking in the period, a reversal –, the filing is

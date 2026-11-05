@@ -96,7 +96,7 @@ fn books_are_set_up_booked_and_found_again() {
     let (from, to) = ("2026-01-01".parse().unwrap(), "2026-03-31".parse().unwrap());
     assert_eq!(
         workspace.reports(&books, &ada, from, to).unwrap(),
-        [("de-ustva", "Umsatzsteuer-Voranmeldung"), ("de-euer", "Anlage EÜR")]
+        [("de-ustva", "Umsatzsteuer-Voranmeldung"), ("de-zm", "Zusammenfassende Meldung"), ("de-euer", "Anlage EÜR")]
     );
     let vat = workspace.report(&books, &ada, "de-ustva", from, to).unwrap();
     // Kennzahl 81 takes the base at 19 %; the form computes the tax from it.
