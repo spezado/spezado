@@ -547,6 +547,10 @@ impl Workspace {
         if let Some(vat_id) = customer.vat_id.as_ref().filter(|v| !v.is_empty()) {
             buyer["vat_id"] = vat_id.as_str().into();
         }
+        if customer.id.parse::<PartyId>().is_ok() {
+            // The contact the buyer is (librotenado spec part 0008).
+            buyer["party"] = customer.id.as_str().into();
+        }
         let due = plus_days(new.date, profile.payment_days);
         let mut data = json!({
             "currency": currency.as_str(),

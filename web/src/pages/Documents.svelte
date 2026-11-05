@@ -7,6 +7,7 @@
   import { app, go, t } from "../lib/state.svelte";
 
   let documents = $state<Schemas["DocumentView"][]>([]);
+  let contacts = $state<Schemas["Contact"][]>([]);
   let files = $state<FileList | null>(null);
   let side = $state("purchase");
   let payment = $state("bank");
@@ -21,6 +22,7 @@
     void app.version;
     if (!books) return;
     api.GET("/api/v1/books/{books}/documents", { params: { path: { books } } }).then(({ data }) => (documents = data ?? []));
+    api.GET("/api/v1/books/{books}/contacts", { params: { path: { books } } }).then(({ data }) => (contacts = data ?? []));
   });
 
   async function submit(event: SubmitEvent) {
@@ -38,6 +40,15 @@
 
   const byKey = (by: string) =>
     (({ vat_id: "byVatId", tax_number: "byTaxNumber", bank_account: "byBankAccount" }) as const)[by as "vat_id"] ?? "byName";
+
+  async function assign(document: Schemas["DocumentView"], contact: string) {
+    if (!app.books) return;
+    const { error, response } = await api.POST("/api/v1/books/{books}/documents/{document}/contact", {
+      params: { path: { books: app.books, document: document.id } },
+      body: { contact: contact || null },
+    });
+    if (!response.ok) failure = problem(error, response);
+  }
 
   async function record(book: boolean) {
     if (!app.books || !read) return;
@@ -112,7 +123,7 @@
     <p class="muted">{t("noDocuments")}</p>
   {:else}
     <table class="wide">
-      <thead><tr><th>{t("date")}</th><th>{t("number")}</th><th class="number">{t("amount")}</th><th>{t("kind")}</th><th>{t("file")}</th></tr></thead>
+      <thead><tr><th>{t("date")}</th><th>{t("number")}</th><th class="number">{t("amount")}</th><th>{t("kind")}</th><th>{t("documentContact")}</th><th>{t("file")}</th></tr></thead>
       <tbody>
         {#each documents as document (document.id)}
           <tr>
@@ -120,6 +131,14 @@
             <td>{document.number ?? ""}</td>
             <td class="number">{document.due ? amount(document.due.value, app.lang) : ""}</td>
             <td class="muted">{document.format ?? document.media_type}{document.booked ? "" : " ·"}</td>
+            <td>
+              {#if document.party_name}
+                <select value={document.contact ?? ""} title={document.party_name} onchange={(e) => assign(document, e.currentTarget.value)}>
+                  <option value="">{document.party_name} – {t("noContact")}</option>
+                  {#each contacts as contact (contact.id)}<option value={contact.id}>{contact.name}</option>{/each}
+                </select>
+              {/if}
+            </td>
             <td>
               <button class="quiet" onclick={async () => (failure = await download(`/api/v1/books/${app.books}/documents/${document.id}/original`, document.name ?? document.id))}>
                 {document.name ?? t("original")}

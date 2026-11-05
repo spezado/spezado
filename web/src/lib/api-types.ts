@@ -377,6 +377,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/books/{books}/documents/{document}/contact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Names the contact the other party of a recorded invoice is, or none – a correction of the document; its original
+         *     stays.
+         */
+        post: operations["document_contact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/books/{books}/documents/{document}/original": {
         parameters: {
             query?: never;
@@ -1115,10 +1135,17 @@ export interface components {
             /** @description When it was paired, `YYYY-MM-DD`. */
             paired: string;
         };
+        /** @description The contact the other party of an invoice is. */
+        DocumentContact: {
+            /** @description A contact's identity; null for none. */
+            contact?: string | null;
+        };
         /** @description A document recorded, or read and waiting to be recorded. */
         DocumentView: {
             /** @description Whether a booking rests on it. */
             booked: boolean;
+            /** @description The identity of the contact the other party is, once known. */
+            contact?: string | null;
             /** @description The date it bears. */
             date: string;
             due?: components["schemas"]["Amount"] | null;
@@ -1134,6 +1161,8 @@ export interface components {
             name?: string | null;
             /** @description Its number, e.g. the invoice number. */
             number?: string | null;
+            /** @description For an invoice: the other party as the invoice names it – the buyer of one an owner wrote, else the seller. */
+            party_name?: string | null;
             /**
              * Format: int64
              * @description The size of its original in bytes.
@@ -2507,6 +2536,38 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Problem"];
                 };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    document_contact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                books: string;
+                document: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentContact"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             422: {
                 headers: {

@@ -115,4 +115,17 @@ fn customers_and_suppliers_are_kept_numbered_and_offered_for_documents() {
     assert_eq!((read.contacts[0].party.to_string(), read.contacts[0].by), (id, MatchBy::VatId));
     assert_eq!(read.contacts.len(), 2, "the supplier with the same account follows");
     assert!(workspace.review(&books).unwrap().is_empty(), "{:?}", workspace.review(&books).unwrap());
+
+    // Recorded without a contact, the document names one later – a correction; its original stays.
+    let mut document = read.document.clone();
+    document.invoice.as_mut().unwrap().seller.party = None;
+    let original = document.original.clone();
+    workspace.record_document(&books, document.clone(), None).unwrap();
+    let contact: PartyId = lieferant.parse().unwrap();
+    workspace.assign_contact(&books, &document.id, Some(contact.clone())).unwrap();
+    let documents = workspace.documents(&books).unwrap();
+    let stored = &documents.iter().find(|(_, d)| d.id == document.id).unwrap().1;
+    assert_eq!(stored.invoice.as_ref().unwrap().seller.party.as_ref(), Some(&contact));
+    assert_eq!(stored.original, original);
+    assert!(workspace.review(&books).unwrap().is_empty(), "{:?}", workspace.review(&books).unwrap());
 }

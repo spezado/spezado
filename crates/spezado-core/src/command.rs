@@ -68,6 +68,13 @@ pub enum Command {
         /// The software the figures were derived with, name → version.
         software: BTreeMap<String, String>,
     },
+    /// Corrects the data of a recorded document; its original stays (librotenado spec part 0005).
+    CorrectDocument {
+        /// The document as corrected.
+        document: Document,
+        /// Why.
+        reason: String,
+    },
     /// Registers a fixed asset (librotenado spec part 0011).
     AcquireAsset(librotenado::Asset),
     /// Records that a fixed asset left the business.
@@ -354,6 +361,19 @@ impl Books {
                     return Err(CommandError::ClosedAlready { owner, closed });
                 }
                 Payload::PeriodClosed { closing: Closing { owner, to, state: events.state(), software } }
+            }
+            Command::CorrectDocument { document, reason } => {
+                let reason = reason.trim().to_owned();
+                if reason.is_empty() {
+                    return Err(CommandError::NoReason);
+                }
+                let recorded = events.documents();
+                let current =
+                    recorded.get(&document.id).ok_or_else(|| CommandError::UnknownDocument(document.id.clone()))?;
+                if current.original != document.original {
+                    return Err(CommandError::UnknownDocument(document.id));
+                }
+                Payload::DocumentCorrected { document, reason }
             }
             Command::AcquireAsset(asset) => {
                 self.owner_open(&asset.owner, asset.acquired)?;

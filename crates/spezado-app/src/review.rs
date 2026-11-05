@@ -479,6 +479,17 @@ impl Words<'_> {
                 format!("{} beruht auf einem Beleg, der nicht erfasst ist.", self.event(event)),
                 format!("{} is based on a document that has not been recorded.", self.event(event)),
             ),
+            DocumentProblem::UnknownCorrection { document, .. } => self.say(
+                format!("Eine Berichtigung nennt einen Beleg, der nicht erfasst ist ({}).", short(document)),
+                format!("A correction names a document that has not been recorded ({}).", short(document)),
+            ),
+            DocumentProblem::OriginalChanged { document, .. } => self.say(
+                format!(
+                    "Eine Berichtigung von {} nennt ein anderes Original – sie gilt nicht.",
+                    self.document(document)
+                ),
+                format!("A correction of {} names another original – it does not apply.", self.document(document)),
+            ),
             DocumentProblem::Duplicate { document, .. } => self.say(
                 format!("{} ist doppelt erfasst.", self.document(document)),
                 format!("{} is recorded twice.", self.document(document)),

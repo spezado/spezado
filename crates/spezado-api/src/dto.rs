@@ -370,6 +370,17 @@ pub struct DocumentView {
     pub due: Option<Amount>,
     /// Whether a booking rests on it.
     pub booked: bool,
+    /// For an invoice: the other party as the invoice names it – the buyer of one an owner wrote, else the seller.
+    pub party_name: Option<String>,
+    /// The identity of the contact the other party is, once known.
+    pub contact: Option<String>,
+}
+
+/// The contact the other party of an invoice is.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct DocumentContact {
+    /// A contact's identity; null for none.
+    pub contact: Option<String>,
 }
 
 /// A booking proposed, not written.

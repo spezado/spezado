@@ -50,4 +50,5 @@ positive for debit and negative for credit, and optionally `@` and a tax code; t
 
 The reports for German books are `de-ustva` (advance VAT return), `de-ust` (annual VAT return, over a calendar
 year) and `de-zm` (recapitulative statement, per customer); `de-euer` (Anlage EÜR) and `de-aveuer` (Anlage AVEÜR, the fixed
-assets) on a cash basis, and the balance sheet and profit and loss account after the HGB with double entry.
+assets) on a cash basis, and the balance sheet and profit and loss account after the HGB with double entry – for a
+corporation also the shortened balance sheets `de-hgb-266-small` and `de-hgb-266-micro` (§ 266 Abs. 1 HGB).

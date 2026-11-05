@@ -50,6 +50,7 @@ use crate::{Api, ApiError, dto};
         reopen,
         crate::records::documents,
         crate::records::read_document,
+        crate::records::document_contact,
         crate::records::record,
         crate::records::original,
         crate::records::open_entries,
@@ -709,7 +710,7 @@ async fn report(
             .iter()
             .map(|(field, units)| dto::Field {
                 field: field.clone(),
-                name: names.as_ref().and_then(|n| field_name(n, figures.id, field)).map(str::to_owned),
+                name: names.as_ref().and_then(|n| field_name(n, &figures.names, field)).map(str::to_owned),
                 amount: dto::Amount::from(&Money::new(*units, figures.currency.clone()).expect("an amount")),
             })
             .collect();

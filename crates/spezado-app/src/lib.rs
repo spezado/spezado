@@ -167,6 +167,8 @@ pub struct ReportFigures {
     pub id: &'static str,
     /// Its name.
     pub name: &'static str,
+    /// Where the names of its fields stand in the translation data: `<names>/<field>` (the report of its mapping).
+    pub names: String,
     /// Position or field → amount, in base units of `currency`.
     pub fields: BTreeMap<String, i128>,
     /// The owner's functional currency.
@@ -507,7 +509,7 @@ impl Workspace {
     ) -> Result<ReportFigures, AppError> {
         let (configuration, country, legal_form, module) = self.law_for(books, owner, from)?;
         let facts = Facts::new(&configuration, country, legal_form.as_deref());
-        let Report { id, name, basis, mapping, .. } = module
+        let Report { id, name, basis, mapping, shortened, .. } = module
             .reports(&facts, from, to)
             .into_iter()
             .find(|candidate| candidate.id == report)
@@ -522,8 +524,12 @@ impl Workspace {
             ReportBasis::Customers => events.customer_report(&mapping, &self.chart, owner, from, to)?.0,
             ReportBasis::Assets => events.asset_report(&mapping, &self.chart, owner, from, to),
         };
+        let fields = match shortened {
+            Some(size) => librotenado::hgb_shortened(&fields, size),
+            None => fields,
+        };
         let law = format!("{}/{}", module.name(), module.version());
-        Ok(ReportFigures { id, name, fields, currency: configuration.currency, law })
+        Ok(ReportFigures { id, name, names: mapping.report, fields, currency: configuration.currency, law })
     }
 
     /// The law modules, `name → version`, as a closing records them.

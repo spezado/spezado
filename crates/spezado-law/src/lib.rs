@@ -61,6 +61,8 @@ pub struct Report {
     pub mapping: ReportMapping,
     /// The kind of filing it is submitted as on its own; none when it is not filed, or only with others.
     pub filing: Option<FilingKind>,
+    /// A balance sheet shortened for a small or micro company (§ 266 Abs. 1 HGB); none for the full one.
+    pub shortened: Option<librotenado::HgbSize>,
 }
 
 /// The accounts of a national chart that workflows book on when nobody chose others: where money is, what is sold

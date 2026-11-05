@@ -1272,6 +1272,55 @@
         }
       }
     },
+    "/api/v1/books/{books}/documents/{document}/contact": {
+      "post": {
+        "tags": [
+          "crate::records"
+        ],
+        "summary": "Names the contact the other party of a recorded invoice is, or none – a correction of the document; its original\nstays.",
+        "operationId": "document_contact",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "document",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentContact"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {},
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/books/{books}/documents/{document}/original": {
       "get": {
         "tags": [
@@ -3317,6 +3366,19 @@
           }
         }
       },
+      "DocumentContact": {
+        "type": "object",
+        "description": "The contact the other party of an invoice is.",
+        "properties": {
+          "contact": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A contact's identity; null for none."
+          }
+        }
+      },
       "DocumentView": {
         "type": "object",
         "description": "A document recorded, or read and waiting to be recorded.",
@@ -3332,6 +3394,13 @@
           "booked": {
             "type": "boolean",
             "description": "Whether a booking rests on it."
+          },
+          "contact": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The identity of the contact the other party is, once known."
           },
           "date": {
             "type": "string",
@@ -3380,6 +3449,13 @@
               "null"
             ],
             "description": "Its number, e.g. the invoice number."
+          },
+          "party_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "For an invoice: the other party as the invoice names it – the buyer of one an owner wrote, else the seller."
           },
           "size": {
             "type": "integer",

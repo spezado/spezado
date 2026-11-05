@@ -82,6 +82,7 @@ impl LawModule for Germany {
                 basis: ReportBasis::Period,
                 mapping,
                 filing: Some(FilingKind::VatReturn),
+                shortened: None,
             });
             // The annual return over the calendar year (§ 18 Abs. 3 UStG), also filed when advance returns were.
             if from == Date::new(2026, 1, 1).expect("a date") && to == Date::new(2026, 12, 31).expect("a date") {
@@ -91,6 +92,7 @@ impl LawModule for Germany {
                     basis: ReportBasis::Period,
                     mapping: ReportMapping::de_ust_2026(),
                     filing: Some(FilingKind::VatReturn),
+                    shortened: None,
                 });
             }
             // Supplies to businesses in other member states, per customer (§ 18a UStG); none for small businesses
@@ -101,6 +103,7 @@ impl LawModule for Germany {
                 basis: ReportBasis::Customers,
                 mapping: ReportMapping::de_zm_2026(),
                 filing: Some(FilingKind::RecapitulativeStatement),
+                shortened: None,
             });
         }
         match configuration.accounting.as_ref().map(|code| code.as_str()) {
@@ -113,6 +116,7 @@ impl LawModule for Germany {
                     basis: ReportBasis::Period,
                     mapping,
                     filing: Some(FilingKind::CashBasisStatement),
+                    shortened: None,
                 });
                 // The register of fixed assets, part of the Anlage EÜR. OPEN: filed together with it.
                 if year == Some(2026) {
@@ -122,6 +126,7 @@ impl LawModule for Germany {
                         basis: ReportBasis::Assets,
                         mapping: ReportMapping::de_aveuer_2026(),
                         filing: None,
+                        shortened: None,
                     });
                 }
             }
@@ -133,13 +138,40 @@ impl LawModule for Germany {
                     mapping: ReportMapping::de_hgb_266_2026(),
                     // Filed as the E-Bilanz, with mappings of their own (OPEN).
                     filing: None,
+                    shortened: None,
                 });
+                // Corporations may file shortened balance sheets by their size (§ 266 Abs. 1 Satz 3 and 4, § 267,
+                // § 267a HGB); which size applies is theirs to determine.
+                if facts.legal_form.is_some_and(|form| CORPORATIONS.contains(&form)) {
+                    for (id, name, size) in [
+                        (
+                            "de-hgb-266-small",
+                            "Bilanz, verkürzt (kleine Kapitalgesellschaft)",
+                            librotenado::HgbSize::Small,
+                        ),
+                        (
+                            "de-hgb-266-micro",
+                            "Bilanz, verkürzt (Kleinstkapitalgesellschaft)",
+                            librotenado::HgbSize::Micro,
+                        ),
+                    ] {
+                        reports.push(Report {
+                            id,
+                            name,
+                            basis: ReportBasis::Balances,
+                            mapping: ReportMapping::de_hgb_266_2026(),
+                            filing: None,
+                            shortened: Some(size),
+                        });
+                    }
+                }
                 reports.push(Report {
                     id: "de-hgb-275-gkv",
                     name: "Gewinn- und Verlustrechnung (§ 275 Abs. 2 HGB)",
                     basis: ReportBasis::Period,
                     mapping: ReportMapping::de_hgb_275_gkv_2026(),
                     filing: None,
+                    shortened: None,
                 });
             }
             _ => {}
@@ -332,6 +364,10 @@ const SKR04_OF: &[(&str, &str)] = &[
     ("2312", "6897"),
 ];
 
+/// The legal forms of corporations and of partnerships without a natural person fully liable, which the shortened
+/// balance sheets of § 266 Abs. 1 HGB apply to (§ 264a HGB).
+const CORPORATIONS: [&str; 5] = ["de-gmbh", "de-ug", "de-ag", "de-kgaa", "de-gmbh-co-kg"];
+
 /// The last day of a month.
 fn last_day(year: u16, month: u8) -> Option<Date> {
     (28..=31).rev().find_map(|day| Date::new(year, month, day))
@@ -381,6 +417,18 @@ mod tests {
         let quarters = Germany.vat_periods(&facts, 2026);
         assert_eq!(quarters.len(), 4);
         assert_eq!(quarters[3], (date("2026-10-01"), date("2026-12-31")));
+    }
+
+    #[test]
+    fn corporations_may_shorten_their_balance_sheet() {
+        let books = configuration("de-double-entry", Some(("de-regular", "month")));
+        let ids = |legal_form: Option<&str>| -> Vec<&str> {
+            let facts = Facts::new(&books, Some("DE".parse().unwrap()), legal_form);
+            Germany.reports(&facts, date("2026-01-01"), date("2026-12-31")).iter().map(|r| r.id).collect()
+        };
+        let gmbh = ids(Some("de-gmbh"));
+        assert!(gmbh.contains(&"de-hgb-266-small") && gmbh.contains(&"de-hgb-266-micro"), "{gmbh:?}");
+        assert!(!ids(Some("de-ek")).contains(&"de-hgb-266-small"));
     }
 
     #[test]

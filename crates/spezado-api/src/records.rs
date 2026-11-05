@@ -36,6 +36,7 @@ pub fn routes() -> Router<Api> {
         .route("/books/{books}/documents", get(documents).post(read_document))
         .route("/books/{books}/documents/pending/{pending}", post(record))
         .route("/books/{books}/documents/{document}/original", get(original))
+        .route("/books/{books}/documents/{document}/contact", post(document_contact))
         .route("/books/{books}/bank/entries", get(open_entries))
         .route("/books/{books}/bank/statements", post(import))
         .route("/books/{books}/bank/entries/book", post(book_entry))
@@ -87,7 +88,14 @@ fn booking_view(booking: &Booking, names: &BTreeMap<AccountId, (Option<String>, 
     }
 }
 
-fn document_view(document: &Document, booked: bool) -> dto::DocumentView {
+fn document_view(document: &Document, booked: bool, owners: &[&librotenado::PartyId]) -> dto::DocumentView {
+    let other = document.invoice.as_deref().map(|invoice| {
+        if invoice.seller.party.as_ref().is_some_and(|p| owners.contains(&p)) {
+            &invoice.buyer
+        } else {
+            &invoice.seller
+        }
+    });
     let kind = serde_json::to_value(document.kind).ok().and_then(|v| v.as_str().map(str::to_owned)).unwrap_or_default();
     dto::DocumentView {
         id: document.id.to_string(),
@@ -100,6 +108,8 @@ fn document_view(document: &Document, booked: bool) -> dto::DocumentView {
         size: document.original.size,
         due: document.invoice.as_ref().map(|i| dto::Amount::from(&i.totals.due)),
         booked,
+        party_name: other.map(|party| party.name.clone()),
+        contact: other.and_then(|party| party.party.as_ref()).map(ToString::to_string),
     }
 }
 
@@ -122,8 +132,11 @@ async fn documents(
                 _ => Vec::new(),
             })
             .collect();
-        let mut list: Vec<dto::DocumentView> =
-            workspace.documents(&books)?.iter().map(|(_, d)| document_view(d, based.contains(&d.id))).collect();
+        let mut list: Vec<dto::DocumentView> = {
+            let events = workspace.get(&books)?.events();
+            let owners = events.owners();
+            workspace.documents(&books)?.iter().map(|(_, d)| document_view(d, based.contains(&d.id), &owners)).collect()
+        };
         list.reverse();
         Ok(Json(list))
     })
@@ -164,7 +177,7 @@ async fn read_document(
         let id = spezado_app::new_id::<DocumentId>().to_string();
         let result = dto::ReadDocument {
             pending: id.clone(),
-            document: document_view(&read.document, false),
+            document: document_view(&read.document, false, &[&owner]),
             proposal: read.proposal.as_ref().map(|b| booking_view(b, &names)),
             not_an_invoice: read.not_an_invoice,
             contacts: read
@@ -246,6 +259,34 @@ async fn record(
         .await?;
     api.changed(&id);
     Ok(Json(written))
+}
+
+/// Names the contact the other party of a recorded invoice is, or none – a correction of the document; its original
+/// stays.
+#[utoipa::path(post, path = "/api/v1/books/{books}/documents/{document}/contact",
+    params(("books" = String, Path), ("document" = String, Path)), request_body = dto::DocumentContact,
+    responses((status = 200), (status = 422, body = dto::Problem)))]
+pub(crate) async fn document_contact(
+    State(api): State<Api>,
+    Path((books, document)): Path<(String, String)>,
+    Json(request): Json<dto::DocumentContact>,
+) -> Result<Json<()>, ApiError> {
+    let id = books.clone();
+    api.run(move |workspace| {
+        let books = books_id(&books)?;
+        let document = document.parse().map_err(|_| ApiError::bad("not the identity of a document"))?;
+        let contact = request
+            .contact
+            .filter(|c| !c.is_empty())
+            .map(|c| c.parse())
+            .transpose()
+            .map_err(|_| ApiError::bad("not the identity of a contact"))?;
+        workspace.assign_contact(&books, &document, contact)?;
+        Ok(())
+    })
+    .await?;
+    api.changed(&id);
+    Ok(Json(()))
 }
 
 /// The original of a document, byte for byte.

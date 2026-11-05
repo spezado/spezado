@@ -29,3 +29,7 @@ Reading an e-invoice offers the contact its other party may be – the seller of
 most certain first: by VAT identification number, by another tax number, by the bank account the invoice asks to be
 paid to, by name (ignoring case and the spaces between words). The first is chosen; choose another, none, or keep
 the party as a new contact with what the invoice says of it. The document names the contact chosen.
+
+A document recorded without one gets its contact later: in the web app, choose it in the column *Contact* of the list
+of documents. It is a correction of the document after librotenado 0005 – the document as recorded stays in the books,
+its original never changes. Invoices written by spezado name their customer from the start.

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **A contact for a document recorded already:** in the web app's list of documents, and the API; a correction of
+  the document after librotenado 0005, its original unchanged. Invoices written name their customer as a contact.
+- **Shortened balance sheets** for small and micro corporations (§ 266 Abs. 1 HGB): `de-hgb-266-small` and
+  `de-hgb-266-micro`.
+- Bank files in **camt.052 and camt.054** are read like camt.053.
+- The data transfer of the GoBD names the accounts' numbers of SKR 03 or SKR 04.
 - **Fixed assets** after librotenado 0011: register an asset with its cost and how it is depreciated – on a straight
   line by month, at once, in a pool, or not at all –, book the depreciation of a year once, and book an asset out at
   its book value when it leaves; the report **Anlage AVEÜR**. In the terminal (*Accounts*: `a`, `f`), the web app
@@ -31,7 +37,7 @@
   runs the relay unless told otherwise; `deploy/compose.yaml` starts one behind a reverse proxy.
 - The documentation at spezado.dev is built with Jekyll and Just the Docs, as falkOSS projects build theirs; the
   addresses stay, the old introduction forwards.
-- Data follows librotenado 0.14.0, from crates.io instead of its repository.
+- Data follows librotenado 0.15.0, from crates.io instead of its repository.
 - **Short financial years:** a configuration that changes the start of the financial year ends the current one
   early (librotenado 0008); the review list names a change on a day that does not begin the new year.
 - The review list names a reopening of something that is not a closing, and a closing reopened twice (librotenado

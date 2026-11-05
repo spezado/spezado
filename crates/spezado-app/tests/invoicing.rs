@@ -388,7 +388,8 @@ fn an_invoice_is_written_as_zugferd() {
     let read = en16931::read_pdf(pdf, &CurrencyTable::v0_1()).unwrap();
     assert_eq!(read.format, "en16931-cii");
     let mut recorded = written.document.invoice.as_deref().unwrap().clone();
-    recorded.seller.party = None; // the books' party, not part of the XML
+    recorded.seller.party = None; // the books' parties, not part of the XML
+    recorded.buyer.party = None;
     assert_eq!(read.invoice, recorded);
     en16931::check_xrechnung(&read).unwrap();
     assert_eq!(workspace.original(&written.document.original.hash).unwrap().unwrap(), *pdf);

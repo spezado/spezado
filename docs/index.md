@@ -22,7 +22,8 @@ SKR 03/04) are drafts until tax advisers have reviewed them.
   balances; the state whose public holidays move deadlines and the permanent extension of VAT returns.
 - **Bookings** from a gross amount and a tax code or in lines; reversals instead of changes; journal, balances and
   ledgers.
-- **Bank statements** from camt.053, MT940 and CSV files, matched to bookings, invoices and earlier payments.
+- **Bank statements** from camt.053 – and the intraday reports and notifications camt.052 and camt.054 –, MT940 and
+  CSV files, matched to bookings, invoices and earlier payments.
 - **Documents and e-invoices**: XRechnung and ZUGFeRD read into booking proposals, other files filed; every original
   kept by its hash.
 - **Invoices** written as XRechnung or ZUGFeRD – with VAT, exempt, under reverse charge, to other EU countries, as

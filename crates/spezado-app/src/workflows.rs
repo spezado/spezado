@@ -319,18 +319,47 @@ impl Workspace {
         self.execute_all(commands)
     }
 
-    /// The documents recorded in a set of books, in the agreed order, with the events that recorded them.
+    /// The documents recorded in a set of books, in the agreed order, with the events that recorded them – their
+    /// data as last corrected.
     pub fn documents(&self, books: &BooksId) -> Result<Vec<(EventHash, Document)>, AppError> {
-        Ok(self
-            .get(books)?
-            .events()
+        let events = self.get(books)?.events();
+        let current = events.documents();
+        Ok(events
             .ordered()
             .into_iter()
             .filter_map(|(hash, event)| match &event.payload {
-                Payload::DocumentRecorded { document } => Some((hash, document.clone())),
+                Payload::DocumentRecorded { document } => {
+                    Some((hash, current.get(&document.id).map_or_else(|| document.clone(), |d| (*d).clone())))
+                }
                 _ => None,
             })
             .collect())
+    }
+
+    /// Names the contact the other party of a recorded invoice is – the buyer of an invoice an owner wrote, else the
+    /// seller –, or none, by a correction of the document (librotenado spec part 0005).
+    pub fn assign_contact(
+        &mut self,
+        books: &BooksId,
+        document: &DocumentId,
+        contact: Option<PartyId>,
+    ) -> Result<(), AppError> {
+        let events = self.get(books)?.events();
+        let owners = events.owners();
+        let mut corrected = events
+            .documents()
+            .get(document)
+            .map(|d| (*d).clone())
+            .ok_or_else(|| AppError::Invoice(format!("no document {document}")))?;
+        let invoice = corrected.invoice.as_deref_mut().ok_or_else(|| AppError::Invoice("not an invoice".into()))?;
+        // The other party: the buyer where the seller is an owner – an invoice written –, else the seller – an invoice
+        // received, as documents read in are.
+        let seller_is_owner = invoice.seller.party.as_ref().is_some_and(|p| owners.contains(&p));
+        let other = if seller_is_owner { &mut invoice.buyer } else { &mut invoice.seller };
+        other.party = contact;
+        let reason = "Kontakt zugeordnet".to_owned();
+        self.execute(books, Command::CorrectDocument { document: corrected, reason })?;
+        Ok(())
     }
 
     /// The bytes of a stored original.
@@ -462,7 +491,18 @@ impl Workspace {
         let taxes = module.tax_table(to).ok_or(AppError::NoLaw(owner.clone()))?;
         let names = Names::v0_1("de").expect("German names are published");
         let currencies = librotenado::CurrencyTable::v0_1();
-        Ok(gobd::export(self.get(books)?.events(), &self.chart, &names, &currencies, &taxes, owner, from, to))
+        let national = self.national_chart(books, owner, to)?;
+        Ok(gobd::export(
+            self.get(books)?.events(),
+            &self.chart,
+            &names,
+            &currencies,
+            &taxes,
+            owner,
+            from,
+            to,
+            national.as_ref(),
+        ))
     }
 
     /// Writes the data transfer of the GoBD (Z3) for an owner and a period into `directory`: `index.xml` and its CSV

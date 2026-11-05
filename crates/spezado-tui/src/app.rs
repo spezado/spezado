@@ -819,8 +819,8 @@ impl App<'_> {
                         let name = names
                             .as_ref()
                             .and_then(|n| {
-                                n.get(&format!("{}/{field}", figures.id))
-                                    .or_else(|| n.get(&format!("{}/{base}", figures.id)))
+                                n.get(&format!("{}/{field}", figures.names))
+                                    .or_else(|| n.get(&format!("{}/{base}", figures.names)))
                             })
                             .unwrap_or("")
                             .to_owned();
