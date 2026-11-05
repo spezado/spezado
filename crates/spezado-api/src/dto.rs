@@ -1188,3 +1188,130 @@ pub struct SetAdapter {
     /// The token spezado authenticates itself with.
     pub token: String,
 }
+
+/// An employment as a list shows it (librotenado spec part 0013).
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct EmploymentView {
+    /// Its identity.
+    pub id: String,
+    /// The employee, a person of the books.
+    pub employee: String,
+    /// The employee's name.
+    pub name: String,
+    /// The first day, `YYYY-MM-DD`.
+    pub start: String,
+    /// The last day, if it ends.
+    pub end: Option<String>,
+    /// The employer's number for the employee.
+    pub number: Option<String>,
+    /// The tax class; none with the flat tax.
+    pub class: Option<u8>,
+    /// The company number of the health insurer.
+    pub insurer: Option<String>,
+    /// The key of the contribution groups.
+    pub contribution_group: Option<String>,
+    /// The key of the group of persons.
+    pub person_group: Option<String>,
+}
+
+/// A new employment under German law; the employee is described as a person by name.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct NewEmployment {
+    /// The employee's name.
+    pub name: String,
+    /// The first day, `YYYY-MM-DD`.
+    pub start: String,
+    /// The last day, if it ends.
+    #[serde(default)]
+    pub end: Option<String>,
+    /// The employer's number for the employee.
+    #[serde(default)]
+    pub number: Option<String>,
+    /// The employee's day of birth.
+    #[serde(default)]
+    pub born: Option<String>,
+    /// The tax class, 1 to 6; none with `flat`.
+    #[serde(default)]
+    pub class: Option<u8>,
+    /// Taxed at the flat rate of 2 % (minor employment).
+    #[serde(default)]
+    pub flat: bool,
+    /// The number of child allowances, e.g. `"1.5"`.
+    #[serde(default)]
+    pub children: Option<String>,
+    /// The religious community that levies church tax: `ev`, `rk`, …
+    #[serde(default)]
+    pub church: Option<String>,
+    /// The company number of the health insurer – for a minor employment the Minijob-Zentrale.
+    pub insurer: String,
+    /// The key of the contribution groups; default `1111`.
+    #[serde(default)]
+    pub contribution_group: Option<String>,
+    /// The key of the group of persons; default `101`.
+    #[serde(default)]
+    pub person_group: Option<String>,
+    /// The insurer's additional rate in percent, e.g. `"2.9"`.
+    #[serde(default)]
+    pub additional_rate: Option<String>,
+    /// The employee pays the care surcharge for having no children.
+    #[serde(default)]
+    pub childless: bool,
+    /// The children under 25 the care insurance counts.
+    #[serde(default)]
+    pub care_children: u8,
+    /// The employee works in Saxony.
+    #[serde(default)]
+    pub saxony: bool,
+    /// The rate of the levy U1 in percent.
+    #[serde(default)]
+    pub u1: Option<String>,
+    /// The rate of the levy U2 in percent.
+    #[serde(default)]
+    pub u2: Option<String>,
+}
+
+/// A part of the wages.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct PayItem {
+    /// `wage`, `one_off`, `compensation`, `in_kind`, `tax_free` or `deduction`.
+    pub kind: String,
+    /// Its name on the payslip.
+    pub name: String,
+    /// Its amount in euros, with a decimal point.
+    pub amount: String,
+}
+
+/// The payslip of an employment for a month, to compute or to record.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct PayslipRequest {
+    /// The employment.
+    pub employment: String,
+    /// The month, `YYYY-MM`.
+    pub month: String,
+    /// What the wages are made of.
+    pub items: Vec<PayItem>,
+    /// Records the payslip and books it; otherwise it is only computed.
+    #[serde(default)]
+    pub record: bool,
+}
+
+/// A payslip with its figures.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct PayslipView {
+    /// Its identity.
+    pub id: String,
+    /// The employment.
+    pub employment: String,
+    /// The first day of its period.
+    pub from: String,
+    /// The last day.
+    pub to: String,
+    /// The day paid.
+    pub paid: String,
+    /// What the wages are made of.
+    pub items: Vec<PayItem>,
+    /// The figures by name (librotenado spec part 0013), in euros.
+    pub figures: std::collections::BTreeMap<String, String>,
+    /// Whether it was recorded and booked.
+    pub recorded: bool,
+}

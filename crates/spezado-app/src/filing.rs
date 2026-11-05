@@ -93,7 +93,8 @@ impl Workspace {
         to: Date,
     ) -> Result<bool, AppError> {
         let (configuration, country, legal_form, module) = self.law_for(books, owner, from)?;
-        let facts = Facts::new(&configuration, country, legal_form.as_deref());
+        let mut facts = Facts::new(&configuration, country, legal_form.as_deref());
+        facts.employer = self.is_employer(books, owner, to)?;
         let reports = module.reports(&facts, from, to);
         Ok(reports.iter().any(|candidate| candidate.id == report && candidate.filing.is_some()))
     }
@@ -236,7 +237,8 @@ impl Workspace {
         to: Date,
     ) -> Result<(FilingKind, ReportContent, Country), AppError> {
         let (configuration, country, legal_form, module) = self.law_for(books, owner, from)?;
-        let facts = Facts::new(&configuration, country, legal_form.as_deref());
+        let mut facts = Facts::new(&configuration, country, legal_form.as_deref());
+        facts.employer = self.is_employer(books, owner, to)?;
         let found = module
             .reports(&facts, from, to)
             .into_iter()
@@ -251,6 +253,7 @@ impl Workspace {
             // Bookings without a clear VAT identification number of the customer are left out; the review list
             // names them.
             ReportBasis::Customers => Derivation::Customers,
+            ReportBasis::Payroll => Derivation::Payroll,
             ReportBasis::Assets | ReportBasis::ProfitTax { .. } | ReportBasis::IncomeTax => {
                 return Err(AppError::Adapter(format!("{report} is not filed on its own")));
             }

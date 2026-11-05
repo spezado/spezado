@@ -283,6 +283,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/books/{books}/contributions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The Beitragsnachweis of the owner to one insurer: the contributions by the groups of the record, in euros. */
+        get: operations["contributions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/books/{books}/customers": {
         parameters: {
             query?: never;
@@ -408,6 +425,24 @@ export interface paths {
         get: operations["original"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/books/{books}/employments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The employments of the owner as described today. */
+        get: operations["employments"];
+        put?: never;
+        /** Adds an employment under German law; the employee is described as a person by name. Returns its identity. */
+        post: operations["add_employment"];
         delete?: never;
         options?: never;
         head?: never;
@@ -605,6 +640,23 @@ export interface paths {
         get: operations["overview"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/books/{books}/payslips": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Computes the payslip of an employment for a month; with `record` records it and books it. */
+        post: operations["payslip"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1207,6 +1259,32 @@ export interface components {
              */
             size: number;
         };
+        /** @description An employment as a list shows it (librotenado spec part 0013). */
+        EmploymentView: {
+            /**
+             * Format: int32
+             * @description The tax class; none with the flat tax.
+             */
+            class?: number | null;
+            /** @description The key of the contribution groups. */
+            contribution_group?: string | null;
+            /** @description The employee, a person of the books. */
+            employee: string;
+            /** @description The last day, if it ends. */
+            end?: string | null;
+            /** @description Its identity. */
+            id: string;
+            /** @description The company number of the health insurer. */
+            insurer?: string | null;
+            /** @description The employee's name. */
+            name: string;
+            /** @description The employer's number for the employee. */
+            number?: string | null;
+            /** @description The key of the group of persons. */
+            person_group?: string | null;
+            /** @description The first day, `YYYY-MM-DD`. */
+            start: string;
+        };
         /** @description An entry of a bank statement. */
         EntryRef: {
             /** @description The statement. */
@@ -1410,6 +1488,51 @@ export interface components {
             /** @description What it is. */
             name: string;
         };
+        /** @description A new employment under German law; the employee is described as a person by name. */
+        NewEmployment: {
+            /** @description The insurer's additional rate in percent, e.g. `"2.9"`. */
+            additional_rate?: string | null;
+            /** @description The employee's day of birth. */
+            born?: string | null;
+            /**
+             * Format: int32
+             * @description The children under 25 the care insurance counts.
+             */
+            care_children?: number;
+            /** @description The employee pays the care surcharge for having no children. */
+            childless?: boolean;
+            /** @description The number of child allowances, e.g. `"1.5"`. */
+            children?: string | null;
+            /** @description The religious community that levies church tax: `ev`, `rk`, … */
+            church?: string | null;
+            /**
+             * Format: int32
+             * @description The tax class, 1 to 6; none with `flat`.
+             */
+            class?: number | null;
+            /** @description The key of the contribution groups; default `1111`. */
+            contribution_group?: string | null;
+            /** @description The last day, if it ends. */
+            end?: string | null;
+            /** @description Taxed at the flat rate of 2 % (minor employment). */
+            flat?: boolean;
+            /** @description The company number of the health insurer – for a minor employment the Minijob-Zentrale. */
+            insurer: string;
+            /** @description The employee's name. */
+            name: string;
+            /** @description The employer's number for the employee. */
+            number?: string | null;
+            /** @description The key of the group of persons; default `101`. */
+            person_group?: string | null;
+            /** @description The employee works in Saxony. */
+            saxony?: boolean;
+            /** @description The first day, `YYYY-MM-DD`. */
+            start: string;
+            /** @description The rate of the levy U1 in percent. */
+            u1?: string | null;
+            /** @description The rate of the levy U2 in percent. */
+            u2?: string | null;
+        };
         /** @description A new invoice. */
         NewInvoice: {
             /** @description The customer's identity. */
@@ -1517,6 +1640,47 @@ export interface components {
             device: string;
             /** @description The token; shown once, stored only as its hash. */
             token: string;
+        };
+        /** @description A part of the wages. */
+        PayItem: {
+            /** @description Its amount in euros, with a decimal point. */
+            amount: string;
+            /** @description `wage`, `one_off`, `compensation`, `in_kind`, `tax_free` or `deduction`. */
+            kind: string;
+            /** @description Its name on the payslip. */
+            name: string;
+        };
+        /** @description The payslip of an employment for a month, to compute or to record. */
+        PayslipRequest: {
+            /** @description The employment. */
+            employment: string;
+            /** @description What the wages are made of. */
+            items: components["schemas"]["PayItem"][];
+            /** @description The month, `YYYY-MM`. */
+            month: string;
+            /** @description Records the payslip and books it; otherwise it is only computed. */
+            record?: boolean;
+        };
+        /** @description A payslip with its figures. */
+        PayslipView: {
+            /** @description The employment. */
+            employment: string;
+            /** @description The figures by name (librotenado spec part 0013), in euros. */
+            figures: {
+                [key: string]: string;
+            };
+            /** @description The first day of its period. */
+            from: string;
+            /** @description Its identity. */
+            id: string;
+            /** @description What the wages are made of. */
+            items: components["schemas"]["PayItem"][];
+            /** @description The day paid. */
+            paid: string;
+            /** @description Whether it was recorded and booked. */
+            recorded: boolean;
+            /** @description The last day. */
+            to: string;
         };
         /** @description A line of a booking. */
         PostingView: {
@@ -2394,6 +2558,36 @@ export interface operations {
             };
         };
     };
+    contributions: {
+        parameters: {
+            query: {
+                /** @description The company number of the insurer. */
+                insurer: string;
+                /** @description The first day, `YYYY-MM-DD`. */
+                from: string;
+                /** @description The last day, `YYYY-MM-DD`. */
+                to: string;
+            };
+            header?: never;
+            path: {
+                books: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+    };
     customers: {
         parameters: {
             query?: never;
@@ -2691,6 +2885,60 @@ export interface operations {
                 };
             };
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    employments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                books: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmploymentView"][];
+                };
+            };
+        };
+    };
+    add_employment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                books: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewEmployment"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3141,6 +3389,39 @@ export interface operations {
                 };
             };
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    payslip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                books: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PayslipRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayslipView"];
+                };
+            };
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

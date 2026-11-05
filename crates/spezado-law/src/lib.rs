@@ -21,6 +21,8 @@ pub struct Facts<'a> {
     pub legal_form: Option<&'a str>,
     /// How the owner keeps its books.
     pub configuration: &'a Configuration,
+    /// Whether the owner employs people (librotenado spec part 0013); set by whoever knows the books.
+    pub employer: bool,
 }
 
 impl<'a> Facts<'a> {
@@ -30,7 +32,7 @@ impl<'a> Facts<'a> {
             let code = configuration.accounting.as_ref().or(configuration.vat.as_ref().map(|vat| &vat.scheme))?;
             code.as_str()[..2].to_ascii_uppercase().parse().ok()
         });
-        Facts { country, legal_form, configuration }
+        Facts { country, legal_form, configuration, employer: false }
     }
 }
 
@@ -57,6 +59,8 @@ pub enum ReportBasis {
     /// The income tax of a person over a calendar year, with what the person states beside the books (librotenado
     /// spec part 0012).
     IncomeTax,
+    /// From the payslips for periods ending within the period – a wage tax return (librotenado spec part 0013).
+    Payroll,
 }
 
 /// A report that applies to an owner for a period.

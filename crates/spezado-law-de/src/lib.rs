@@ -108,6 +108,18 @@ impl LawModule for Germany {
                 shortened: None,
             });
         }
+        // The wage tax an employer withheld (§ 41a EStG), from its payslips; which period applies – month, quarter or
+        // year (Abs. 2) – is the filer's.
+        if facts.employer && year == Some(2026) {
+            reports.push(Report {
+                id: "de-lsta",
+                name: "Lohnsteuer-Anmeldung",
+                basis: ReportBasis::Payroll,
+                mapping: ReportMapping::de_lsta_2026(),
+                filing: Some(FilingKind::WageTaxReturn),
+                shortened: None,
+            });
+        }
         match configuration.accounting.as_ref().map(|code| code.as_str()) {
             Some("de-cash-basis") if matches!(year, Some(2025 | 2026)) => {
                 let mapping =

@@ -27,6 +27,7 @@ mod assets;
 pub mod dto;
 mod filings;
 mod invoices;
+mod payroll;
 mod records;
 mod routes;
 mod sync;
@@ -277,6 +278,7 @@ pub fn router(api: Api) -> Router {
     let protected = routes::protected()
         .merge(records::routes())
         .merge(assets::routes())
+        .merge(payroll::routes())
         .merge(invoices::routes())
         .merge(sync::routes())
         .merge(filings::routes())

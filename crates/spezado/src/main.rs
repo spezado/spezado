@@ -153,6 +153,56 @@ enum Commands {
         #[arg(long)]
         owner: Option<PartyId>,
     },
+    /// Lists the employments of an owner, or adds one (librotenado 0013).
+    Employment {
+        #[command(subcommand)]
+        action: Option<EmploymentAction>,
+    },
+    /// Computes the payslip of an employment for a month; with --record records and books it.
+    Payslip {
+        /// The employment.
+        #[arg(long)]
+        employment: librotenado::payroll::EmploymentId,
+        /// The month, e.g. 2026-01.
+        #[arg(long)]
+        month: String,
+        /// Current wages of the month, e.g. 4000.00.
+        #[arg(long)]
+        wage: Option<String>,
+        /// A one-off payment: a bonus, holiday or Christmas pay.
+        #[arg(long)]
+        one_off: Option<String>,
+        /// Compensation for the loss of the employment (§ 24 Nr. 1 EStG).
+        #[arg(long)]
+        compensation: Option<String>,
+        /// A benefit in kind.
+        #[arg(long)]
+        in_kind: Option<String>,
+        /// Paid free of tax and contributions.
+        #[arg(long)]
+        tax_free: Option<String>,
+        /// Deducted from the net pay.
+        #[arg(long)]
+        deduction: Option<String>,
+        /// Records the payslip and books it.
+        #[arg(long)]
+        record: bool,
+    },
+    /// Shows the Beitragsnachweis of an owner to one health insurer for the months of a period.
+    Contributions {
+        /// The company number (Betriebsnummer) of the insurer.
+        #[arg(long)]
+        insurer: String,
+        /// The first day.
+        #[arg(long)]
+        from: Date,
+        /// The last day.
+        #[arg(long)]
+        to: Date,
+        /// The owner; may be left out while the books have one.
+        #[arg(long)]
+        owner: Option<PartyId>,
+    },
     /// Reopens the latest closing of an owner: the period it closed is open again; nothing is deleted.
     Reopen {
         /// Why it is reopened.
@@ -286,6 +336,70 @@ enum SyncAction {
     },
     /// Lists the devices of the books.
     Devices,
+}
+
+#[derive(Debug, Subcommand)]
+enum EmploymentAction {
+    /// Adds an employment under German law; the employee is described as a person by name.
+    Add {
+        /// The employee's name.
+        #[arg(long)]
+        name: String,
+        /// The first day.
+        #[arg(long)]
+        start: Date,
+        /// The last day, if it ends.
+        #[arg(long)]
+        end: Option<Date>,
+        /// The employer's number for the employee.
+        #[arg(long)]
+        number: Option<String>,
+        /// The employee's day of birth.
+        #[arg(long)]
+        born: Option<Date>,
+        /// The tax class, 1 to 6; left out with --flat.
+        #[arg(long)]
+        class: Option<u8>,
+        /// Taxed at the flat rate of 2 % (minor employment).
+        #[arg(long)]
+        flat: bool,
+        /// The number of child allowances, e.g. 1.5.
+        #[arg(long)]
+        children: Option<String>,
+        /// The religious community that levies church tax: ev, rk, …
+        #[arg(long)]
+        church: Option<String>,
+        /// The company number of the health insurer – for a minor employment the Minijob-Zentrale.
+        #[arg(long)]
+        insurer: String,
+        /// The key of the contribution groups, e.g. 1111, 6500.
+        #[arg(long, default_value = "1111")]
+        groups: String,
+        /// The key of the group of persons, e.g. 101, 109.
+        #[arg(long, default_value = "101")]
+        person_group: String,
+        /// The insurer's additional rate in percent, e.g. 2.9.
+        #[arg(long)]
+        additional_rate: Option<String>,
+        /// The employee pays the care surcharge for having no children.
+        #[arg(long)]
+        childless: bool,
+        /// The children under 25 the care insurance counts.
+        #[arg(long, default_value_t = 0)]
+        care_children: u8,
+        /// The employee works in Saxony.
+        #[arg(long)]
+        saxony: bool,
+        /// The rate of the levy U1 in percent.
+        #[arg(long)]
+        u1: Option<String>,
+        /// The rate of the levy U2 in percent.
+        #[arg(long)]
+        u2: Option<String>,
+        /// The owner; may be left out while the books have one.
+        #[arg(long)]
+        owner: Option<PartyId>,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -608,6 +722,45 @@ fn run(workspace: &mut Workspace, books: &BooksId, command: Commands) -> Result<
             println!("losses carried     {:>16}", eur(facts.losses));
             println!("church tax         {}", facts.church_rate.map_or("none".into(), |r| format!("{r} %")));
         }
+        Commands::Employment { action } => employment(workspace, books, action)?,
+        Commands::Payslip { employment, month, wage, one_off, compensation, in_kind, tax_free, deduction, record } => {
+            use librotenado::payroll::{PayItem, PayItemKind};
+            let (year, number) = month
+                .split_once('-')
+                .and_then(|(y, m)| Some((y.parse::<u16>().ok()?, m.parse::<u8>().ok()?)))
+                .ok_or_else(|| anyhow!("a month is written 2026-01"))?;
+            let eur: Currency = "EUR".parse().expect("EUR");
+            let mut items = Vec::new();
+            for (kind, name, text) in [
+                (PayItemKind::Wage, "Lohn/Gehalt", wage),
+                (PayItemKind::OneOff, "Einmalzahlung", one_off),
+                (PayItemKind::Compensation, "Abfindung", compensation),
+                (PayItemKind::InKind, "Sachbezug", in_kind),
+                (PayItemKind::TaxFree, "Steuerfrei", tax_free),
+                (PayItemKind::Deduction, "Abzug", deduction),
+            ] {
+                if let Some(text) = text {
+                    items.push(PayItem { kind, name: name.into(), amount: parse_amount(&text, &eur)? });
+                }
+            }
+            let payslip = workspace.payslip(books, &employment, year, number, items)?;
+            println!("{} to {}, paid {}", payslip.from, payslip.to, payslip.paid);
+            for (name, amount) in &payslip.figures {
+                println!("{name:<28} {:>16}", format_amount(amount));
+            }
+            if record {
+                workspace.record_payslip(books, payslip)?;
+                println!("recorded and booked");
+            }
+        }
+        Commands::Contributions { insurer, from, to, owner } => {
+            let owner = choose_owner(workspace, books, owner)?;
+            let eur: Currency = "EUR".parse().expect("EUR");
+            for (field, units) in workspace.contribution_statement(books, &owner, &insurer, from, to)? {
+                let amount = librotenado::Money::new(units, eur.clone()).expect("an amount");
+                println!("{field:<16} {:>16}", format_amount(&amount));
+            }
+        }
         Commands::Reopen { reason, owner } => {
             let owner = choose_owner(workspace, books, owner)?;
             println!("{}", workspace.execute(books, Command::Reopen { owner, reason })?);
@@ -771,6 +924,79 @@ fn choose_books(workspace: &Workspace, books: Option<BooksId>) -> Result<BooksId
         (None, _) => bail!("no books yet – set some up with `spezado set-up`"),
         _ => bail!("the workspace holds several books – choose with --books (see `spezado books`)"),
     }
+}
+
+/// Lists the employments of an owner, or adds one.
+fn employment(workspace: &mut Workspace, books: &BooksId, action: Option<EmploymentAction>) -> Result<()> {
+    match action {
+        None => {
+            let owner = choose_owner(workspace, books, None)?;
+            let (_, persons) = workspace.get(books)?.events().parties();
+            let names: BTreeMap<PartyId, String> =
+                persons.iter().map(|(id, p)| ((*id).clone(), p.name.clone())).collect();
+            for e in workspace.employments(books, &owner, spezado_app::today())? {
+                let name = names.get(&e.employee).cloned().unwrap_or_default();
+                let end = e.end.map(|d| d.to_string()).unwrap_or_default();
+                println!("{}  {name}  {} – {end}", e.id, e.start);
+            }
+        }
+        Some(EmploymentAction::Add {
+            name,
+            start,
+            end,
+            number,
+            born,
+            class,
+            flat,
+            children,
+            church,
+            insurer,
+            groups,
+            person_group,
+            additional_rate,
+            childless,
+            care_children,
+            saxony,
+            u1,
+            u2,
+            owner,
+        }) => {
+            use librotenado::payroll::{GermanEmployment, GermanInsurance, GermanTax};
+            let owner = choose_owner(workspace, books, owner)?;
+            let decimal = |text: Option<String>| -> Result<Option<librotenado::Decimal>> {
+                text.map(|t| t.parse().map_err(|_| anyhow!("not a number: {t}"))).transpose()
+            };
+            let employee: PartyId = new_id();
+            let person: Person = serde_json::from_value(serde_json::json!({"id": employee.as_str(), "name": name}))?;
+            workspace.execute(books, Command::DescribePerson(person))?;
+            let de = GermanEmployment {
+                tax: GermanTax {
+                    class,
+                    factor: None,
+                    children: decimal(children)?,
+                    church,
+                    allowance: None,
+                    addition: None,
+                    flat,
+                },
+                insurance: GermanInsurance {
+                    insurer,
+                    contribution_group: groups,
+                    person_group,
+                    additional_rate: decimal(additional_rate)?,
+                    private: None,
+                    childless,
+                    children: care_children,
+                    saxony,
+                    u1: decimal(u1)?,
+                    u2: decimal(u2)?,
+                },
+            };
+            let new = spezado_app::NewEmployment { owner, employee, start, end, number, born, de };
+            println!("{}", workspace.add_employment(books, new)?);
+        }
+    }
+    Ok(())
 }
 
 fn choose_owner(workspace: &Workspace, books: &BooksId, owner: Option<PartyId>) -> Result<PartyId> {

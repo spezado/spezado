@@ -66,3 +66,21 @@ yet (librotenado 0012, OPEN).
 For a person running a business, `de-est` is the income tax over a calendar year: the profit of the books with what
 the person states beside them – `spezado income-tax --year 2026 --other-income 12000.00 --deductions 4000.00
 --losses 0 --joint false --church 9`; without options it shows what is stated. It stays on this device.
+
+## Payroll
+
+An employer describes each employment once – the employee by name, the tax features (ELStAM) and how the employee
+is insured – and computes a payslip per month by librotenado's rules (0013):
+
+```sh
+spezado employment add --name "Erika Muster" --start 2026-01-01 --class 1 --church rk \
+  --insurer 87654321 --groups 1111 --person-group 101 --additional-rate 2.9 --u1 1.5 --u2 0.4
+spezado employment
+spezado payslip --employment <id> --month 2026-01 --wage 4000.00
+spezado payslip --employment <id> --month 2026-02 --wage 4000.00 --one-off 2000.00 --record
+spezado contributions --insurer 87654321 --from 2026-02-01 --to 2026-02-28
+```
+
+A minor employment: `--flat --groups 6500 --person-group 109` with the Minijob-Zentrale as insurer. `--record`
+records the payslip and books it on the day it is paid, the last of the month. The Lohnsteuer-Anmeldung is the
+report `de-lsta` of the period; the Beitragsnachweis is per insurer and month.

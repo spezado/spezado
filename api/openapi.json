@@ -883,6 +883,69 @@
         }
       }
     },
+    "/api/v1/books/{books}/contributions": {
+      "get": {
+        "tags": [
+          "crate::payroll"
+        ],
+        "summary": "The Beitragsnachweis of the owner to one insurer: the contributions by the groups of the record, in euros.",
+        "operationId": "contributions",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "insurer",
+            "in": "query",
+            "description": "The company number of the insurer.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "The first day, `YYYY-MM-DD`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "The last day, `YYYY-MM-DD`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "propertyNames": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/books/{books}/customers": {
       "get": {
         "tags": [
@@ -1353,6 +1416,86 @@
             }
           },
           "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/employments": {
+      "get": {
+        "tags": [
+          "crate::payroll"
+        ],
+        "summary": "The employments of the owner as described today.",
+        "operationId": "employments",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EmploymentView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "crate::payroll"
+        ],
+        "summary": "Adds an employment under German law; the employee is described as a person by name. Returns its identity.",
+        "operationId": "add_employment",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewEmployment"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
             "content": {
               "application/json": {
                 "schema": {
@@ -2121,6 +2264,55 @@
             }
           },
           "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/payslips": {
+      "post": {
+        "tags": [
+          "crate::payroll"
+        ],
+        "summary": "Computes the payslip of an employment for a month; with `record` records it and books it.",
+        "operationId": "payslip",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayslipRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayslipView"
+                }
+              }
+            }
+          },
+          "422": {
             "content": {
               "application/json": {
                 "schema": {
@@ -3670,6 +3862,78 @@
           }
         }
       },
+      "EmploymentView": {
+        "type": "object",
+        "description": "An employment as a list shows it (librotenado spec part 0013).",
+        "required": [
+          "id",
+          "employee",
+          "name",
+          "start"
+        ],
+        "properties": {
+          "class": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "The tax class; none with the flat tax.",
+            "minimum": 0
+          },
+          "contribution_group": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The key of the contribution groups."
+          },
+          "employee": {
+            "type": "string",
+            "description": "The employee, a person of the books."
+          },
+          "end": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The last day, if it ends."
+          },
+          "id": {
+            "type": "string",
+            "description": "Its identity."
+          },
+          "insurer": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The company number of the health insurer."
+          },
+          "name": {
+            "type": "string",
+            "description": "The employee's name."
+          },
+          "number": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The employer's number for the employee."
+          },
+          "person_group": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The key of the group of persons."
+          },
+          "start": {
+            "type": "string",
+            "description": "The first day, `YYYY-MM-DD`."
+          }
+        }
+      },
       "EntryRef": {
         "type": "object",
         "description": "An entry of a bank statement.",
@@ -4200,6 +4464,126 @@
           }
         }
       },
+      "NewEmployment": {
+        "type": "object",
+        "description": "A new employment under German law; the employee is described as a person by name.",
+        "required": [
+          "name",
+          "start",
+          "insurer"
+        ],
+        "properties": {
+          "additional_rate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The insurer's additional rate in percent, e.g. `\"2.9\"`."
+          },
+          "born": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The employee's day of birth."
+          },
+          "care_children": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The children under 25 the care insurance counts.",
+            "minimum": 0
+          },
+          "childless": {
+            "type": "boolean",
+            "description": "The employee pays the care surcharge for having no children."
+          },
+          "children": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The number of child allowances, e.g. `\"1.5\"`."
+          },
+          "church": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The religious community that levies church tax: `ev`, `rk`, …"
+          },
+          "class": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "The tax class, 1 to 6; none with `flat`.",
+            "minimum": 0
+          },
+          "contribution_group": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The key of the contribution groups; default `1111`."
+          },
+          "end": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The last day, if it ends."
+          },
+          "flat": {
+            "type": "boolean",
+            "description": "Taxed at the flat rate of 2 % (minor employment)."
+          },
+          "insurer": {
+            "type": "string",
+            "description": "The company number of the health insurer – for a minor employment the Minijob-Zentrale."
+          },
+          "name": {
+            "type": "string",
+            "description": "The employee's name."
+          },
+          "number": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The employer's number for the employee."
+          },
+          "person_group": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The key of the group of persons; default `101`."
+          },
+          "saxony": {
+            "type": "boolean",
+            "description": "The employee works in Saxony."
+          },
+          "start": {
+            "type": "string",
+            "description": "The first day, `YYYY-MM-DD`."
+          },
+          "u1": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The rate of the levy U1 in percent."
+          },
+          "u2": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The rate of the levy U2 in percent."
+          }
+        }
+      },
       "NewInvoice": {
         "type": "object",
         "description": "A new invoice.",
@@ -4541,6 +4925,116 @@
           "token": {
             "type": "string",
             "description": "The token; shown once, stored only as its hash."
+          }
+        }
+      },
+      "PayItem": {
+        "type": "object",
+        "description": "A part of the wages.",
+        "required": [
+          "kind",
+          "name",
+          "amount"
+        ],
+        "properties": {
+          "amount": {
+            "type": "string",
+            "description": "Its amount in euros, with a decimal point."
+          },
+          "kind": {
+            "type": "string",
+            "description": "`wage`, `one_off`, `compensation`, `in_kind`, `tax_free` or `deduction`."
+          },
+          "name": {
+            "type": "string",
+            "description": "Its name on the payslip."
+          }
+        }
+      },
+      "PayslipRequest": {
+        "type": "object",
+        "description": "The payslip of an employment for a month, to compute or to record.",
+        "required": [
+          "employment",
+          "month",
+          "items"
+        ],
+        "properties": {
+          "employment": {
+            "type": "string",
+            "description": "The employment."
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PayItem"
+            },
+            "description": "What the wages are made of."
+          },
+          "month": {
+            "type": "string",
+            "description": "The month, `YYYY-MM`."
+          },
+          "record": {
+            "type": "boolean",
+            "description": "Records the payslip and books it; otherwise it is only computed."
+          }
+        }
+      },
+      "PayslipView": {
+        "type": "object",
+        "description": "A payslip with its figures.",
+        "required": [
+          "id",
+          "employment",
+          "from",
+          "to",
+          "paid",
+          "items",
+          "figures",
+          "recorded"
+        ],
+        "properties": {
+          "employment": {
+            "type": "string",
+            "description": "The employment."
+          },
+          "figures": {
+            "type": "object",
+            "description": "The figures by name (librotenado spec part 0013), in euros.",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "from": {
+            "type": "string",
+            "description": "The first day of its period."
+          },
+          "id": {
+            "type": "string",
+            "description": "Its identity."
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PayItem"
+            },
+            "description": "What the wages are made of."
+          },
+          "paid": {
+            "type": "string",
+            "description": "The day paid."
+          },
+          "recorded": {
+            "type": "boolean",
+            "description": "Whether it was recorded and booked."
+          },
+          "to": {
+            "type": "string",
+            "description": "The last day."
           }
         }
       },

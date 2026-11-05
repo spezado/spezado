@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **Payroll** after librotenado 0013: employments (`spezado employment add --name … --start … --class 1 --insurer
+  … --groups 1111 --person-group 101 --additional-rate 2.9`, `/employments` in the API) and a payslip per month
+  (`spezado payslip --employment … --month 2026-01 --wage 4000.00 [--one-off …] [--record]`, `/payslips`): the wage
+  tax by the BMF's Programmablaufplan 2026, the solidarity surcharge and church tax by the state of the employer, the
+  social insurance with its ceilings, the transition range and minor employment, the levies. Recording books it on
+  Gehälter or Aushilfslöhne, gesetzliche soziale Aufwendungen and the liabilities; a payslip whose figures are not
+  those of the rules is refused. The report `de-lsta` (Lohnsteuer-Anmeldung, filed as `wage_tax_return`) for an
+  employer, and the Beitragsnachweis per insurer (`spezado contributions --insurer … --from … --to …`,
+  `/contributions`).
+
 - **Income tax** after librotenado 0012: the report `de-est` over a calendar year for a person running a business –
   the profit of the books, other income, deductions and losses, the tariff of 2026, the reduction for trade tax
   (§ 35 EStG), the solidarity surcharge, church tax and the advance payments. What the person states beside the

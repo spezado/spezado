@@ -79,6 +79,10 @@ pub enum Command {
     AcquireAsset(librotenado::Asset),
     /// Records that a fixed asset left the business.
     DisposeAsset(librotenado::Disposal),
+    /// Describes an employment, or changes its description from a day (librotenado spec part 0013).
+    DescribeEmployment(Box<librotenado::payroll::Employment>),
+    /// Records a payslip whose figures are those the rules give (librotenado spec part 0013).
+    RecordPayslip(librotenado::payroll::Payslip),
     /// Reopens the latest closing of an owner that is not reopened yet: the period it closed is open again, nothing
     /// is deleted (librotenado spec part 0002).
     Reopen {
@@ -124,6 +128,16 @@ pub enum CommandError {
         closed: Date,
     },
     /// A fixed asset of that identity is registered already.
+    /// A description of an employment that changes its employer or employee.
+    #[error("employment {0} is described with another employer or employee")]
+    EmploymentChanged(librotenado::payroll::EmploymentId),
+    /// A payslip of an employment not described.
+    #[error("employment {0} is not described for the period of the payslip")]
+    UnknownEmployment(librotenado::payroll::EmploymentId),
+    /// A payslip recorded already, with a period it cannot have, overlapping another or with other figures than the
+    /// rules give.
+    #[error("payslip {0} cannot be recorded: {1}")]
+    InvalidPayslip(librotenado::payroll::PayslipId, String),
     #[error("asset {0} is registered already")]
     AssetExists(librotenado::AssetId),
     /// No fixed asset of that identity is registered.
@@ -374,6 +388,49 @@ impl Books {
                     return Err(CommandError::UnknownDocument(document.id));
                 }
                 Payload::DocumentCorrected { document, reason }
+            }
+            Command::DescribeEmployment(employment) => {
+                if !self.is_owner(&employment.owner) {
+                    return Err(CommandError::NotAnOwner(employment.owner.clone()));
+                }
+                let known = events.ordered().into_iter().find_map(|(_, event)| match &event.payload {
+                    Payload::EmploymentDescribed { employment: e } if e.id == employment.id => {
+                        Some((e.owner.clone(), e.employee.clone()))
+                    }
+                    _ => None,
+                });
+                if known.is_some_and(|k| k != (employment.owner.clone(), employment.employee.clone())) {
+                    return Err(CommandError::EmploymentChanged(employment.id.clone()));
+                }
+                Payload::EmploymentDescribed { employment }
+            }
+            Command::RecordPayslip(payslip) => {
+                let employment = events
+                    .employment(&payslip.employment, payslip.to)
+                    .ok_or_else(|| CommandError::UnknownEmployment(payslip.employment.clone()))?;
+                self.owner_open(&employment.owner, payslip.paid)?;
+                let invalid = |why: &str| CommandError::InvalidPayslip(payslip.id.clone(), why.to_owned());
+                let recorded = events.payslips(&employment.owner);
+                if recorded.iter().any(|p| p.id == payslip.id) {
+                    return Err(invalid("recorded already"));
+                }
+                if recorded
+                    .iter()
+                    .any(|p| p.employment == payslip.employment && payslip.from <= p.to && p.from <= payslip.to)
+                {
+                    return Err(invalid("it overlaps another payslip"));
+                }
+                let within = payslip.from >= employment.start && employment.end.is_none_or(|end| payslip.to <= end);
+                if !within {
+                    return Err(invalid("its period lies outside the employment"));
+                }
+                let figures = events
+                    .payslip_figures(&payslip.employment, payslip.from, payslip.to, &payslip.items)
+                    .map_err(|e| invalid(&e.to_string()))?;
+                if figures != payslip.figures {
+                    return Err(invalid("its figures are not those the rules give"));
+                }
+                Payload::PayslipRecorded { payslip }
             }
             Command::AcquireAsset(asset) => {
                 self.owner_open(&asset.owner, asset.acquired)?;

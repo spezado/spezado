@@ -31,6 +31,7 @@ mod income;
 mod invoice_pdf;
 mod invoicing;
 mod opening;
+mod payroll;
 mod review;
 mod sync;
 mod workflows;
@@ -43,6 +44,7 @@ pub use income::IncomeFacts;
 pub use invoicing::{
     BOOKING_TAX_CODES, Customer, INVOICE_TAX_CODES, InvoiceFormat, InvoiceProfile, NewInvoice, NewLine, WrittenInvoice,
 };
+pub use payroll::NewEmployment;
 pub use spezado_law_de::STATES as GERMAN_STATES;
 pub use sync::{SyncMember, SyncReport, parse_invitation};
 pub use workflows::{AccountChoice, ReadDocument, SimpleEntry, VatReturnDue, today};
@@ -125,6 +127,9 @@ pub enum AppError {
     /// A fixed asset that cannot be registered, depreciated or disposed of.
     #[error("{0}")]
     Asset(String),
+    /// An employment or payslip that cannot be described, computed or recorded.
+    #[error("{0}")]
+    Payroll(String),
     /// Synchronising through a relay failed.
     #[error("{0}")]
     Sync(String),
@@ -485,7 +490,8 @@ impl Workspace {
                 let Ok((configuration, country, legal_form, module)) = self.law_for(books, owner, to) else {
                     continue;
                 };
-                let facts = Facts::new(&configuration, country, legal_form.as_deref());
+                let mut facts = Facts::new(&configuration, country, legal_form.as_deref());
+                facts.employer = self.is_employer(books, owner, to)?;
                 for report in module.reports(&facts, from, to) {
                     if report.basis == ReportBasis::Customers {
                         problems.extend(events.customer_report(&report.mapping, &self.chart, owner, from, to)?.1);
@@ -494,6 +500,11 @@ impl Workspace {
             }
         }
         Ok(problems)
+    }
+
+    /// Whether an owner employs people – has an employment begun by `to` (librotenado spec part 0013).
+    fn is_employer(&self, books: &BooksId, owner: &PartyId, to: Date) -> Result<bool, AppError> {
+        Ok(!self.get(books)?.events().employments(owner, to).is_empty())
     }
 
     /// The configuration of an owner on a date, the law module that applies to it, and its facts' parts.
@@ -507,7 +518,8 @@ impl Workspace {
         let organisation = organisations.get(owner);
         let country = organisation.map(|o| o.country);
         let legal_form = organisation.map(|o| o.legal_form.clone());
-        let facts = Facts::new(&configuration, country, legal_form.as_deref());
+        let mut facts = Facts::new(&configuration, country, legal_form.as_deref());
+        facts.employer = self.is_employer(books, owner, date)?;
         let module = spezado_law::module_for(&self.law, &facts).ok_or_else(|| AppError::NoLaw(owner.clone()))?;
         Ok((configuration, country, legal_form, module))
     }
@@ -521,7 +533,8 @@ impl Workspace {
         to: Date,
     ) -> Result<Vec<(&'static str, &'static str)>, AppError> {
         let (configuration, country, legal_form, module) = self.law_for(books, owner, from)?;
-        let facts = Facts::new(&configuration, country, legal_form.as_deref());
+        let mut facts = Facts::new(&configuration, country, legal_form.as_deref());
+        facts.employer = self.is_employer(books, owner, to)?;
         Ok(module.reports(&facts, from, to).into_iter().map(|report| (report.id, report.name)).collect())
     }
 
@@ -535,7 +548,8 @@ impl Workspace {
         to: Date,
     ) -> Result<ReportFigures, AppError> {
         let (configuration, country, legal_form, module) = self.law_for(books, owner, from)?;
-        let facts = Facts::new(&configuration, country, legal_form.as_deref());
+        let mut facts = Facts::new(&configuration, country, legal_form.as_deref());
+        facts.employer = self.is_employer(books, owner, to)?;
         let Report { id, name, basis, mapping, shortened, .. } = module
             .reports(&facts, from, to)
             .into_iter()
@@ -570,6 +584,7 @@ impl Workspace {
                     (false, _) => tax.fields(),
                 }
             }
+            ReportBasis::Payroll => events.payroll_report(&mapping, owner, from, to),
             ReportBasis::IncomeTax => {
                 let profit = librotenado::ProfitTaxFacts {
                     subject: librotenado::TaxSubject::Individual,
