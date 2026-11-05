@@ -3538,6 +3538,20 @@
           "name": {
             "type": "string",
             "description": "Its name."
+          },
+          "reconciliation": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Field"
+            },
+            "description": "For a balance sheet: how the tax balance sheet differs per position (Überleitungsrechnung)."
+          },
+          "terms": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Terms"
+            },
+            "description": "For a balance sheet: the remaining terms of the positions (§ 268 Abs. 4 and 5 HGB)."
           }
         }
       },
@@ -3875,6 +3889,13 @@
           "lines"
         ],
         "properties": {
+          "basis": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`commercial` or `tax` for a booking that counts in that balance sheet only – where the tax balance sheet\ndeparts from the commercial one; absent for both."
+          },
           "date": {
             "type": "string",
             "description": "`YYYY-MM-DD`."
@@ -4825,6 +4846,14 @@
               "null"
             ],
             "description": "`read`, `write` or `manage` – the person's own devices; `manage` when none."
+          },
+          "until": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "The last day the device may read and write – an auditor's –; unlimited when absent."
           }
         }
       },
@@ -4959,6 +4988,39 @@
           "name": {
             "type": "string",
             "description": "Its name."
+          }
+        }
+      },
+      "Terms": {
+        "type": "object",
+        "description": "The remaining terms of a position of the balance sheet.",
+        "required": [
+          "field",
+          "up_to_one_year",
+          "over_one_year",
+          "over_five_years",
+          "unknown"
+        ],
+        "properties": {
+          "field": {
+            "type": "string",
+            "description": "The position."
+          },
+          "over_five_years": {
+            "$ref": "#/components/schemas/Amount",
+            "description": "Due after more than five years."
+          },
+          "over_one_year": {
+            "$ref": "#/components/schemas/Amount",
+            "description": "Due after more than a year – those after five included."
+          },
+          "unknown": {
+            "$ref": "#/components/schemas/Amount",
+            "description": "On accounts without a remaining term: to be divided by whoever draws up the balance sheet."
+          },
+          "up_to_one_year": {
+            "$ref": "#/components/schemas/Amount",
+            "description": "Due within a year."
           }
         }
       },

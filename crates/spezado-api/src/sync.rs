@@ -84,9 +84,11 @@ pub(crate) async fn sync_invite(
     Path(books): Path<String>,
     body: Option<Json<dto::SyncInvite>>,
 ) -> Result<Json<dto::SyncInvitation>, ApiError> {
-    let rights = rights(body.and_then(|Json(b)| b.rights).as_deref().unwrap_or("manage"))?;
+    let body = body.map(|Json(b)| b).unwrap_or_default();
+    let rights = rights(body.rights.as_deref().unwrap_or("manage"))?;
+    let until = body.until;
     api.run(move |workspace| {
-        Ok(Json(dto::SyncInvitation { invitation: workspace.invite(&books_id(&books)?, rights)? }))
+        Ok(Json(dto::SyncInvitation { invitation: workspace.invite(&books_id(&books)?, rights, until)? }))
     })
     .await
 }

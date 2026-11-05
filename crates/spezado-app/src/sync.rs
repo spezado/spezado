@@ -62,6 +62,9 @@ struct Invited {
     secret: String,
     made: u64,
     rights: Rights,
+    /// The last day the one it brings may read and write; none when unlimited.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    until: Option<librotenado::Date>,
 }
 
 /// What a synchronisation did.
@@ -75,11 +78,15 @@ pub struct SyncReport {
     pub added: Vec<String>,
     /// Whether this device still waits to be added.
     pub waiting: bool,
+    /// Members removed because their time ran out.
+    pub expired: usize,
 }
 
 /// A member of synchronised books, as shown.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SyncMember {
+    /// The last day it may read and write; none when unlimited.
+    pub until: Option<librotenado::Date>,
     /// Its identity, to remove it by.
     pub id: String,
     /// What it may do: `read`, `write` or `manage`.
@@ -328,14 +335,19 @@ impl Workspace {
 
     /// An invitation for another device – the person's own, with `manage`, or someone else's with less –, good for a
     /// day; the device joins with it, and the next synchronisation here adds it with these rights.
-    pub fn invite(&self, books: &BooksId, rights: Rights) -> Result<String, AppError> {
+    pub fn invite(
+        &self,
+        books: &BooksId,
+        rights: Rights,
+        until: Option<librotenado::Date>,
+    ) -> Result<String, AppError> {
         let mut state = self.sync_state(books)?.ok_or_else(|| failed("these books are not synchronised"))?;
         if state.rights.is_some_and(|r| r != Rights::Manage) {
             return Err(failed("only a device that may manage the books invites"));
         }
         let invitation = Invitation::new(&state.relay, books.clone());
         state.invited.retain(|i| now_s().saturating_sub(i.made) < INVITATION_LIFETIME);
-        state.invited.push(Invited { secret: hex::encode(invitation.secret), made: now_s(), rights });
+        state.invited.push(Invited { secret: hex::encode(invitation.secret), made: now_s(), rights, until });
         self.save_sync_state(books, &state)?;
         Ok(invitation_text(&invitation))
     }
@@ -353,12 +365,14 @@ impl Workspace {
         let relay = Relay::new(&state.relay, &keys);
         for _ in 0..3 {
             let list = relay.members(books)?;
+            // Names are sealed with the books key (librotenado 0006): open them to find who is meant.
+            let all = list.keys(&keys).map_err(failed)?;
             let member = list
                 .members()
                 .find(|m| {
                     m.id.to_string() == who
                         || m.device.as_ref().is_some_and(|d| d.as_str() == who)
-                        || m.name.as_deref() == Some(who)
+                        || m.display_name(books, &all).as_deref() == Some(who)
                 })
                 .cloned()
                 .ok_or_else(|| failed(format!("no member {who:?} in these books")))?;
@@ -369,7 +383,8 @@ impl Workspace {
             let (record, _) = list.remove(&keys, &current, vec![member.id]);
             list.clone().apply(record.clone()).map_err(|e| failed(format!("cannot remove {who}: {e}")))?;
             if relay.record(books, &record)? {
-                return Ok(member.name.or(member.device.map(|d| d.to_string())).unwrap_or_default());
+                let name = member.display_name(books, &all);
+                return Ok(name.or(member.device.map(|d| d.to_string())).unwrap_or_default());
             }
         }
         Err(failed("the member list keeps changing – try again"))
@@ -440,12 +455,17 @@ impl Workspace {
         let state = self.sync_state(books)?.ok_or_else(|| failed("these books are not synchronised"))?;
         let keys = self.keys_of(books, &state)?;
         let list = Relay::new(&state.relay, &keys).members(books)?;
+        let all = list.keys(&keys).unwrap_or_default();
         Ok(list
             .members()
             .map(|m| SyncMember {
+                until: m.until,
                 id: m.id.to_string(),
                 rights: m.rights,
-                name: m.name.clone().or_else(|| m.device.as_ref().map(ToString::to_string)).unwrap_or_default(),
+                name: m
+                    .display_name(books, &all)
+                    .or_else(|| m.device.as_ref().map(ToString::to_string))
+                    .unwrap_or_default(),
                 device: m.device.as_ref().map(ToString::to_string),
                 recovery: m.role == MemberRole::Recovery,
                 me: m.id == keys.id(),
@@ -485,6 +505,19 @@ impl Workspace {
         state.invited.retain(|i| now_s().saturating_sub(i.made) < INVITATION_LIFETIME);
         if !state.invited.is_empty() && state.rights == Some(Rights::Manage) {
             report.added = self.add_requested(books, &relay, &keys, &mut list, &mut state)?;
+        }
+        // Members whose time has run out are removed, which changes the key (librotenado 0006).
+        if state.rights == Some(Rights::Manage) {
+            let expired: Vec<_> =
+                list.expired(crate::workflows::today()).into_iter().filter(|id| *id != keys.id()).collect();
+            if !expired.is_empty() {
+                let current = Self::current_key(&list, &keys)?;
+                let (record, _) = list.remove(&keys, &current, expired.clone());
+                if list.clone().apply(record.clone()).is_ok() && relay.record(books, &record)? {
+                    list = relay.members(books)?;
+                    report.expired = expired.len();
+                }
+            }
         }
 
         // What other devices sent.
@@ -574,12 +607,15 @@ impl Workspace {
             return Err(Relay::refused(status, &body));
         }
         let requests: Vec<Value> = serde_json::from_slice(&body).map_err(failed)?;
-        let invitations: Vec<(Invitation, Rights)> = state
+        let invitations: Vec<(Invitation, (Rights, Option<librotenado::Date>))> = state
             .invited
             .iter()
             .filter_map(|invited| {
                 let secret = hex::decode(&invited.secret).ok()?.try_into().ok()?;
-                Some((Invitation { relay: state.relay.clone(), books: books.clone(), secret }, invited.rights))
+                Some((
+                    Invitation { relay: state.relay.clone(), books: books.clone(), secret },
+                    (invited.rights, invited.until),
+                ))
             })
             .collect();
         let mut used = Vec::new();
@@ -588,9 +624,11 @@ impl Workspace {
             let Ok(request) = from_root::<JoinRequest>(&serde_json::to_vec(&request).map_err(failed)?) else {
                 continue;
             };
-            let Some((invitation, rights)) = invitations.iter().find(|(i, _)| i.proves(&request)) else { continue };
-            // What the device may do is the inviting member's to say.
-            let member = Member { rights: *rights, ..request.member };
+            let Some((invitation, (rights, until))) = invitations.iter().find(|(i, _)| i.proves(&request)) else {
+                continue;
+            };
+            // What the device may do, and until when, is the inviting member's to say.
+            let member = Member { rights: *rights, until: *until, ..request.member };
             let taken = list.member(&member.id).is_some()
                 || members.iter().chain(list.members()).any(|m| m.device.is_some() && m.device == member.device);
             if member.role != MemberRole::Device || taken {

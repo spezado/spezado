@@ -607,7 +607,14 @@ async fn book_lines(
                     })
                 })
                 .collect::<Result<Vec<_>, ApiError>>()?;
+            let basis = match request.basis.as_deref().filter(|b| !b.is_empty()) {
+                None => None,
+                Some("commercial") => Some(librotenado::Basis::Commercial),
+                Some("tax") => Some(librotenado::Basis::Tax),
+                Some(_) => return Err(ApiError::bad("the basis is commercial or tax")),
+            };
             let booking = Booking {
+                basis,
                 attributed: None,
                 date: date(&request.date)?,
                 text: request.text,
@@ -705,16 +712,33 @@ async fn report(
         let owner = owner(workspace, &books)?;
         let figures = workspace.report(&books, &owner, &report, date(&query.from)?, date(&query.to)?)?;
         let names = Names::v0_1(query.lang.as_deref().unwrap_or("de"));
-        let fields = figures
-            .fields
+        let amount = |units: i128| dto::Amount::from(&Money::new(units, figures.currency.clone()).expect("an amount"));
+        let field = |(field, units): (&String, &i128)| dto::Field {
+            field: field.clone(),
+            name: names.as_ref().and_then(|n| field_name(n, &figures.names, field)).map(str::to_owned),
+            amount: amount(*units),
+        };
+        let fields = figures.fields.iter().map(field).collect();
+        let reconciliation = figures.reconciliation.iter().map(field).collect();
+        let terms = figures
+            .terms
             .iter()
-            .map(|(field, units)| dto::Field {
-                field: field.clone(),
-                name: names.as_ref().and_then(|n| field_name(n, &figures.names, field)).map(str::to_owned),
-                amount: dto::Amount::from(&Money::new(*units, figures.currency.clone()).expect("an amount")),
+            .map(|(position, t)| dto::Terms {
+                field: position.clone(),
+                up_to_one_year: amount(t.up_to_one_year),
+                over_one_year: amount(t.over_one_year),
+                over_five_years: amount(t.over_five_years),
+                unknown: amount(t.unknown),
             })
             .collect();
-        Ok(Json(dto::Figures { id: figures.id.into(), name: figures.name.into(), law: figures.law, fields }))
+        Ok(Json(dto::Figures {
+            id: figures.id.into(),
+            name: figures.name.into(),
+            law: figures.law,
+            fields,
+            terms,
+            reconciliation,
+        }))
     })
     .await
 }

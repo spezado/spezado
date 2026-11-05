@@ -634,6 +634,7 @@ impl Workspace {
                         .unwrap_or(standard.vat_reverse_charge.clone()),
                     vat_input: standard.vat_reverse_charge_input.clone(),
                     vat_reverse_charge: standard.vat_reverse_charge.clone(),
+                    transit: standard.transit.clone(),
                 };
                 let mut booking = propose_booking(&document, InvoiceSide::Sale, owner, &accounts)
                     .map_err(|e| AppError::Invoice(e.to_string()))?;

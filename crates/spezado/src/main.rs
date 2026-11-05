@@ -218,6 +218,10 @@ enum SyncAction {
         /// What the invited device may do: read, write or manage (your own devices).
         #[arg(long, default_value = "manage")]
         rights: String,
+        /// The last day it may read and write, e.g. for an auditor (YYYY-MM-DD); removed at the next
+        /// synchronisation after it.
+        #[arg(long)]
+        until: Option<String>,
     },
     /// Removes a device or person from the books, by its name or device name; the key of the books changes.
     Remove {
@@ -297,6 +301,9 @@ struct SetUp {
     /// The month the financial year begins with.
     #[arg(long, default_value_t = 1)]
     year_start: u8,
+    /// The day of that month it begins on, 2 to 28, if not the first.
+    #[arg(long)]
+    year_start_day: Option<u8>,
     /// How profit is determined: de-cash-basis, de-double-entry; none for a private household.
     #[arg(long)]
     accounting: Option<String>,
@@ -500,9 +507,31 @@ fn run(workspace: &mut Workspace, books: &BooksId, command: Commands) -> Result<
                 Some(report) => {
                     let figures = workspace.report(books, &owner, &report, from, to)?;
                     println!("{} ({}), {from} – {to}, {}", figures.name, figures.id, figures.law);
+                    let money = |units: i128| -> Result<String> {
+                        Ok(format_amount(
+                            &librotenado::Money::new(units, figures.currency.clone()).context("overflow")?,
+                        ))
+                    };
                     for (field, units) in &figures.fields {
-                        let amount = librotenado::Money::new(*units, figures.currency.clone()).context("overflow")?;
-                        println!("{field:>16} {:>16}", format_amount(&amount));
+                        println!("{field:>16} {:>16}", money(*units)?);
+                        // The remaining terms the balance sheet notes (§ 268 Abs. 4 and 5 HGB).
+                        if let Some(t) = figures.terms.get(field).filter(|t| t.over_one_year != 0 || t.unknown != 0) {
+                            println!("{:>16} {:>16}  of which due within a year", "", money(t.up_to_one_year)?);
+                            println!("{:>16} {:>16}  of which due after more than a year", "", money(t.over_one_year)?);
+                            if t.unknown != 0 {
+                                println!(
+                                    "{:>16} {:>16}  without a remaining term – to be divided",
+                                    "",
+                                    money(t.unknown)?
+                                );
+                            }
+                        }
+                    }
+                    if !figures.reconciliation.is_empty() {
+                        println!("Reconciliation to the tax balance sheet:");
+                        for (field, units) in &figures.reconciliation {
+                            println!("{field:>16} {:>16}", money(*units)?);
+                        }
                     }
                 }
             }
@@ -621,7 +650,7 @@ fn sync(workspace: &mut Workspace, books: Option<BooksId>, action: Option<SyncAc
                 _ => println!("This device's key of the books is in the workspace – protect its folder."),
             }
         }
-        Some(SyncAction::Invite { rights }) => {
+        Some(SyncAction::Invite { rights, until }) => {
             let books = choose_books(workspace, books)?;
             let rights = match rights.as_str() {
                 "read" => librotenado::Rights::Read,
@@ -629,7 +658,9 @@ fn sync(workspace: &mut Workspace, books: Option<BooksId>, action: Option<SyncAc
                 "manage" => librotenado::Rights::Manage,
                 _ => bail!("rights are read, write or manage"),
             };
-            println!("{}", workspace.invite(&books, rights)?);
+            let until =
+                until.map(|d| d.parse::<librotenado::Date>()).transpose().map_err(|_| anyhow!("--until is a date"))?;
+            println!("{}", workspace.invite(&books, rights, until)?);
             println!();
             println!("On the other device: spezado sync join <invitation> – then run spezado sync here.");
         }
@@ -744,6 +775,9 @@ fn set_up(workspace: &mut Workspace, setup: SetUp) -> Result<BooksId> {
         "owner": id.as_str(), "from": setup.from.to_string(), "currency": setup.currency.as_str(),
         "year_start": setup.year_start,
     });
+    if let Some(day) = setup.year_start_day {
+        configuration["year_start_day"] = day.into();
+    }
     if let Some(accounting) = setup.accounting {
         configuration["accounting"] = accounting.into();
     }
@@ -809,7 +843,16 @@ fn parse_booking(
             })
         })
         .collect::<Result<Vec<_>>>()?;
-    Ok(Booking { attributed: None, date, text, postings, documents: vec![], entries: vec![], transaction: None })
+    Ok(Booking {
+        basis: None,
+        attributed: None,
+        date,
+        text,
+        postings,
+        documents: vec![],
+        entries: vec![],
+        transaction: None,
+    })
 }
 
 /// The national chart of each owner, as last configured – read once per owner.

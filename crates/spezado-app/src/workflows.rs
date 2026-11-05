@@ -176,6 +176,7 @@ impl Workspace {
         }
         postings.push(posting(entry.payment.clone(), -side(&entry.gross), None));
         Ok(Booking {
+            basis: None,
             attributed: entry.attributed,
             date: entry.date,
             text: entry.text.clone(),
@@ -293,6 +294,7 @@ impl Workspace {
                         .cloned()
                         .unwrap_or(standard.vat_reverse_charge_input.clone()),
                     vat_reverse_charge: standard.vat_reverse_charge.clone(),
+                    transit: standard.transit.clone(),
                 };
                 propose_booking(&document, side, owner, &accounts).ok()
             }

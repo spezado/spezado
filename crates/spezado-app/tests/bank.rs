@@ -118,6 +118,7 @@ fn a_year_of_bank_entries() {
     };
     assert!(mismatch(&workspace));
     let opening = librotenado::Booking {
+        basis: None,
         attributed: None,
         date: "2026-09-30".parse().unwrap(),
         text: "Anfangsbestand".into(),

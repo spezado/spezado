@@ -1198,6 +1198,10 @@ export interface components {
             law: string;
             /** @description Its name. */
             name: string;
+            /** @description For a balance sheet: how the tax balance sheet differs per position (Überleitungsrechnung). */
+            reconciliation?: components["schemas"]["Field"][];
+            /** @description For a balance sheet: the remaining terms of the positions (§ 268 Abs. 4 and 5 HGB). */
+            terms?: components["schemas"]["Terms"][];
         };
         /** @description A filing of the books and where it stands. */
         FilingView: {
@@ -1322,6 +1326,11 @@ export interface components {
         };
         /** @description A booking in lines. */
         LinesBooking: {
+            /**
+             * @description `commercial` or `tax` for a booking that counts in that balance sheet only – where the tax balance sheet
+             *     departs from the commercial one; absent for both.
+             */
+            basis?: string | null;
             /** @description `YYYY-MM-DD`. */
             date: string;
             /** @description The lines; they balance. */
@@ -1660,6 +1669,11 @@ export interface components {
         SyncInvite: {
             /** @description `read`, `write` or `manage` – the person's own devices; `manage` when none. */
             rights?: string | null;
+            /**
+             * Format: date
+             * @description The last day the device may read and write – an auditor's –; unlimited when absent.
+             */
+            until?: string | null;
         };
         /** @description Joining books with an invitation. */
         SyncJoin: {
@@ -1708,6 +1722,19 @@ export interface components {
             code: string;
             /** @description Its name. */
             name: string;
+        };
+        /** @description The remaining terms of a position of the balance sheet. */
+        Terms: {
+            /** @description The position. */
+            field: string;
+            /** @description Due after more than five years. */
+            over_five_years: components["schemas"]["Amount"];
+            /** @description Due after more than a year – those after five included. */
+            over_one_year: components["schemas"]["Amount"];
+            /** @description On accounts without a remaining term: to be divided by whoever draws up the balance sheet. */
+            unknown: components["schemas"]["Amount"];
+            /** @description Due within a year. */
+            up_to_one_year: components["schemas"]["Amount"];
         };
         /** @description An advance VAT return and when it is due. */
         VatReturnDue: {

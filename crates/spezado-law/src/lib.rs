@@ -93,6 +93,8 @@ pub struct StandardAccounts {
     /// Expenses deductible in part: account → the account of the part not deductible, and the deductible part in
     /// per cent – business entertainment in Germany.
     pub partly_deductible: BTreeMap<AccountId, (AccountId, u8)>,
+    /// Transit items: amounts collected in the name and for the account of others (durchlaufende Posten).
+    pub transit: AccountId,
 }
 
 /// The law of one country, or of a part of it, as a module.

@@ -267,6 +267,10 @@ pub struct LinesBooking {
     pub text: String,
     /// The lines; they balance.
     pub lines: Vec<Line>,
+    /// `commercial` or `tax` for a booking that counts in that balance sheet only – where the tax balance sheet
+    /// departs from the commercial one; absent for both.
+    #[serde(default)]
+    pub basis: Option<String>,
 }
 
 /// A reversal of a booking.
@@ -324,6 +328,27 @@ pub struct Figures {
     pub law: String,
     /// The fields with an amount.
     pub fields: Vec<Field>,
+    /// For a balance sheet: the remaining terms of the positions (§ 268 Abs. 4 and 5 HGB).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub terms: Vec<Terms>,
+    /// For a balance sheet: how the tax balance sheet differs per position (Überleitungsrechnung).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reconciliation: Vec<Field>,
+}
+
+/// The remaining terms of a position of the balance sheet.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct Terms {
+    /// The position.
+    pub field: String,
+    /// Due within a year.
+    pub up_to_one_year: Amount,
+    /// Due after more than a year – those after five included.
+    pub over_one_year: Amount,
+    /// Due after more than five years.
+    pub over_five_years: Amount,
+    /// On accounts without a remaining term: to be divided by whoever draws up the balance sheet.
+    pub unknown: Amount,
 }
 
 /// Closing the books up to a date.
@@ -989,11 +1014,15 @@ pub struct SyncInvitation {
 }
 
 /// What an invited device may do.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
 pub struct SyncInvite {
     /// `read`, `write` or `manage` – the person's own devices; `manage` when none.
     #[serde(default)]
     pub rights: Option<String>,
+    /// The last day the device may read and write – an auditor's –; unlimited when absent.
+    #[serde(default)]
+    #[schema(value_type = Option<String>, format = Date)]
+    pub until: Option<librotenado::Date>,
 }
 
 /// A member removed.

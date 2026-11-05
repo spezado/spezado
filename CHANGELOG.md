@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- **Remaining terms** on the balance sheet (§ 268 Abs. 4 and 5 HGB): per position, what is due within a year and
+  after more than a year, in the command line, the web app and the API.
+- **Bookings in one balance sheet only** (`basis` of a booking in lines, API) and the **reconciliation to the tax
+  balance sheet** with the balance sheet.
+- **Access for a time:** `spezado sync invite --until`, and `until` in the API; a device that may manage the books
+  removes members whose time ran out. Names of devices are sealed from the relay, and envelopes padded; the relay
+  serves a member up to its last day.
+- **A financial year from the middle of a month:** `--year-start-day`.
+- **Payments for third parties** of an XRechnung booked on transit items (SKR 03 1590, SKR 04 1370).
+- Public holidays checked against the law of every state; Berlin's 17 June 2028 added.
+- librotenado 0.16.0.
+
 - **A contact for a document recorded already:** in the web app's list of documents, and the API; a correction of
   the document after librotenado 0005, its original unchanged. Invoices written name their customer as a contact.
 - **Shortened balance sheets** for small and micro corporations (§ 266 Abs. 1 HGB): `de-hgb-266-small` and

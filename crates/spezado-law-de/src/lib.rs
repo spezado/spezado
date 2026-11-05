@@ -291,6 +291,7 @@ impl LawModule for Germany {
             // 70 per cent of business entertainment is deductible (§ 4 Abs. 5 Satz 1 Nr. 2 EStG); the VAT on it in
             // full (§ 15 Abs. 1a Satz 2 UStG).
             partly_deductible: [(account("entertainment")?, (account("entertainment-not-deductible")?, 70))].into(),
+            transit: account("transit")?,
         })
     }
 
@@ -328,6 +329,7 @@ const STANDARD: &[(&str, &str, &str)] = &[
     ("reverse-charge-input", "1577", "1407"),
     ("entertainment", "4650", "6640"),
     ("entertainment-not-deductible", "4654", "6644"),
+    ("transit", "1590", "1370"),
 ];
 
 /// A calendar quarter, counted from the first of `year` (0) – earlier ones negative.

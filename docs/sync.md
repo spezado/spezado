@@ -64,7 +64,11 @@ An invitation says what the device it brings may do:
 
 ```sh
 spezado sync invite --rights read      # for the tax adviser
+spezado sync invite --rights read --until 2027-03-31   # an auditor, for the time of the audit
 ```
+
+With `--until`, the relay serves the device up to that day; at the next synchronisation after it, a device that may
+manage the books removes it, and the key changes (librotenado 0006).
 
 The web app offers the same when inviting and shows what every device may do.
 
@@ -74,7 +78,8 @@ The web app offers the same when inviting and shows what every device may do.
 spezado sync remove Steuerberaterin    # by name or device name
 ```
 
-The books get a new key, which the device removed does not receive: nothing written afterwards reaches it. What it
+Names of devices are encrypted with the key of the books, so that the relay does not read them, and what travels is
+padded to steps of size. The books get a new key, which the device removed does not receive: nothing written afterwards reaches it. What it
 has read, it may have kept – removing protects the future, not the past. In the web app, every device but this one
 has *remove*.
 

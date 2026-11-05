@@ -92,6 +92,7 @@ impl Workspace {
             postings.push(posting(opening.clone(), -total));
         }
         Ok(Booking {
+            basis: None,
             attributed: None,
             date,
             text: text.to_owned(),

@@ -135,7 +135,7 @@ fn own_devices_share_books_through_a_relay() {
     assert!(laptop.start_sync(&books, &relay, None).is_err(), "only once");
 
     // The phone joins by invitation: it waits until the laptop has added it, then receives everything.
-    let invitation = laptop.invite(&books, librotenado::Rights::Manage).unwrap();
+    let invitation = laptop.invite(&books, librotenado::Rights::Manage, None).unwrap();
     let mut phone = device(&phone_dir, "phone");
     assert_eq!(phone.join(&invitation, Some("Phone")).unwrap(), books);
     assert!(phone.sync(&books).unwrap().waiting);
@@ -207,9 +207,9 @@ fn books_are_shared_with_rights_and_members_removed() {
 
     // A tax adviser may read, a bookkeeper may write.
     let mut adviser = device(&adviser_dir, "adviser");
-    adviser.join(&owner.invite(&books, librotenado::Rights::Read).unwrap(), Some("Steuerberaterin")).unwrap();
+    adviser.join(&owner.invite(&books, librotenado::Rights::Read, None).unwrap(), Some("Steuerberaterin")).unwrap();
     let mut bookkeeper = device(&bookkeeper_dir, "bookkeeper");
-    bookkeeper.join(&owner.invite(&books, librotenado::Rights::Write).unwrap(), Some("Buchhalter")).unwrap();
+    bookkeeper.join(&owner.invite(&books, librotenado::Rights::Write, None).unwrap(), Some("Buchhalter")).unwrap();
     assert_eq!(owner.sync(&books).unwrap().added.len(), 2);
     adviser.sync(&books).unwrap();
     bookkeeper.sync(&books).unwrap();
@@ -220,15 +220,25 @@ fn books_are_shared_with_rights_and_members_removed() {
         software: Default::default(),
     };
     assert!(matches!(adviser.execute(&books, close("2026-01-31")), Err(spezado_app::AppError::ReadOnly(_))));
-    assert!(adviser.invite(&books, librotenado::Rights::Read).is_err(), "only who manages invites");
+    assert!(adviser.invite(&books, librotenado::Rights::Read, None).is_err(), "only who manages invites");
     bookkeeper.execute(&books, close("2026-01-31")).unwrap();
     bookkeeper.sync(&books).unwrap();
     assert_eq!(owner.sync(&books).unwrap().received, 1);
 
+    // An auditor for a time that has run out is removed at the next synchronisation of a device that manages.
+    let auditor_dir = Scratch::new("auditor");
+    let mut auditor = device(&auditor_dir, "auditor");
+    let ended = Some("2026-01-31".parse().unwrap());
+    auditor.join(&owner.invite(&books, librotenado::Rights::Read, ended).unwrap(), Some("Prüferin")).unwrap();
+    let report = owner.sync(&books).unwrap();
+    assert_eq!((report.added.len(), report.expired), (1, 1));
+    assert!(owner.sync_members(&books).unwrap().iter().all(|m| m.name != "Prüferin"));
+    assert!(auditor.sync(&books).is_err(), "removed");
+
     // A device removed before it ever synchronised learns it, too.
     let latecomer_dir = Scratch::new("latecomer");
     let mut latecomer = device(&latecomer_dir, "latecomer");
-    latecomer.join(&owner.invite(&books, librotenado::Rights::Read).unwrap(), Some("Aushilfe")).unwrap();
+    latecomer.join(&owner.invite(&books, librotenado::Rights::Read, None).unwrap(), Some("Aushilfe")).unwrap();
     owner.sync(&books).unwrap();
     owner.remove_member(&books, "Aushilfe").unwrap();
     assert!(latecomer.sync(&books).is_err(), "removed, not waiting");

@@ -114,6 +114,7 @@ impl Workspace {
             return Ok(None);
         }
         Ok(Some(Booking {
+            basis: None,
             attributed: None,
             date: to,
             text: depreciation_text(year),
@@ -194,6 +195,7 @@ impl Workspace {
                 exchange: None,
             };
             let booking = Booking {
+                basis: None,
                 attributed: None,
                 date,
                 text: format!("Anlagenabgang {}", state.asset.name),

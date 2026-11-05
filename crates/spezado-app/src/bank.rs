@@ -290,6 +290,7 @@ impl Workspace {
                 vat_output: standard.vat.get(&"de-out-19".parse().ok()?).cloned()?,
                 vat_input: standard.vat.get(&"de-in-19".parse().ok()?).cloned()?,
                 vat_reverse_charge: standard.vat_reverse_charge.clone(),
+                transit: standard.transit.clone(),
             };
             let mut booking = propose_booking(&document, side, owner, &accounts).ok()?;
             // A small business's own invoices are exempt by § 19 UStG, not by § 4: a field of their own.

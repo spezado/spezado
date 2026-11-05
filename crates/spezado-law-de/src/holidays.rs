@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Public holidays in Germany: those of the whole country, and those a state's law adds for all of the state.
 //!
-//! Sources: the Einigungsvertrag for the 3rd of October, the holiday laws of the states, as collected in
-//! <https://de.wikipedia.org/wiki/Gesetzliche_Feiertage_in_Deutschland>; the Weltkindertag in Thuringia since 2019
-//! (Drittes Gesetz zur Änderung des Thüringer Feier- und Gedenktagsgesetzes, Drucksache 6/6163); the 15th of August in
-//! all of the Saarland (Gesetz Nr. 1040 über die Sonn- und Feiertage). OPEN: a review of each state's law in its
-//! current wording.
+//! Sources: the Einigungsvertrag for the 3rd of October; the holiday law of each state in its wording of November
+//! 2026, checked on the state's portal of law: BW FTG § 1, BY FTG Art. 1, BE FeiertG § 1 (Frauentag since 2019; the 8th
+//! of May 2020 and 2025 and the 17th of June 2028 once), BB FTG § 2, HB § 2, HH FeiertagsG § 1, HE HFeiertagsG § 1,
+//! MV FTG § 2 (Frauentag since 2023), NI NFeiertagsG § 2, NW FTG § 2, RP LFtG § 2, SL SFG § 2 (the 15th of August in
+//! all of the state), SN SächsSFG § 1, ST FeiertG § 2, SH SFTG § 2, TH ThürFGtG § 2 (Weltkindertag since 2019); the
+//! Reformation Day in HB, HH, NI and SH since 2018. OPEN: holidays a state's government may decree once by regulation,
+//! and the dates of the latest amendments in BW, BB and NW, which their portals do not show.
 //!
 //! Holidays in only some municipalities – Fronleichnam in parts of Saxony and Thuringia, Mariä Himmelfahrt in parts
 //! of Bavaria, the Augsburger Friedensfest – are left out: a deadline then falls on the day before, never after.
@@ -71,6 +73,8 @@ pub fn is_holiday(date: Date, state: Option<&str>) -> bool {
         (1, 6) => in_state(&["BW", "BY", "ST"]),
         (3, 8) => (year >= 2019 && in_state(&["BE"])) || (year >= 2023 && in_state(&["MV"])),
         (5, 8) => matches!(year, 2020 | 2025) && in_state(&["BE"]),
+        // The 75th anniversary of the uprising of 17 June 1953, once in Berlin.
+        (6, 17) => year == 2028 && in_state(&["BE"]),
         (8, 15) => in_state(&["SL"]),
         (9, 20) => year >= 2019 && in_state(&["TH"]),
         (10, 31) => in_state(&["BB", "MV", "SN", "ST", "TH"]) || (year >= 2018 && in_state(&["HB", "HH", "NI", "SH"])),
@@ -116,6 +120,7 @@ mod tests {
         assert!(is_holiday(date("2026-01-06"), Some("DE-BY")) && !is_holiday(date("2026-01-06"), Some("DE-BE")));
         assert!(is_holiday(date("2026-03-08"), Some("DE-BE")) && !is_holiday(date("2018-03-08"), Some("DE-BE")));
         assert!(is_holiday(date("2025-05-08"), Some("DE-BE")) && !is_holiday(date("2026-05-08"), Some("DE-BE")));
+        assert!(is_holiday(date("2028-06-17"), Some("DE-BE")) && !is_holiday(date("2029-06-17"), Some("DE-BE")));
         assert!(is_holiday(date("2026-08-15"), Some("DE-SL")) && !is_holiday(date("2026-08-15"), Some("DE-BY")));
         assert!(is_holiday(date("2026-10-31"), Some("DE-NI")) && !is_holiday(date("2026-10-31"), Some("DE-NW")));
         assert!(is_holiday(date("2026-11-18"), Some("DE-SN")) && !is_holiday(date("2026-11-18"), Some("DE-BY")));

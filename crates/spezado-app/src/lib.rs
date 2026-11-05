@@ -175,6 +175,10 @@ pub struct ReportFigures {
     pub currency: Currency,
     /// The law module, `name/version`.
     pub law: String,
+    /// For a balance sheet: the remaining terms of the amounts on each position (§ 268 Abs. 4 and 5 HGB).
+    pub terms: BTreeMap<String, librotenado::Terms>,
+    /// For a balance sheet: how the tax balance sheet differs per position, from bookings in one of them only.
+    pub reconciliation: BTreeMap<String, i128>,
 }
 
 /// An owner's configuration on a date, its country and legal form if an organisation, and the law module that
@@ -524,12 +528,54 @@ impl Workspace {
             ReportBasis::Customers => events.customer_report(&mapping, &self.chart, owner, from, to)?.0,
             ReportBasis::Assets => events.asset_report(&mapping, &self.chart, owner, from, to),
         };
-        let fields = match shortened {
+        let (mut terms, mut reconciliation) = (BTreeMap::new(), BTreeMap::new());
+        if basis == ReportBasis::Balances {
+            terms = events.term_report(&mapping, &self.chart, owner, Some(to))?;
+            reconciliation = events.reconciliation(&mapping, &self.chart, owner, Some(to))?;
+        }
+        let shorten = |fields: BTreeMap<String, i128>| match shortened {
             Some(size) => librotenado::hgb_shortened(&fields, size),
             None => fields,
         };
+        let fields = shorten(fields);
+        let reconciliation = shorten(reconciliation);
+        if shortened.is_some() {
+            // The terms of the positions a shortened balance sheet keeps: each part shortened alike.
+            let part = |get: fn(&librotenado::Terms) -> i128| -> BTreeMap<String, i128> {
+                shorten(terms.iter().map(|(position, t)| (position.clone(), get(t))).collect())
+            };
+            let parts = [
+                part(|t| t.up_to_one_year),
+                part(|t| t.over_one_year),
+                part(|t| t.over_five_years),
+                part(|t| t.unknown),
+            ];
+            let positions: std::collections::BTreeSet<&String> = parts.iter().flat_map(BTreeMap::keys).collect();
+            terms = positions
+                .into_iter()
+                .map(|position| {
+                    let get = |i: usize| parts[i].get(position).copied().unwrap_or(0);
+                    let t = librotenado::Terms {
+                        up_to_one_year: get(0),
+                        over_one_year: get(1),
+                        over_five_years: get(2),
+                        unknown: get(3),
+                    };
+                    (position.clone(), t)
+                })
+                .collect();
+        }
         let law = format!("{}/{}", module.name(), module.version());
-        Ok(ReportFigures { id, name, names: mapping.report, fields, currency: configuration.currency, law })
+        Ok(ReportFigures {
+            id,
+            name,
+            names: mapping.report,
+            fields,
+            currency: configuration.currency,
+            law,
+            terms,
+            reconciliation,
+        })
     }
 
     /// The law modules, `name → version`, as a closing records them.

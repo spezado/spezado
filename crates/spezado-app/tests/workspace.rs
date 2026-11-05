@@ -52,6 +52,7 @@ fn configuration(owner: &PartyId, accounting: Option<&str>, vat: bool) -> Config
 fn booking(owner: &PartyId, date: &str, text: &str, lines: &[(&str, i128, Option<&str>)]) -> Booking {
     let skr03 = ChartTranslation::de_skr03();
     Booking {
+        basis: None,
         attributed: None,
         date: date.parse().unwrap(),
         text: text.into(),

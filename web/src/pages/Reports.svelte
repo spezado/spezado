@@ -67,9 +67,28 @@
       <tbody>
         {#each figures.fields as field (field.field)}
           <tr><td class="mono">{field.field}</td><td>{field.name ?? ""}</td><td class="number">{amount(field.amount.value, app.lang)}</td></tr>
+          <!-- The remaining terms a balance sheet notes (§ 268 Abs. 4 and 5 HGB). -->
+          {@const terms = (figures.terms ?? []).find((t) => t.field === field.field)}
+          {#if terms && (Number(terms.over_one_year.value) !== 0 || Number(terms.unknown.value) !== 0)}
+            <tr class="muted"><td></td><td>{t("withinAYear")}</td><td class="number">{amount(terms.up_to_one_year.value, app.lang)}</td></tr>
+            <tr class="muted"><td></td><td>{t("afterAYear")}</td><td class="number">{amount(terms.over_one_year.value, app.lang)}</td></tr>
+            {#if Number(terms.unknown.value) !== 0}
+              <tr class="muted"><td></td><td>{t("noTerm")}</td><td class="number">{amount(terms.unknown.value, app.lang)}</td></tr>
+            {/if}
+          {/if}
         {/each}
       </tbody>
     </table>
+    {#if (figures.reconciliation ?? []).length > 0}
+      <h2>{t("reconciliation")}</h2>
+      <table>
+        <tbody>
+          {#each figures.reconciliation ?? [] as field (field.field)}
+            <tr><td class="mono">{field.field}</td><td>{field.name ?? ""}</td><td class="number">{amount(field.amount.value, app.lang)}</td></tr>
+          {/each}
+        </tbody>
+      </table>
+    {/if}
   {:else}
     <h1>{t("reports")} {app.year}</h1>
     {#if reports.length === 0}
