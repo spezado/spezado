@@ -8,9 +8,20 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 publish.workspace = true
+default-run = "spezado"
 
 [lints]
 workspace = true
+
+[[bin]]
+name = "spezado"
+path = "src/main.rs"
+
+# The server with its icon as a program of its own, which Windows starts without a console window (at login).
+[[bin]]
+name = "spezado-tray"
+path = "src/bin/spezado-tray.rs"
+required-features = ["tray"]
 
 [dependencies]
 anyhow = "=1.0.104"

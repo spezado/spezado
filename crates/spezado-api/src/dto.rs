@@ -199,6 +199,9 @@ pub struct AccountView {
     pub name: String,
     /// `asset`, `liability`, `equity`, `income`, `expense`, `memo`.
     pub kind: String,
+    /// The tax code postings on it carry, where it has one – an automatic account of DATEV.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tax: Option<String>,
 }
 
 /// The balance of an account.

@@ -14,6 +14,7 @@ use spezado_app::{Party, Workspace, new_id};
 use spezado_core::{Command, format_amount, parse_amount};
 
 mod autostart;
+mod start;
 #[cfg(feature = "tray")]
 mod tray;
 
@@ -327,17 +328,6 @@ struct SetUp {
     region: Option<String>,
 }
 
-/// A pairing code given in `SPEZADO_PAIRING_CODE` – by an app that starts `spezado serve` and pairs itself; at least
-/// 16 letters, digits, `-` or `_`. In the environment rather than on the command line, where others could read it.
-fn pairing_code_given() -> Result<Option<String>> {
-    let Some(code) = std::env::var_os("SPEZADO_PAIRING_CODE") else { return Ok(None) };
-    let code = code
-        .into_string()
-        .ok()
-        .filter(|code| code.len() >= 16 && code.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_'));
-    code.map(Some).context("SPEZADO_PAIRING_CODE: at least 16 letters, digits, - or _")
-}
-
 /// Whether a command creates the workspace if there is none: the terminal interface and the server.
 fn starts_from_nothing(command: &Commands) -> bool {
     match command {
@@ -350,13 +340,7 @@ fn starts_from_nothing(command: &Commands) -> bool {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
-    let directory = match cli.dir.clone() {
-        Some(directory) => directory,
-        None => match std::env::var_os("SPEZADO_DIR") {
-            Some(directory) => directory.into(),
-            None => dirs::data_dir().context("no data directory; give --dir")?.join("spezado"),
-        },
-    };
+    let directory = start::directory(cli.dir.clone())?;
     if let Commands::Openapi = cli.command {
         use spezado_api::utoipa_openapi;
         println!("{}", utoipa_openapi());
@@ -376,8 +360,8 @@ fn main() -> Result<()> {
     if let Commands::Autostart { state, port } = cli.command {
         match state {
             Some(Switch::On) => {
-                let program = std::env::current_exe().context("the path of this program")?;
-                autostart::enable(&program, &autostart::arguments(cli.dir.as_deref(), port))?;
+                let (program, arguments) = autostart::launcher(cli.dir.as_deref(), port)?;
+                autostart::enable(&program, &arguments)?;
             }
             Some(Switch::Off) => autostart::disable()?,
             None => {}
@@ -387,7 +371,7 @@ fn main() -> Result<()> {
     }
     if let Commands::Init { device } = cli.command {
         let device = device.unwrap_or_else(|| {
-            let id: String = uuid_suffix();
+            let id: String = start::uuid_suffix();
             format!("device-{id}").parse().expect("a valid device name")
         });
         let workspace = Workspace::create(&directory, device)?;
@@ -395,9 +379,8 @@ fn main() -> Result<()> {
         return Ok(());
     }
     // The terminal interface and the server start from nothing: a workspace for this device, then setting up books.
-    if starts_from_nothing(&cli.command) && !directory.join("spezado.sqlite").exists() {
-        let device = format!("device-{}", uuid_suffix()).parse().expect("a valid device name");
-        Workspace::create(&directory, device)?;
+    if starts_from_nothing(&cli.command) {
+        start::ensure_workspace(&directory)?;
     }
     let mut workspace = Workspace::open(&directory)
         .with_context(|| format!("{} – create one with `spezado init`", directory.display()))?;
@@ -412,7 +395,7 @@ fn main() -> Result<()> {
         Commands::Serve { port, listen, host } => {
             let listen = listen.unwrap_or_else(|| std::net::SocketAddr::from(([127, 0, 0, 1], port)));
             let host = host.unwrap_or_else(|| gethostname::gethostname().to_string_lossy().into_owned());
-            let pairing = pairing_code_given()?;
+            let pairing = start::pairing_code_given()?;
             spezado_api::serve(
                 workspace,
                 listen,
@@ -443,8 +426,8 @@ fn main() -> Result<()> {
         }
         #[cfg(feature = "tray")]
         Commands::Tray { port } => {
-            let pairing = pairing_code_given()?;
-            let again = autostart::arguments(cli.dir.as_deref(), port);
+            let pairing = start::pairing_code_given()?;
+            let again = autostart::launcher(cli.dir.as_deref(), port)?;
             tray::run(workspace, std::net::SocketAddr::from(([127, 0, 0, 1], port)), pairing, again)
         }
         Commands::Tui { lang } => {
@@ -479,11 +462,6 @@ fn main() -> Result<()> {
 }
 
 /// Eight hexadecimal digits from a fresh identity – for a device name nobody chose.
-fn uuid_suffix() -> String {
-    let id: PartyId = new_id();
-    id.as_str()[id.as_str().len() - 8..].to_owned()
-}
-
 fn run(workspace: &mut Workspace, books: &BooksId, command: Commands) -> Result<()> {
     match command {
         Commands::Book { date, text, owner, lines } => {

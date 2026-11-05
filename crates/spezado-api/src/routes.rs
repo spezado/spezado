@@ -445,6 +445,7 @@ async fn accounts(
                     number: c.number,
                     name: c.name,
                     kind: format!("{:?}", c.kind).to_lowercase(),
+                    tax: c.tax.map(|t| t.to_string()),
                 })
                 .collect(),
         ))

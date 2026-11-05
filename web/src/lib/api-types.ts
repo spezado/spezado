@@ -928,6 +928,8 @@ export interface components {
             name: string;
             /** @description Its national number. */
             number?: string | null;
+            /** @description The tax code postings on it carry, where it has one – an automatic account of DATEV. */
+            tax?: string | null;
         };
         /** @description The adapter of a country. */
         AdapterView: {

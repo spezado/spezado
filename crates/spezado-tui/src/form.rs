@@ -244,6 +244,7 @@ mod tests {
                 number: Some((*number).into()),
                 name: (*name).into(),
                 kind: AccountKind::Expense,
+                tax: None,
             })
             .collect()
     }

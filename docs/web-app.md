@@ -19,8 +19,9 @@ spezado serve
 `spezado tray` runs the same server with an icon in the menu bar (macOS) or the system tray (Windows): **Open
 spezado** opens the web app, **Pair a device …** makes a new pairing code and opens the pairing link, **Start at
 login** starts it whenever you log in, **Quit spezado** stops it. Like `serve`, it creates the workspace if there is
-none. The release builds have it on macOS and Windows; on Linux, `spezado serve` runs without an icon. On Windows,
-started at login, it still keeps a console window open (**OPEN**).
+none. The release builds have it on macOS and Windows; on Linux, `spezado serve` runs without an icon. On Windows the
+release has `spezado-tray.exe` beside `spezado.exe`: the same as `spezado tray`, but without a console window – it is
+what starts at login there, and it writes errors to `spezado-tray.log` in the workspace directory.
 
 ```sh
 spezado tray

@@ -2829,6 +2829,13 @@
               "null"
             ],
             "description": "Its national number."
+          },
+          "tax": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The tax code postings on it carry, where it has one – an automatic account of DATEV."
           }
         }
       },

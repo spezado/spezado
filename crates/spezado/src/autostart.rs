@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Starting spezado when the person logs in: a launch agent on macOS, the Run key of the registry on Windows, an
 //! XDG autostart entry on Linux. What starts is this program with the arguments given – `tray` where there is a
-//! menu bar, else `serve`.
+//! menu bar, else `serve` –, on Windows the program `spezado-tray`, which opens no console window.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 
@@ -23,6 +23,24 @@ pub fn enable(program: &Path, arguments: &[String]) -> Result<()> {
 /// Stops starting spezado at login; nothing happens if it did not.
 pub fn disable() -> Result<()> {
     platform::disable()
+}
+
+/// The program and the arguments that start spezado at login: on Windows with a system tray `spezado-tray.exe` beside
+/// this program, which has no console window; elsewhere this program (see [`arguments`]).
+pub fn launcher(directory: Option<&Path>, port: u16) -> Result<(PathBuf, Vec<String>)> {
+    let program = std::env::current_exe().context("the path of this program")?;
+    if cfg!(all(target_os = "windows", feature = "tray")) {
+        let tray = program.with_file_name("spezado-tray.exe");
+        if tray.exists() {
+            let mut arguments = Vec::new();
+            if let Some(directory) = directory {
+                arguments.extend(["--dir".to_owned(), directory.display().to_string()]);
+            }
+            arguments.extend(["--port".to_owned(), port.to_string()]);
+            return Ok((tray, arguments));
+        }
+    }
+    Ok((program, arguments(directory, port)))
 }
 
 /// The arguments that start spezado at login: `tray` where this build has a menu bar, else `serve`; with the

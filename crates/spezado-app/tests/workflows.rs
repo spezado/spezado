@@ -200,6 +200,11 @@ fn vat_returns_fall_due_and_accounts_can_be_chosen() {
     let choices = workspace.account_choices(&books, &ada, "2026-03-01".parse().unwrap(), "en").unwrap();
     let telephone = choices.iter().find(|c| c.number.as_deref() == Some("4920")).unwrap();
     assert_eq!(telephone.name, "Telephone");
+    assert_eq!(telephone.tax, None, "not an automatic account");
+    // An automatic account of DATEV carries the tax code it computes VAT with; a cash discount is there.
+    let tax = |number: &str| choices.iter().find(|c| c.number.as_deref() == Some(number)).and_then(|c| c.tax.clone());
+    assert_eq!(tax("8400").map(|t| t.to_string()).as_deref(), Some("de-out-19"));
+    assert_eq!(tax("8736").map(|t| t.to_string()).as_deref(), Some("de-out-19"));
     let numbers: Vec<&str> = choices.iter().filter_map(|c| c.number.as_deref()).take(3).collect();
     assert!(numbers.windows(2).all(|w| w[0].len() <= w[1].len()), "{numbers:?}");
 }

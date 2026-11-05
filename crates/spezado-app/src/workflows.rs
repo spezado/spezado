@@ -83,6 +83,8 @@ pub struct AccountChoice {
     pub name: String,
     /// Its kind.
     pub kind: AccountKind,
+    /// The tax code postings on it carry – an automatic account of DATEV (librotenado 0004, attribute `tax`).
+    pub tax: Option<librotenado::TaxCode>,
 }
 
 impl Workspace {
@@ -439,7 +441,8 @@ impl Workspace {
                 .iter()
                 .filter_map(|(number, id)| {
                     let kind = *kinds.get(id)?;
-                    Some(AccountChoice { id: id.clone(), number: Some(number.clone()), name: name(id), kind })
+                    let tax = self.chart.tax_code(id);
+                    Some(AccountChoice { id: id.clone(), number: Some(number.clone()), name: name(id), kind, tax })
                 })
                 .collect(),
             None => self
@@ -451,13 +454,20 @@ impl Workspace {
                     number: None,
                     name: name(&account.id),
                     kind: account.kind,
+                    tax: self.chart.tax_code(&account.id),
                 })
                 .collect(),
         };
         // The other side of opening balances, which national charts have no number for.
         let opening = librotenado::Chart::opening_balances_v0_1();
         if !choices.iter().any(|c| c.id == opening) {
-            choices.push(AccountChoice { name: name(&opening), id: opening, number: None, kind: AccountKind::Memo });
+            choices.push(AccountChoice {
+                name: name(&opening),
+                id: opening,
+                number: None,
+                kind: AccountKind::Memo,
+                tax: None,
+            });
         }
         for (_, event) in self.get(books)?.events().ordered() {
             if let Payload::AccountOpened { account } = &event.payload {
@@ -467,7 +477,19 @@ impl Workspace {
                     (None, Some(iban)) => iban.clone(),
                     _ => name(&account.id),
                 };
-                choices.push(AccountChoice { id: account.id.clone(), number: None, name: own, kind: account.kind });
+                // An account of the books carries the tax code of its parent, unless it has one of its own.
+                let tax = account
+                    .attributes
+                    .get("tax")
+                    .and_then(|t| t.parse().ok())
+                    .or_else(|| account.parent.as_ref().and_then(|p| self.chart.tax_code(p)));
+                choices.push(AccountChoice {
+                    id: account.id.clone(),
+                    number: None,
+                    name: own,
+                    kind: account.kind,
+                    tax,
+                });
             }
         }
         // By number, the numbered ones first.

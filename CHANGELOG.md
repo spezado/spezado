@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **`spezado-tray` on Windows:** the server with its icon in the system tray as a program of its own, without a
+  console window; it starts at login (`Start at login`, `spezado autostart on`).
+- **Tax codes of automatic accounts:** choosing an account of SKR 03 or SKR 04 on which DATEV computes VAT (AM, AV)
+  proposes its tax code – `8400` `de-out-19`, `3736` `de-in-19` –, in the terminal, the web app and the API
+  (`tax` of an account).
+- **Cash discounts:** the accounts of cash discounts granted and received (SKR 03 3730 ff., 8730 ff.; SKR 04 5730 ff.,
+  4730 ff.) are there; librotenado had left them out.
 - **Remaining terms** on the balance sheet (§ 268 Abs. 4 and 5 HGB): per position, what is due within a year and
   after more than a year, in the command line, the web app and the API.
 - **Bookings in one balance sheet only** (`basis` of a booking in lines, API) and the **reconciliation to the tax

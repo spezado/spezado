@@ -28,10 +28,10 @@
     api.GET("/api/v1/books/{books}/tax-codes", { params: { path: { books }, query: { lang } } }).then(({ data }) => (codes = data ?? []));
   });
 
-  /** A tax code nobody chose follows the kind of the account chosen. */
+  /** A tax code nobody chose follows the account chosen – its own, or by its kind. */
   function chosen(account: Schemas["AccountView"]) {
     if (simple.taxTouched) return;
-    const code = account.kind === "income" ? "de-out-19" : account.kind === "expense" ? "de-in-19" : "";
+    const code = account.tax ?? (account.kind === "income" ? "de-out-19" : account.kind === "expense" ? "de-in-19" : "");
     simple.tax = codes.some((c) => c.code === code) ? code : "";
   }
 

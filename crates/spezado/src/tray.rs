@@ -27,9 +27,15 @@ enum Message {
     Menu(MenuEvent),
 }
 
-/// Runs the server and the icon until "Quit" is chosen. `again` are the arguments that start this again at login.
-pub fn run(workspace: Workspace, listen: SocketAddr, pairing: Option<String>, again: Vec<String>) -> Result<()> {
-    let program = std::env::current_exe().context("the path of this program")?;
+/// Runs the server and the icon until "Quit" is chosen. `again` is the program and the arguments that start this
+/// again at login.
+pub fn run(
+    workspace: Workspace,
+    listen: SocketAddr,
+    pairing: Option<String>,
+    again: (std::path::PathBuf, Vec<String>),
+) -> Result<()> {
+    let (program, again) = again;
     let event_loop = EventLoopBuilder::<Message>::with_user_event().build();
     // On macOS an accessory: the icon in the menu bar, nothing in the Dock.
     #[cfg(target_os = "macos")]

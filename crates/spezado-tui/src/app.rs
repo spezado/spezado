@@ -859,7 +859,7 @@ impl App<'_> {
         }
     }
 
-    /// After an account is chosen: a tax code nobody chose follows its kind.
+    /// After an account is chosen: a tax code nobody chose follows the account – its own, or by its kind.
     fn follow_account(&self, form: &mut Form, index: usize) {
         if form.fields[index].label != Text::Account || !form.fields.iter().any(|f| f.label == Text::TaxCode) {
             return;
@@ -869,12 +869,13 @@ impl App<'_> {
         if tax.touched {
             return;
         }
-        let code = match account.kind {
-            librotenado::AccountKind::Income => "de-out-19",
-            librotenado::AccountKind::Expense => "de-in-19",
-            _ => "",
+        let code = match (&account.tax, account.kind) {
+            (Some(code), _) => code.to_string(),
+            (None, librotenado::AccountKind::Income) => "de-out-19".into(),
+            (None, librotenado::AccountKind::Expense) => "de-in-19".into(),
+            _ => String::new(),
         };
-        tax.choose(code);
+        tax.choose(&code);
     }
 
     fn in_proposal(&mut self, mut proposal: Proposal, key: KeyEvent) {

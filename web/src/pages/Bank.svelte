@@ -70,7 +70,7 @@
   }
 
   function chosen(account: Schemas["AccountView"]) {
-    const code = account.kind === "income" ? "de-out-19" : account.kind === "expense" ? "de-in-19" : "";
+    const code = account.tax ?? (account.kind === "income" ? "de-out-19" : account.kind === "expense" ? "de-in-19" : "");
     entry.tax = codes.some((c) => c.code === code) ? code : "";
   }
 
