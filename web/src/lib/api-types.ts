@@ -489,6 +489,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/books/{books}/income-tax": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What the owner stated for income tax of a year beside the books (shown in the report de-est). */
+        get: operations["income_tax"];
+        /** Stores what the owner states for income tax of a year – on this device, not in the books' events. */
+        put: operations["change_income_tax"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/books/{books}/invoices": {
         parameters: {
             query?: never;
@@ -1256,6 +1274,22 @@ export interface components {
             known: number;
             /** @description Entries an earlier statement showed already. */
             shown_before: number;
+        };
+        /** @description What a person states for income tax of a year beside the books. */
+        IncomeTaxFacts: {
+            /**
+             * Format: int32
+             * @description The rate of church tax in percent, 8 or 9; none without.
+             */
+            church_rate?: number | null;
+            /** @description Special expenses, extraordinary burdens, allowances. */
+            deductions?: string | null;
+            /** @description Assessed jointly with a spouse (splitting). */
+            joint?: boolean;
+            /** @description Losses carried forward, not yet used. */
+            losses?: string | null;
+            /** @description Other positive income, with a decimal point. */
+            other_income?: string | null;
         };
         /** @description A line of a new invoice. */
         InvoiceLineInput: {
@@ -2820,6 +2854,70 @@ export interface operations {
                 };
                 content: {
                     "application/zip": unknown;
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    income_tax: {
+        parameters: {
+            query?: {
+                /** @description The calendar year. */
+                year?: number | null;
+                /** @description The language of names: `de` or `en`. */
+                lang?: string | null;
+            };
+            header?: never;
+            path: {
+                books: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncomeTaxFacts"];
+                };
+            };
+        };
+    };
+    change_income_tax: {
+        parameters: {
+            query?: {
+                /** @description The calendar year. */
+                year?: number | null;
+                /** @description The language of names: `de` or `en`. */
+                lang?: string | null;
+            };
+            header?: never;
+            path: {
+                books: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IncomeTaxFacts"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncomeTaxFacts"];
                 };
             };
             422: {

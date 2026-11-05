@@ -197,6 +197,18 @@ impl LawModule for Germany {
                     shortened: None,
                 });
             }
+            // The income tax of a person running the business, over a calendar year from 2026 (§ 25 EStG).
+            let calendar_year = from.month() == 1 && from.day() == 1 && to.month() == 12 && to.day() == 31;
+            if subject == TaxSubject::Individual && calendar_year && year.is_some_and(|y| y >= 2026) {
+                reports.push(Report {
+                    id: "de-est",
+                    name: "Einkommensteuer",
+                    basis: ReportBasis::IncomeTax,
+                    mapping: computed("de-est"),
+                    filing: None,
+                    shortened: None,
+                });
+            }
             if configuration.trade_tax_multiplier.is_some() {
                 reports.push(Report {
                     id: "de-gewst",
@@ -454,7 +466,7 @@ mod tests {
             Germany.reports(&facts, date(from), date(to)).iter().map(|report| report.id).collect()
         };
         assert_eq!(ids("2026-01-01", "2026-03-31"), ["de-ustva", "de-zm", "de-euer", "de-aveuer"]);
-        assert_eq!(ids("2026-01-01", "2026-12-31"), ["de-ustva", "de-ust", "de-zm", "de-euer", "de-aveuer"]);
+        assert_eq!(ids("2026-01-01", "2026-12-31"), ["de-ustva", "de-ust", "de-zm", "de-euer", "de-aveuer", "de-est"]);
         assert_eq!(ids("2025-01-01", "2025-12-31"), ["de-euer"]);
         assert!(ids("2025-12-01", "2026-01-31").is_empty());
         let quarters = Germany.vat_periods(&facts, 2026);
@@ -481,7 +493,7 @@ mod tests {
         assert!(Germany.vat_periods(&facts, 2026).is_empty());
         // No VAT return, but the Anlage EÜR all the same.
         let reports = Germany.reports(&facts, date("2026-01-01"), date("2026-12-31"));
-        assert_eq!(reports.iter().map(|report| report.id).collect::<Vec<_>>(), ["de-euer", "de-aveuer"]);
+        assert_eq!(reports.iter().map(|report| report.id).collect::<Vec<_>>(), ["de-euer", "de-aveuer", "de-est"]);
         let monthly = configuration("de-double-entry", Some(("de-regular", "month")));
         let months = Germany.vat_periods(&Facts::new(&monthly, None, None), 2028);
         assert_eq!(months.len(), 12);

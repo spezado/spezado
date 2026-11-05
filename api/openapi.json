@@ -1634,6 +1634,131 @@
         }
       }
     },
+    "/api/v1/books/{books}/income-tax": {
+      "get": {
+        "tags": [],
+        "summary": "What the owner stated for income tax of a year beside the books (shown in the report de-est).",
+        "operationId": "income_tax",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "description": "The calendar year.",
+            "required": false,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "The language of names: `de` or `en`.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncomeTaxFacts"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [],
+        "summary": "Stores what the owner states for income tax of a year – on this device, not in the books' events.",
+        "operationId": "change_income_tax",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "description": "The calendar year.",
+            "required": false,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "The language of names: `de` or `en`.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IncomeTaxFacts"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncomeTaxFacts"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/books/{books}/invoices": {
       "post": {
         "tags": [
@@ -3732,6 +3857,46 @@
             "type": "integer",
             "description": "Entries an earlier statement showed already.",
             "minimum": 0
+          }
+        }
+      },
+      "IncomeTaxFacts": {
+        "type": "object",
+        "description": "What a person states for income tax of a year beside the books.",
+        "properties": {
+          "church_rate": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "The rate of church tax in percent, 8 or 9; none without.",
+            "minimum": 0
+          },
+          "deductions": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Special expenses, extraordinary burdens, allowances."
+          },
+          "joint": {
+            "type": "boolean",
+            "description": "Assessed jointly with a spouse (splitting)."
+          },
+          "losses": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Losses carried forward, not yet used."
+          },
+          "other_income": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Other positive income, with a decimal point."
           }
         }
       },

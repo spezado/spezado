@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Income tax** after librotenado 0012: the report `de-est` over a calendar year for a person running a business –
+  the profit of the books, other income, deductions and losses, the tariff of 2026, the reduction for trade tax
+  (§ 35 EStG), the solidarity surcharge, church tax and the advance payments. What the person states beside the
+  books: `spezado income-tax --year 2026 --other-income … --deductions … --losses … --joint true --church 9`, and
+  `/income-tax` in the API; kept on this device, not in the books' events.
+
 - **Corporation tax and trade tax** after librotenado 0012: the reports `de-kst` (Körperschaftsteuer and
   solidarity surcharge, for GmbH, UG, AG, KGaA, SE, cooperatives, associations) and `de-gewst` (Gewerbesteuer, with
   the additions of § 8 and reductions of § 9 GewStG, the allowance and the base amount) over a financial year, from

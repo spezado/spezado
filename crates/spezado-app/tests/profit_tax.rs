@@ -113,7 +113,10 @@ fn a_sole_proprietor_pays_trade_tax_from_the_multiplier_on() {
     pay(&mut workspace, &books, &ada, "8400", 11_900_000, Some("de-out-19"));
     let (from, to) = ("2026-01-01".parse().unwrap(), "2026-12-31".parse().unwrap());
     let reports: Vec<&str> = workspace.reports(&books, &ada, from, to).unwrap().into_iter().map(|(id, _)| id).collect();
-    assert!(!reports.contains(&"de-kst") && reports.contains(&"de-gewst"), "{reports:?}");
+    assert!(
+        !reports.contains(&"de-kst") && reports.contains(&"de-gewst") && reports.contains(&"de-est"),
+        "{reports:?}"
+    );
     let gewst = workspace.report(&books, &ada, "de-gewst", from, to).unwrap().fields;
     // 100,000 less the allowance of 24,500: 75,500 × 3.5 % × 400 %.
     assert_eq!((gewst["rounded"], gewst["allowance"]), (10_000_000, 2_450_000));
@@ -122,4 +125,43 @@ fn a_sole_proprietor_pays_trade_tax_from_the_multiplier_on() {
     workspace.change_trade_tax(&books, &ada, "2027-01-01".parse().unwrap(), None).unwrap();
     let next = workspace.reports(&books, &ada, "2027-01-01".parse().unwrap(), "2027-12-31".parse().unwrap()).unwrap();
     assert!(next.iter().all(|(id, _)| *id != "de-gewst"));
+}
+
+#[test]
+fn a_sole_proprietor_pays_income_tax() {
+    let scratch = Scratch::new("income");
+    let person = |id: PartyId| {
+        Party::Person(Person {
+            id,
+            name: "Ada".into(),
+            tax_ids: vec![],
+            roles: vec![],
+            contact: None,
+            bank_accounts: vec![],
+        })
+    };
+    let (mut workspace, books, ada) = set_up(&scratch, person, "de-cash-basis");
+    pay(&mut workspace, &books, &ada, "8400", 11_900_000, Some("de-out-19"));
+    let (from, to) = ("2026-01-01".parse().unwrap(), "2026-12-31".parse().unwrap());
+    // Stated beside the books: other income and deductions, church tax at 9 %.
+    let facts = spezado_app::IncomeFacts {
+        other_income: 1_000_000,
+        deductions: 500_000,
+        church_rate: Some(9),
+        ..Default::default()
+    };
+    workspace.set_income_facts(&books, &ada, 2026, &facts).unwrap();
+    assert_eq!(workspace.income_facts(&books, &ada, 2026).unwrap(), facts);
+    let est = workspace.report(&books, &ada, "de-est", from, to).unwrap().fields;
+    assert_eq!(est["business"], 10_000_000);
+    assert_eq!(est["taxable"], 10_500_000);
+    let tariff = librotenado::income_tax_tariff(2026, 105_000).unwrap() * 100;
+    assert_eq!(est["tariff"], tariff);
+    // The trade tax of 10,570 (see above) is four times the base amount of 2,642.50: the whole of it is credited.
+    assert_eq!(est["trade_tax_credit"], 1_057_000);
+    assert_eq!(est["assessed"], tariff - 1_057_000);
+    assert_eq!(est["church"], tariff * 9 / 100);
+    // Only over a calendar year.
+    let quarter = workspace.reports(&books, &ada, from, "2026-03-31".parse().unwrap()).unwrap();
+    assert!(quarter.iter().all(|(id, _)| *id != "de-est"));
 }

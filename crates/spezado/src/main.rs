@@ -128,6 +128,31 @@ enum Commands {
         #[arg(long)]
         owner: Option<PartyId>,
     },
+    /// What a person states for income tax beside the books, for a year (shown in the report de-est); without
+    /// options, shows what is stated.
+    IncomeTax {
+        /// The calendar year.
+        #[arg(long)]
+        year: u16,
+        /// Assessed jointly with a spouse (splitting).
+        #[arg(long)]
+        joint: Option<bool>,
+        /// Other positive income, e.g. 12000.00.
+        #[arg(long)]
+        other_income: Option<String>,
+        /// Special expenses, extraordinary burdens, allowances.
+        #[arg(long)]
+        deductions: Option<String>,
+        /// Losses carried forward, not yet used.
+        #[arg(long)]
+        losses: Option<String>,
+        /// The rate of church tax in percent, 8 or 9; 0 for none.
+        #[arg(long)]
+        church: Option<u8>,
+        /// The owner; may be left out while the books have one.
+        #[arg(long)]
+        owner: Option<PartyId>,
+    },
     /// Reopens the latest closing of an owner: the period it closed is open again; nothing is deleted.
     Reopen {
         /// Why it is reopened.
@@ -543,6 +568,45 @@ fn run(workspace: &mut Workspace, books: &BooksId, command: Commands) -> Result<
                 Some(m) => println!("trade tax at {m} % from {from}"),
                 None => println!("no trade tax from {from}"),
             }
+        }
+        Commands::IncomeTax { year, joint, other_income, deductions, losses, church, owner } => {
+            let owner = choose_owner(workspace, books, owner)?;
+            let mut facts = workspace.income_facts(books, &owner, year)?;
+            let euros = |text: &str| -> Result<i128> {
+                let money = parse_amount(text, &"EUR".parse().expect("EUR"))?;
+                Ok(money.base_units())
+            };
+            let changed = joint.is_some()
+                || other_income.is_some()
+                || deductions.is_some()
+                || losses.is_some()
+                || church.is_some();
+            if let Some(joint) = joint {
+                facts.joint = joint;
+            }
+            if let Some(text) = other_income {
+                facts.other_income = euros(&text)?;
+            }
+            if let Some(text) = deductions {
+                facts.deductions = euros(&text)?;
+            }
+            if let Some(text) = losses {
+                facts.losses = euros(&text)?;
+            }
+            if let Some(rate) = church {
+                facts.church_rate = (rate > 0).then_some(rate);
+            }
+            if changed {
+                workspace.set_income_facts(books, &owner, year, &facts)?;
+            }
+            let eur = |units: i128| {
+                format_amount(&librotenado::Money::new(units, "EUR".parse().expect("EUR")).expect("an amount"))
+            };
+            println!("joint assessment   {}", if facts.joint { "yes" } else { "no" });
+            println!("other income       {:>16}", eur(facts.other_income));
+            println!("deductions         {:>16}", eur(facts.deductions));
+            println!("losses carried     {:>16}", eur(facts.losses));
+            println!("church tax         {}", facts.church_rate.map_or("none".into(), |r| format!("{r} %")));
         }
         Commands::Reopen { reason, owner } => {
             let owner = choose_owner(workspace, books, owner)?;

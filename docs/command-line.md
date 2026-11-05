@@ -62,3 +62,7 @@ and `de-gewst` (trade tax, where the configuration has the multiplier of the mun
 when setting up, `spezado trade-tax 410 --from 2026-01-01` later; `spezado trade-tax --from …` without a number for
 a freelancer). Losses carried forward, the reduction for business land and the size of holdings are not asked for
 yet (librotenado 0012, OPEN).
+
+For a person running a business, `de-est` is the income tax over a calendar year: the profit of the books with what
+the person states beside them – `spezado income-tax --year 2026 --other-income 12000.00 --deductions 4000.00
+--losses 0 --joint false --church 9`; without options it shows what is stated. It stays on this device.

@@ -54,6 +54,9 @@ pub enum ReportBasis {
         /// The trade tax rather than corporation tax.
         trade: bool,
     },
+    /// The income tax of a person over a calendar year, with what the person states beside the books (librotenado
+    /// spec part 0012).
+    IncomeTax,
 }
 
 /// A report that applies to an owner for a period.

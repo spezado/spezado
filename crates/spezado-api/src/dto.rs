@@ -118,6 +118,26 @@ pub struct Deadlines {
     pub vat_extended: bool,
 }
 
+/// What a person states for income tax of a year beside the books.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
+pub struct IncomeTaxFacts {
+    /// Assessed jointly with a spouse (splitting).
+    #[serde(default)]
+    pub joint: bool,
+    /// Other positive income, with a decimal point.
+    #[serde(default)]
+    pub other_income: Option<String>,
+    /// Special expenses, extraordinary burdens, allowances.
+    #[serde(default)]
+    pub deductions: Option<String>,
+    /// Losses carried forward, not yet used.
+    #[serde(default)]
+    pub losses: Option<String>,
+    /// The rate of church tax in percent, 8 or 9; none without.
+    #[serde(default)]
+    pub church_rate: Option<u8>,
+}
+
 /// The trade tax multiplier of the owner's municipality.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct TradeTax {

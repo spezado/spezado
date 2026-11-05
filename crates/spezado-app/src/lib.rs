@@ -27,6 +27,7 @@ mod assets;
 mod bank;
 mod contacts;
 mod filing;
+mod income;
 mod invoice_pdf;
 mod invoicing;
 mod opening;
@@ -38,6 +39,7 @@ pub use assets::{AssetItem, NewAsset};
 pub use bank::{ImportedStatements, OpenEntry, Source, Suggestion};
 pub use contacts::{ContactCard, ContactPerson, ContactSuggestion};
 pub use filing::FilingItem;
+pub use income::IncomeFacts;
 pub use invoicing::{
     BOOKING_TAX_CODES, Customer, INVOICE_TAX_CODES, InvoiceFormat, InvoiceProfile, NewInvoice, NewLine, WrittenInvoice,
 };
@@ -567,6 +569,24 @@ impl Workspace {
                     (true, None) => BTreeMap::new(),
                     (false, _) => tax.fields(),
                 }
+            }
+            ReportBasis::IncomeTax => {
+                let profit = librotenado::ProfitTaxFacts {
+                    subject: librotenado::TaxSubject::Individual,
+                    multiplier: configuration.trade_tax_multiplier,
+                    income_losses: 0,
+                    trade_losses: 0,
+                    land_reduction: 0,
+                    turnover_and_wages: None,
+                    holding: librotenado::Holding::default(),
+                    cash_basis: configuration.accounting.as_ref().is_some_and(|a| a.as_str() == "de-cash-basis"),
+                };
+                let facts = librotenado::IncomeTaxFacts::from(&self.income_facts(books, owner, to.year())?);
+                events
+                    .income_tax(&self.chart, owner, from, to, &profit, &facts)
+                    .map_err(|e| AppError::UnknownReport(format!("{report}: {e}")))?
+                    .map(|tax| tax.fields())
+                    .ok_or_else(|| AppError::UnknownReport(format!("{report}: no tariff for {}", to.year())))?
             }
         };
         let (mut terms, mut reconciliation) = (BTreeMap::new(), BTreeMap::new());

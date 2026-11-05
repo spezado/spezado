@@ -44,6 +44,8 @@ use crate::{Api, ApiError, dto};
         change_deadlines,
         trade_tax,
         change_trade_tax,
+        income_tax,
+        change_income_tax,
         reverse,
         reports,
         report,
@@ -116,6 +118,7 @@ pub fn protected() -> Router<Api> {
         .route("/books/{books}/opening", get(opening).post(book_opening))
         .route("/books/{books}/deadlines", get(deadlines).put(change_deadlines))
         .route("/books/{books}/trade-tax", get(trade_tax).put(change_trade_tax))
+        .route("/books/{books}/income-tax", get(income_tax).put(change_income_tax))
         .route("/books/{books}/reversals", post(reverse))
         .route("/books/{books}/reports", get(reports))
         .route("/books/{books}/reports/{report}", get(report))
@@ -829,6 +832,67 @@ async fn deadlines(State(api): State<Api>, Path(books): Path<String>) -> Result<
         }))
     })
     .await
+}
+
+/// What the owner stated for income tax of a year beside the books (shown in the report de-est).
+#[utoipa::path(get, path = "/api/v1/books/{books}/income-tax", params(("books" = String, Path), YearQuery),
+    responses((status = 200, body = dto::IncomeTaxFacts)))]
+async fn income_tax(
+    State(api): State<Api>,
+    Path(books): Path<String>,
+    Query(query): Query<YearQuery>,
+) -> Result<Json<dto::IncomeTaxFacts>, ApiError> {
+    api.run(move |workspace| {
+        let books = books_id(&books)?;
+        let owner = owner(workspace, &books)?;
+        let facts = workspace.income_facts(&books, &owner, query.year.unwrap_or_else(|| today().year()))?;
+        let euros = |units: i128| dto::Amount::from(&Money::new(units, eur()).expect("an amount")).value;
+        Ok(Json(dto::IncomeTaxFacts {
+            joint: facts.joint,
+            other_income: Some(euros(facts.other_income)),
+            deductions: Some(euros(facts.deductions)),
+            losses: Some(euros(facts.losses)),
+            church_rate: facts.church_rate,
+        }))
+    })
+    .await
+}
+
+/// Stores what the owner states for income tax of a year – on this device, not in the books' events.
+#[utoipa::path(put, path = "/api/v1/books/{books}/income-tax", params(("books" = String, Path), YearQuery),
+    request_body = dto::IncomeTaxFacts, responses((status = 200, body = dto::IncomeTaxFacts), (status = 422, body = dto::Problem)))]
+async fn change_income_tax(
+    State(api): State<Api>,
+    Path(books): Path<String>,
+    Query(query): Query<YearQuery>,
+    Json(request): Json<dto::IncomeTaxFacts>,
+) -> Result<Json<dto::IncomeTaxFacts>, ApiError> {
+    let id = books.clone();
+    let changed = api
+        .run(move |workspace| {
+            let books = books_id(&books)?;
+            let owner = owner(workspace, &books)?;
+            let units = |text: &Option<String>| -> Result<i128, ApiError> {
+                match text.as_deref().filter(|t| !t.is_empty()) {
+                    Some(text) => {
+                        Ok(parse_amount(text, &eur()).map_err(|e| ApiError::bad(e.to_string()))?.base_units())
+                    }
+                    None => Ok(0),
+                }
+            };
+            let facts = spezado_app::IncomeFacts {
+                joint: request.joint,
+                other_income: units(&request.other_income)?,
+                deductions: units(&request.deductions)?,
+                losses: units(&request.losses)?,
+                church_rate: request.church_rate,
+            };
+            workspace.set_income_facts(&books, &owner, query.year.unwrap_or_else(|| today().year()), &facts)?;
+            Ok(request)
+        })
+        .await?;
+    api.changed(&id);
+    Ok(Json(changed))
 }
 
 /// The trade tax multiplier of the owner's municipality today.

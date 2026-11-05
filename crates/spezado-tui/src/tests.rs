@@ -131,9 +131,9 @@ fn a_booking_is_reversed_and_the_vat_return_shows_it() {
     assert!(screen(&app).contains("reversed"));
     assert!(app.view.issues.is_empty(), "{:?}", app.view.issues);
 
-    // The reports of the year: four advance returns, the annual return, the Anlage EÜR and AVEÜR.
+    // The reports of the year: four advance returns, the annual return, the Anlage EÜR and AVEÜR, the income tax.
     press(&mut app, KeyCode::Char('6'));
-    assert_eq!(app.view.reports.len(), 7, "{:?}", app.view.reports);
+    assert_eq!(app.view.reports.len(), 8, "{:?}", app.view.reports);
     let quarter = (
         crate::app::App::rows(&app),
         app.view.reports.iter().position(|r| r.from <= spezado_app::today() && spezado_app::today() <= r.to),
