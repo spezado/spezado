@@ -118,6 +118,7 @@ fn a_year_of_bank_entries() {
     };
     assert!(mismatch(&workspace));
     let opening = librotenado::Booking {
+        attributed: None,
         date: "2026-09-30".parse().unwrap(),
         text: "Anfangsbestand".into(),
         postings: vec![
@@ -240,6 +241,7 @@ fn a_payment_booked_before_the_statement_is_matched_to_its_entry() {
     let skr03 = ChartTranslation::de_skr03();
     // The telephone bill paid from the bank and booked on the 14th, before the statement came.
     let entry = spezado_app::SimpleEntry {
+        attributed: None,
         owner: ada.clone(),
         date: "2026-10-14".parse().unwrap(),
         text: "Telefon Oktober".into(),

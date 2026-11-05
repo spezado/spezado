@@ -57,6 +57,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/books/{books}/assets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The fixed assets of the owner, with their book values at a day. */
+        get: operations["assets"];
+        put?: never;
+        /** Registers a fixed asset. */
+        post: operations["register"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/books/{books}/assets/{asset}/disposal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Records that a fixed asset left the business and books its book value out. */
+        post: operations["dispose"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/books/{books}/balances": {
         parameters: {
             query?: never;
@@ -281,6 +316,23 @@ export interface paths {
         /** Changes the facts that move the owner's deadlines from a date on; everything else stays as configured. */
         put: operations["change_deadlines"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/books/{books}/depreciation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Books the owner's depreciation of a calendar year, once; answers whether there was anything to book. */
+        post: operations["depreciate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -871,6 +923,37 @@ export interface components {
             /** @description The amount with a decimal point, as many places as the currency has: `"-12.40"`. */
             value: string;
         };
+        /** @description A fixed asset leaving the business. */
+        AssetDisposal: {
+            /** @description `YYYY-MM-DD`. */
+            date: string;
+            /** @description What it was sold for, without VAT, with a decimal point; absent when not sold. */
+            proceeds?: string | null;
+        };
+        /** @description A fixed asset as the register shows it. */
+        AssetView: {
+            /** @description The account it is kept on: its national number. */
+            account: string;
+            /** @description `YYYY-MM-DD`. */
+            acquired: string;
+            /** @description The book value at the day asked for. */
+            book_value: components["schemas"]["Amount"];
+            /** @description Its cost, without deductible VAT. */
+            cost: components["schemas"]["Amount"];
+            /** @description `YYYY-MM-DD`: the day it left, if it did. */
+            disposed?: string | null;
+            /** @description Its identity. */
+            id: string;
+            /** @description `straight_line`, `immediate`, `pool` or `none`. */
+            method: string;
+            /**
+             * Format: int32
+             * @description The useful life in months, on a straight line.
+             */
+            months?: number | null;
+            /** @description What it is. */
+            name: string;
+        };
         /** @description The balance of an account. */
         BalanceView: {
             /** @description The account. */
@@ -1014,6 +1097,14 @@ export interface components {
             region?: string | null;
             /** @description Whether advance VAT returns are due a month later for good (§ 46 UStDV). */
             vat_extended?: boolean;
+        };
+        /** @description The year whose depreciation to book. */
+        DepreciationYear: {
+            /**
+             * Format: int32
+             * @description The calendar year.
+             */
+            year: number;
         };
         /** @description A device paired with the API. */
         Device: {
@@ -1208,6 +1299,24 @@ export interface components {
             lines: components["schemas"]["Line"][];
             /** @description What it is about. */
             text: string;
+        };
+        /** @description A fixed asset to register. */
+        NewAsset: {
+            /** @description The account of fixed assets: its national number or identity. */
+            account: string;
+            /** @description `YYYY-MM-DD`. */
+            acquired: string;
+            /** @description Its cost without deductible VAT, with a decimal point. */
+            cost: string;
+            /** @description `straight_line`, `immediate`, `pool` or `none`. */
+            method: string;
+            /**
+             * Format: int32
+             * @description The useful life in months, for `straight_line`.
+             */
+            months?: number | null;
+            /** @description What it is. */
+            name: string;
         };
         /** @description A new invoice. */
         NewInvoice: {
@@ -1452,6 +1561,11 @@ export interface components {
         SimpleBooking: {
             /** @description The account: its national number or identity. */
             account: string;
+            /**
+             * @description `YYYY-MM-DD`: the day it counts on where profit is determined by receipts and payments, if not its date – a
+             *     regularly recurring payment within ten days of the turn of the year (§ 11 EStG).
+             */
+            attributed?: string | null;
             /** @description `YYYY-MM-DD`. */
             date: string;
             /** @description The documents it rests on: identities of documents recorded. */
@@ -1713,6 +1827,95 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AccountView"][];
+                };
+            };
+        };
+    };
+    assets: {
+        parameters: {
+            query?: {
+                /** @description `YYYY-MM-DD`; default: today. */
+                at?: string | null;
+            };
+            header?: never;
+            path: {
+                books: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetView"][];
+                };
+            };
+        };
+    };
+    register: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                books: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewAsset"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Saved"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    dispose: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                books: string;
+                asset: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssetDisposal"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -2167,6 +2370,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Deadlines"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    depreciate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                books: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DepreciationYear"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": boolean;
                 };
             };
             422: {

@@ -36,7 +36,7 @@ IBAN.
 | Journal | `n` new booking, `z` booking in lines, `r` reverse | every booking; a reversal refers to what it cancels – nothing is changed or deleted |
 | Bank | `i` read a statement, `↵` book, `a` book all proposals, `f` fetch | the entries of your statements not booked yet, each with a proposal where spezado found one |
 | Documents | `i` read, `n` new booking, `r` write an invoice, `k` new customer, `p` seller | documents with their originals |
-| Accounts | `↵` ledger, `o` opening balances | the balance of every account |
+| Accounts | `↵` ledger, `o` opening balances, `a` new fixed asset, `f` book the depreciation of the year | the balance of every account ([Fixed assets](assets.md)) |
 | Reports | `↵` open, then `e` export as CSV, `p` prepare as a filing; `↵` on a filing submits it or asks where it stands | the reports that apply to the year, then the filings ([Filings](filings.md)) |
 | Review | | what needs review, in words |
 | Closing | `c` close a period, `u` reopen the latest closing, `g` GoBD data transfer | |

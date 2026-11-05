@@ -68,6 +68,10 @@ pub enum Command {
         /// The software the figures were derived with, name → version.
         software: BTreeMap<String, String>,
     },
+    /// Registers a fixed asset (librotenado spec part 0011).
+    AcquireAsset(librotenado::Asset),
+    /// Records that a fixed asset left the business.
+    DisposeAsset(librotenado::Disposal),
     /// Reopens the latest closing of an owner that is not reopened yet: the period it closed is open again, nothing
     /// is deleted (librotenado spec part 0002).
     Reopen {
@@ -112,6 +116,15 @@ pub enum CommandError {
         /// The last day closed.
         closed: Date,
     },
+    /// A fixed asset of that identity is registered already.
+    #[error("asset {0} is registered already")]
+    AssetExists(librotenado::AssetId),
+    /// No fixed asset of that identity is registered.
+    #[error("asset {0} is not registered")]
+    UnknownAsset(librotenado::AssetId),
+    /// The fixed asset left the business already, or would leave before it was acquired.
+    #[error("asset {0} cannot leave the business on that day")]
+    AssetDisposed(librotenado::AssetId),
     /// Nothing is closed in the owner's books.
     #[error("nothing is closed in the books of {0}")]
     NothingClosed(PartyId),
@@ -342,6 +355,29 @@ impl Books {
                 }
                 Payload::PeriodClosed { closing: Closing { owner, to, state: events.state(), software } }
             }
+            Command::AcquireAsset(asset) => {
+                self.owner_open(&asset.owner, asset.acquired)?;
+                if events.assets(&asset.owner).iter().any(|state| state.asset.id == asset.id) {
+                    return Err(CommandError::AssetExists(asset.id));
+                }
+                Payload::AssetAcquired { asset }
+            }
+            Command::DisposeAsset(disposal) => {
+                let owners = events.owners();
+                let state = owners
+                    .iter()
+                    .flat_map(|owner| events.assets(owner))
+                    .find(|state| state.asset.id == disposal.asset)
+                    .ok_or_else(|| CommandError::UnknownAsset(disposal.asset.clone()))?;
+                if state.disposal.is_some() {
+                    return Err(CommandError::AssetDisposed(disposal.asset));
+                }
+                if disposal.date < state.asset.acquired {
+                    return Err(CommandError::AssetDisposed(disposal.asset));
+                }
+                self.owner_open(&state.asset.owner, disposal.date)?;
+                Payload::AssetDisposed { disposal }
+            }
             Command::Reopen { owner, reason } => {
                 if !self.is_owner(&owner) {
                     return Err(CommandError::NotAnOwner(owner));
@@ -488,6 +524,7 @@ mod tests {
             exchange: None,
         };
         Booking {
+            attributed: None,
             date: date.parse().unwrap(),
             text: "office paper".into(),
             postings: vec![posting("4930", cents), posting("1200", -cents)],

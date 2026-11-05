@@ -8,7 +8,7 @@
   import { app, t } from "../lib/state.svelte";
 
   /** The reports filed on their own; the API refuses the others. */
-  const FILED = ["de-ustva", "de-zm", "de-euer"];
+  const FILED = ["de-ustva", "de-ust", "de-zm", "de-euer"];
 
   let reports = $state<Schemas["ReportItem"][]>([]);
   let figures = $state<(Schemas["Figures"] & { from: string; to: string }) | null>(null);

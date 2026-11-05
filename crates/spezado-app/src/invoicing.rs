@@ -135,12 +135,32 @@ pub enum InvoiceFormat {
     Zugferd,
 }
 
+/// The German tax codes a booking from a gross amount offers, in this order; a small business sees only
+/// `de-out-small-business` of the codes of sales.
+pub const BOOKING_TAX_CODES: [&str; 14] = [
+    "de-in-19",
+    "de-in-7",
+    "de-out-19",
+    "de-out-7",
+    "de-out-0",
+    "de-out-exempt",
+    "de-out-exempt-letting",
+    "de-out-13b",
+    "de-out-eu-service",
+    "de-out-ig-supply",
+    "de-out-ig-new-vehicle",
+    "de-out-export",
+    "de-out-small-business",
+    "de-in-no-deduction",
+];
+
 /// The tax codes an invoice can be written with, with the category of EN 16931 each falls into.
-pub const INVOICE_TAX_CODES: [(&str, &str); 8] = [
+pub const INVOICE_TAX_CODES: [(&str, &str); 9] = [
     ("de-out-19", "S"),
     ("de-out-7", "S"),
     ("de-out-0", "Z"),
     ("de-out-exempt", "E"),
+    ("de-out-exempt-letting", "E"),
     ("de-out-13b", "AE"),
     ("de-out-eu-service", "AE"),
     ("de-out-ig-supply", "K"),
@@ -153,6 +173,7 @@ pub const INVOICE_TAX_CODES: [(&str, &str); 8] = [
 fn exemption(code: &str, exempt: Option<&str>) -> Option<(String, Option<&'static str>)> {
     Some(match code {
         "de-out-exempt" => (exempt.unwrap_or("Steuerfreie Leistung nach § 4 UStG.").to_owned(), None),
+        "de-out-exempt-letting" => (exempt.unwrap_or("Steuerfreie Vermietung nach § 4 Nr. 12 UStG.").to_owned(), None),
         "de-out-13b" | "de-out-eu-service" => {
             ("Steuerschuldnerschaft des Leistungsempfängers.".into(), Some("VATEX-EU-AE"))
         }

@@ -328,6 +328,7 @@ fn supplies_without_vat_state_why_and_reach_their_fields() {
     // left out of the statement – and goes to the review list.
     let standard = workspace.standard_accounts(&books, &ada, "2026-05-01".parse().unwrap()).unwrap();
     let entry = SimpleEntry {
+        attributed: None,
         owner: ada.clone(),
         date: "2026-05-01".parse().unwrap(),
         text: "Lieferung nach Wien".into(),

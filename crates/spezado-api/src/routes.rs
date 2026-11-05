@@ -64,6 +64,10 @@ use crate::{Api, ApiError, dto};
         crate::invoices::customers,
         crate::invoices::contacts,
         crate::invoices::save_contact,
+        crate::assets::assets,
+        crate::assets::register,
+        crate::assets::dispose,
+        crate::assets::depreciate,
         crate::invoices::save_customer,
         crate::invoices::next_number,
         crate::invoices::issue,
@@ -154,7 +158,12 @@ fn owner(workspace: &Workspace, books: &BooksId) -> Result<PartyId, ApiError> {
 }
 
 /// An account by its national number or identity.
-fn account(workspace: &Workspace, books: &BooksId, owner: &PartyId, text: &str) -> Result<AccountId, ApiError> {
+pub(crate) fn account(
+    workspace: &Workspace,
+    books: &BooksId,
+    owner: &PartyId,
+    text: &str,
+) -> Result<AccountId, ApiError> {
     let choices = workspace.account_choices(books, owner, today(), "de")?;
     choices
         .iter()
@@ -499,20 +508,7 @@ async fn tax_codes(
             .configuration(&owner, today())
             .and_then(|c| c.vat.as_ref())
             .is_some_and(|vat| vat.scheme.as_str() == "de-small-business");
-        let codes = [
-            "de-in-19",
-            "de-in-7",
-            "de-out-19",
-            "de-out-7",
-            "de-out-0",
-            "de-out-exempt",
-            "de-out-13b",
-            "de-out-eu-service",
-            "de-out-ig-supply",
-            "de-out-export",
-            "de-out-small-business",
-            "de-in-no-deduction",
-        ];
+        let codes = spezado_app::BOOKING_TAX_CODES;
         Ok(Json(
             codes
                 .iter()
@@ -540,6 +536,7 @@ async fn book_simple(
         .run(move |workspace| {
             let books = books_id(&books)?;
             let owner = owner(workspace, &books)?;
+            let attributed = request.attributed.as_deref().filter(|d| !d.is_empty()).map(date).transpose()?;
             let date = date(&request.date)?;
             let standard = workspace.standard_accounts(&books, &owner, date)?;
             let payment = match request.payment.as_str() {
@@ -548,6 +545,7 @@ async fn book_simple(
                 other => return Err(ApiError::bad(format!("payment is bank or cash, not {other:?}"))),
             };
             let entry = SimpleEntry {
+                attributed,
                 owner: owner.clone(),
                 date,
                 text: request.text,
@@ -609,6 +607,7 @@ async fn book_lines(
                 })
                 .collect::<Result<Vec<_>, ApiError>>()?;
             let booking = Booking {
+                attributed: None,
                 date: date(&request.date)?,
                 text: request.text,
                 postings,

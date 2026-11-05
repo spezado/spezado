@@ -44,6 +44,8 @@ pub enum ReportBasis {
     Balances,
     /// From the postings dated within the period, per customer – a recapitulative statement.
     Customers,
+    /// From the register of fixed assets – the Anlage AVEÜR (librotenado spec part 0011).
+    Assets,
 }
 
 /// A report that applies to an owner for a period.
@@ -86,6 +88,9 @@ pub struct StandardAccounts {
     pub vat_reverse_charge: AccountId,
     /// The deductible VAT under reverse charge.
     pub vat_reverse_charge_input: AccountId,
+    /// Expenses deductible in part: account → the account of the part not deductible, and the deductible part in
+    /// per cent – business entertainment in Germany.
+    pub partly_deductible: BTreeMap<AccountId, (AccountId, u8)>,
 }
 
 /// The law of one country, or of a part of it, as a module.
@@ -124,6 +129,17 @@ pub trait LawModule: std::fmt::Debug + Send + Sync {
     ) -> Vec<(Date, Date, Date)> {
         let _ = (facts, year, fields);
         Vec::new()
+    }
+
+    /// For a fixed asset in a national chart: the account of expense its depreciation goes to – none where it is not
+    /// depreciated – and the account its book value goes to when it leaves.
+    fn asset_accounts(
+        &self,
+        national: &ChartTranslation,
+        asset: &librotenado::Asset,
+    ) -> Option<(Option<AccountId>, AccountId)> {
+        let _ = (national, asset);
+        None
     }
 
     /// The standard accounts of a national chart the module offers.

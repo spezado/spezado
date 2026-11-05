@@ -91,7 +91,15 @@ impl Workspace {
         for total in totals.into_values().filter(|t| t.base_units() != 0) {
             postings.push(posting(opening.clone(), -total));
         }
-        Ok(Booking { date, text: text.to_owned(), postings, documents: vec![], entries: vec![], transaction: None })
+        Ok(Booking {
+            attributed: None,
+            date,
+            text: text.to_owned(),
+            postings,
+            documents: vec![],
+            entries: vec![],
+            transaction: None,
+        })
     }
 
     /// Books opening balances, as [`Workspace::opening_booking`] builds them.

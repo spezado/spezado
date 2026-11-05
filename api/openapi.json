@@ -186,6 +186,147 @@
         }
       }
     },
+    "/api/v1/books/{books}/assets": {
+      "get": {
+        "tags": [
+          "crate::assets"
+        ],
+        "summary": "The fixed assets of the owner, with their book values at a day.",
+        "operationId": "assets",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "at",
+            "in": "query",
+            "description": "`YYYY-MM-DD`; default: today.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AssetView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "crate::assets"
+        ],
+        "summary": "Registers a fixed asset.",
+        "operationId": "register",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewAsset"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Saved"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/assets/{asset}/disposal": {
+      "post": {
+        "tags": [
+          "crate::assets"
+        ],
+        "summary": "Records that a fixed asset left the business and books its book value out.",
+        "operationId": "dispose",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "asset",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssetDisposal"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {},
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/books/{books}/balances": {
       "get": {
         "tags": [],
@@ -879,6 +1020,55 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Deadlines"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/depreciation": {
+      "post": {
+        "tags": [
+          "crate::assets"
+        ],
+        "summary": "Books the owner's depreciation of a calendar year, once; answers whether there was anything to book.",
+        "operationId": "depreciate",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DepreciationYear"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "boolean"
                 }
               }
             }
@@ -2631,6 +2821,85 @@
           }
         }
       },
+      "AssetDisposal": {
+        "type": "object",
+        "description": "A fixed asset leaving the business.",
+        "required": [
+          "date"
+        ],
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "`YYYY-MM-DD`."
+          },
+          "proceeds": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What it was sold for, without VAT, with a decimal point; absent when not sold."
+          }
+        }
+      },
+      "AssetView": {
+        "type": "object",
+        "description": "A fixed asset as the register shows it.",
+        "required": [
+          "id",
+          "name",
+          "account",
+          "acquired",
+          "cost",
+          "method",
+          "book_value"
+        ],
+        "properties": {
+          "account": {
+            "type": "string",
+            "description": "The account it is kept on: its national number."
+          },
+          "acquired": {
+            "type": "string",
+            "description": "`YYYY-MM-DD`."
+          },
+          "book_value": {
+            "$ref": "#/components/schemas/Amount",
+            "description": "The book value at the day asked for."
+          },
+          "cost": {
+            "$ref": "#/components/schemas/Amount",
+            "description": "Its cost, without deductible VAT."
+          },
+          "disposed": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`YYYY-MM-DD`: the day it left, if it did."
+          },
+          "id": {
+            "type": "string",
+            "description": "Its identity."
+          },
+          "method": {
+            "type": "string",
+            "description": "`straight_line`, `immediate`, `pool` or `none`."
+          },
+          "months": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "The useful life in months, on a straight line.",
+            "minimum": 0
+          },
+          "name": {
+            "type": "string",
+            "description": "What it is."
+          }
+        }
+      },
       "BalanceView": {
         "type": "object",
         "description": "The balance of an account.",
@@ -3007,6 +3276,21 @@
           "vat_extended": {
             "type": "boolean",
             "description": "Whether advance VAT returns are due a month later for good (§ 46 UStDV)."
+          }
+        }
+      },
+      "DepreciationYear": {
+        "type": "object",
+        "description": "The year whose depreciation to book.",
+        "required": [
+          "year"
+        ],
+        "properties": {
+          "year": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The calendar year.",
+            "minimum": 0
           }
         }
       },
@@ -3529,6 +3813,48 @@
           "text": {
             "type": "string",
             "description": "What it is about."
+          }
+        }
+      },
+      "NewAsset": {
+        "type": "object",
+        "description": "A fixed asset to register.",
+        "required": [
+          "name",
+          "account",
+          "acquired",
+          "cost",
+          "method"
+        ],
+        "properties": {
+          "account": {
+            "type": "string",
+            "description": "The account of fixed assets: its national number or identity."
+          },
+          "acquired": {
+            "type": "string",
+            "description": "`YYYY-MM-DD`."
+          },
+          "cost": {
+            "type": "string",
+            "description": "Its cost without deductible VAT, with a decimal point."
+          },
+          "method": {
+            "type": "string",
+            "description": "`straight_line`, `immediate`, `pool` or `none`."
+          },
+          "months": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "The useful life in months, for `straight_line`.",
+            "minimum": 0
+          },
+          "name": {
+            "type": "string",
+            "description": "What it is."
           }
         }
       },
@@ -4252,6 +4578,13 @@
           "account": {
             "type": "string",
             "description": "The account: its national number or identity."
+          },
+          "attributed": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`YYYY-MM-DD`: the day it counts on where profit is determined by receipts and payments, if not its date – a\nregularly recurring payment within ten days of the turn of the year (§ 11 EStG)."
           },
           "date": {
             "type": "string",

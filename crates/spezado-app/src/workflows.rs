@@ -40,6 +40,9 @@ pub struct SimpleEntry {
     pub payment: AccountId,
     /// The documents it rests on.
     pub documents: Vec<DocumentId>,
+    /// The day it counts on where profit is determined by receipts and payments, if not its date – a regularly
+    /// recurring payment within ten days of the turn of the year (§ 11 EStG, librotenado spec part 0001).
+    pub attributed: Option<Date>,
 }
 
 /// A document read from a file, not yet recorded: its record, and a booking proposal if it is an e-invoice.
@@ -150,7 +153,22 @@ impl Workspace {
             tax,
             exchange: None,
         };
-        let mut postings = vec![posting(entry.account.clone(), side(&net), entry.tax.clone())];
+        // An expense deductible in part goes to two accounts: the deductible part, rounded half away from zero, and
+        // the rest; the VAT stays whole.
+        let standard = self.standard_accounts(books, &entry.owner, entry.date)?;
+        let mut postings = match standard.partly_deductible.get(&entry.account) {
+            Some((rest_account, percent)) if !income => {
+                let units = net.base_units();
+                let deductible = (units * i128::from(*percent) + units.signum() * 50) / 100;
+                let money = |units| Money::new(units, net.currency().clone()).expect("within the amount");
+                let mut both = vec![posting(entry.account.clone(), side(&money(deductible)), entry.tax.clone())];
+                if units != deductible {
+                    both.push(posting(rest_account.clone(), side(&money(units - deductible)), entry.tax.clone()));
+                }
+                both
+            }
+            _ => vec![posting(entry.account.clone(), side(&net), entry.tax.clone())],
+        };
         if let Some((_, account)) = vat
             && tax.base_units() != 0
         {
@@ -158,6 +176,7 @@ impl Workspace {
         }
         postings.push(posting(entry.payment.clone(), -side(&entry.gross), None));
         Ok(Booking {
+            attributed: entry.attributed,
             date: entry.date,
             text: entry.text.clone(),
             postings,

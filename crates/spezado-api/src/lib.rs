@@ -23,6 +23,7 @@ use spezado_app::{AppError, Workspace, new_id, today};
 use spezado_core::CommandError;
 use tokio::sync::broadcast;
 
+mod assets;
 pub mod dto;
 mod filings;
 mod invoices;
@@ -275,6 +276,7 @@ pub fn router(api: Api) -> Router {
     // Files of up to 32 MB: invoices, photos, statements.
     let protected = routes::protected()
         .merge(records::routes())
+        .merge(assets::routes())
         .merge(invoices::routes())
         .merge(sync::routes())
         .merge(filings::routes())

@@ -446,6 +446,7 @@ impl Workspace {
         let payment = item.account.clone().ok_or(AppError::NoStandardAccounts)?;
         let amount = item.entry.amount.clone();
         let mut entry = SimpleEntry {
+            attributed: None,
             owner: owner.clone(),
             date: item.entry.booked,
             text,

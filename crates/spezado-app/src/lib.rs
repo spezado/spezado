@@ -23,6 +23,7 @@ use spezado_core::{Books, Command, CommandError, Issue};
 use spezado_law::{Facts, LawModule, Report, ReportBasis};
 use spezado_store::{Store, StoreError};
 
+mod assets;
 mod bank;
 mod contacts;
 mod filing;
@@ -33,10 +34,13 @@ mod review;
 mod sync;
 mod workflows;
 
+pub use assets::{AssetItem, NewAsset};
 pub use bank::{ImportedStatements, OpenEntry, Source, Suggestion};
 pub use contacts::{ContactCard, ContactPerson, ContactSuggestion};
 pub use filing::FilingItem;
-pub use invoicing::{Customer, INVOICE_TAX_CODES, InvoiceFormat, InvoiceProfile, NewInvoice, NewLine, WrittenInvoice};
+pub use invoicing::{
+    BOOKING_TAX_CODES, Customer, INVOICE_TAX_CODES, InvoiceFormat, InvoiceProfile, NewInvoice, NewLine, WrittenInvoice,
+};
 pub use spezado_law_de::STATES as GERMAN_STATES;
 pub use sync::{SyncMember, SyncReport, parse_invitation};
 pub use workflows::{AccountChoice, ReadDocument, SimpleEntry, VatReturnDue, today};
@@ -116,6 +120,9 @@ pub enum AppError {
     /// Opening balances that cannot be booked.
     #[error("{0}")]
     Opening(String),
+    /// A fixed asset that cannot be registered, depreciated or disposed of.
+    #[error("{0}")]
+    Asset(String),
     /// Synchronising through a relay failed.
     #[error("{0}")]
     Sync(String),
@@ -513,6 +520,7 @@ impl Workspace {
             }
             ReportBasis::Balances => events.account_report(&mapping, &self.chart, owner, Some(to))?,
             ReportBasis::Customers => events.customer_report(&mapping, &self.chart, owner, from, to)?.0,
+            ReportBasis::Assets => events.asset_report(&mapping, &self.chart, owner, from, to),
         };
         let law = format!("{}/{}", module.name(), module.version());
         Ok(ReportFigures { id, name, fields, currency: configuration.currency, law })

@@ -5,8 +5,9 @@ nav_order: 7
 
 # Filings
 
-A filing is what goes to an authority: in Germany the advance VAT return (`de-ustva`), the recapitulative statement
-(`de-zm`, Zusammenfassende Meldung) and the Anlage EÜR (`de-euer`).
+A filing is what goes to an authority: in Germany the advance VAT return (`de-ustva`), the annual VAT return
+(`de-ust`, over the calendar year), the recapitulative statement (`de-zm`, Zusammenfassende Meldung) and the Anlage
+EÜR (`de-euer`; the Anlage AVEÜR `de-aveuer` is shown with it, filing it together is OPEN).
 spezado derives it from the books, records it, and submits it through an **adapter** – a service of its own per
 country that talks to the authority, after
 [librotenado 0007](https://librotenado.dev/spec/0007-filings.html). spezado itself never talks to ELSTER.

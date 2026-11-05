@@ -8,6 +8,7 @@
   import Book from "./pages/Book.svelte";
   import Closing from "./pages/Closing.svelte";
   import Contacts from "./pages/Contacts.svelte";
+  import Assets from "./pages/Assets.svelte";
   import Documents from "./pages/Documents.svelte";
   import Invoices from "./pages/Invoices.svelte";
   import Journal from "./pages/Journal.svelte";
@@ -47,7 +48,7 @@
     });
   });
 
-  const pages: Page[] = ["overview", "journal", "bank", "documents", "invoices", "contacts", "accounts", "reports", "review", "closing"];
+  const pages: Page[] = ["overview", "journal", "bank", "documents", "invoices", "contacts", "accounts", "assets", "reports", "review", "closing"];
   const owner = $derived(books?.[0]?.owner_name ?? "");
 </script>
 
@@ -95,6 +96,7 @@
     {:else if app.page === "review"}<Review />
     {:else if app.page === "closing"}<Closing />
     {:else if app.page === "contacts"}<Contacts />
+    {:else if app.page === "assets"}<Assets />
     {:else}<Overview />{/if}
   </main>
 {/if}

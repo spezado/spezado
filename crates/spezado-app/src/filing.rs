@@ -251,6 +251,7 @@ impl Workspace {
             // Bookings without a clear VAT identification number of the customer are left out; the review list
             // names them.
             ReportBasis::Customers => Derivation::Customers,
+            ReportBasis::Assets => return Err(AppError::Adapter(format!("{report} is not filed on its own"))),
         };
         let taxes = module.tax_table(to).ok_or_else(|| AppError::UnknownReport(report.to_owned()))?;
         let content = events.report_content(

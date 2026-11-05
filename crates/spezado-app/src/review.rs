@@ -232,6 +232,47 @@ impl Words<'_> {
             Issue::Booking(problem) => self.booking(problem),
             Issue::Statement(problem) => self.statement(problem),
             Issue::Customer(problem) => self.customer(problem),
+            Issue::Asset(problem) => self.asset_problem(problem),
+        }
+    }
+
+    /// A fixed asset by its name.
+    fn asset(&self, id: &librotenado::AssetId) -> String {
+        let name = self.events.ordered().into_iter().find_map(|(_, event)| match &event.payload {
+            Payload::AssetAcquired { asset } if asset.id == *id => Some(asset.name.clone()),
+            _ => None,
+        });
+        let name = name.unwrap_or_else(|| short(id));
+        self.say(format!("Anlagegut „{name}“"), format!("the fixed asset “{name}”"))
+    }
+
+    fn asset_problem(&self, problem: &librotenado::AssetProblem) -> String {
+        use librotenado::AssetProblem::*;
+        match problem {
+            NotAnOwner { event, owner } => self.say(
+                format!("{} gehört {}, und das ist kein Eigentümer der Bücher.", short(event), self.party(owner)),
+                format!("{} belongs to {}, who is not an owner of the books.", short(event), self.party(owner)),
+            ),
+            Duplicate { asset, .. } => self.say(
+                format!("{} ist zweimal erfasst.", self.asset(asset)),
+                format!("{} is registered twice.", self.asset(asset)),
+            ),
+            Invalid { asset, .. } => self.say(
+                format!("{} hat keine Kosten über null oder keine Nutzungsdauer.", self.asset(asset)),
+                format!("{} has no cost above zero or no useful life.", self.asset(asset)),
+            ),
+            UnknownAsset { asset, .. } => self.say(
+                format!("Ein Abgang nennt ein Anlagegut, das nicht erfasst ist ({}).", short(asset)),
+                format!("A disposal names a fixed asset that is not registered ({}).", short(asset)),
+            ),
+            DisposedTwice { asset, .. } => self.say(
+                format!("{} ist zweimal abgegangen – es gilt der erste Abgang.", self.asset(asset)),
+                format!("{} left the business twice – the first applies.", self.asset(asset)),
+            ),
+            DisposedBeforeAcquired { asset, .. } => self.say(
+                format!("{} geht ab, bevor es angeschafft wurde.", self.asset(asset)),
+                format!("{} leaves before it was acquired.", self.asset(asset)),
+            ),
         }
     }
 
@@ -560,6 +601,16 @@ impl Words<'_> {
             BookingProblem::DoubleReversal { event, reverses } => self.say(
                 format!("{} wird zweimal storniert, zuletzt durch {}.", self.event(reverses), self.event(event)),
                 format!("{} is reversed twice, the second time by {}.", self.event(reverses), self.event(event)),
+            ),
+            BookingProblem::Attribution { event } => self.say(
+                format!(
+                    "{} ist einem Jahr zugeordnet, von dessen Wechsel sie mehr als zehn Tage entfernt ist (§ 11 EStG).",
+                    self.event(event)
+                ),
+                format!(
+                    "{} is attributed to a year it is more than ten days from the turn of (§ 11 EStG).",
+                    self.event(event)
+                ),
             ),
             BookingProblem::ReversalMismatch { event, reverses } => self.say(
                 format!("{} hebt {} nicht genau auf.", self.event(event), self.event(reverses)),

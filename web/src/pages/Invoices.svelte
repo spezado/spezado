@@ -170,6 +170,7 @@
                 <option value="de-out-7">7 %</option>
                 <option value="de-out-0">0 %</option>
                 <option value="de-out-exempt">{t("taxExempt")}</option>
+                <option value="de-out-exempt-letting">{t("taxExemptLetting")}</option>
                 <option value="de-out-13b">{t("tax13b")}</option>
                 <option value="de-out-eu-service">{t("taxEuService")}</option>
                 <option value="de-out-ig-supply">{t("taxIgSupply")}</option>

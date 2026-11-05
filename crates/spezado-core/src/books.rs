@@ -49,6 +49,9 @@ pub enum Issue {
     /// Bank statements and the bookings of their entries (spec part 0005).
     #[error("{0}")]
     Statement(StatementProblem),
+    /// The fixed assets (spec part 0011).
+    #[error("{0}")]
+    Asset(librotenado::AssetProblem),
     /// A booking a report per customer cannot place (spec part 0009); found by the law that applies to its owner.
     #[error("{0}")]
     Customer(CustomerProblem),
@@ -193,6 +196,7 @@ impl Books {
         issues.extend(events.review_closings().into_iter().map(Issue::Closing));
         issues.extend(events.review_bookings().into_iter().map(Issue::Booking));
         issues.extend(events.review_statements().into_iter().map(Issue::Statement));
+        issues.extend(events.review_assets().into_iter().map(Issue::Asset));
         issues
     }
 }

@@ -108,6 +108,8 @@ pub enum Purpose {
     Profile,
     /// A new customer.
     Customer,
+    /// A fixed asset registered.
+    Asset,
     /// A contact kept: new when the identity is empty.
     Contact(String),
     /// Writing an invoice.
@@ -384,20 +386,7 @@ impl<'w> App<'w> {
         let mut codes = vec![(self.t(Text::NoTax).to_owned(), String::new())];
         if let Ok(configuration) = events.configuration(&owner, date).ok_or(()) {
             let small = configuration.vat.as_ref().is_some_and(|vat| vat.scheme.as_str() == "de-small-business");
-            for code in [
-                "de-in-19",
-                "de-in-7",
-                "de-out-19",
-                "de-out-7",
-                "de-out-0",
-                "de-out-exempt",
-                "de-out-13b",
-                "de-out-eu-service",
-                "de-out-ig-supply",
-                "de-out-export",
-                "de-out-small-business",
-                "de-in-no-deduction",
-            ] {
+            for code in spezado_app::BOOKING_TAX_CODES {
                 if small && code.starts_with("de-out-") && code != "de-out-small-business" {
                     continue;
                 }
@@ -655,6 +644,34 @@ impl App<'_> {
                 let mut form = Form::new(Text::OpeningBalances, fields);
                 form.help = Some(Text::OpeningHelp);
                 self.mode = Mode::Form(Purpose::Opening, form);
+            }
+            KeyCode::Char('a') if self.tab == Tab::Accounts => {
+                let methods = vec![
+                    (self.t(Text::StraightLine).to_owned(), "straight_line".to_owned()),
+                    (self.t(Text::Immediate).to_owned(), "immediate".to_owned()),
+                    (self.t(Text::Pool).to_owned(), "pool".to_owned()),
+                    (self.t(Text::NotDepreciated).to_owned(), "none".to_owned()),
+                ];
+                let fields = vec![
+                    Field::text(Text::Name, ""),
+                    Field::account(Text::Account, "0420"),
+                    Field::text(Text::Date, self.lang.date(today())),
+                    Field::text(Text::CostNet, ""),
+                    Field::choice(Text::Method, methods, 0),
+                    Field::text(Text::Months, "36"),
+                ];
+                self.mode = Mode::Form(Purpose::Asset, Form::new(Text::NewAsset, fields));
+            }
+            KeyCode::Char('f') if self.tab == Tab::Accounts => {
+                let (Some(books), Some(owner)) = (self.books.clone(), self.owner.clone()) else { return };
+                match self.workspace.book_depreciation(&books, &owner, self.year) {
+                    Ok(true) => {
+                        self.say(format!("{} {}", self.t(Text::DepreciationBooked), self.year));
+                        self.refresh();
+                    }
+                    Ok(false) => self.say(self.t(Text::NothingToDepreciate)),
+                    Err(error) => self.fail(error.to_string()),
+                }
             }
             KeyCode::Char('c') if self.tab == Tab::Closing => {
                 let form =
@@ -1028,6 +1045,30 @@ impl App<'_> {
                 self.say(self.t(Text::Saved));
                 Ok(())
             }
+            Purpose::Asset => {
+                let (books, owner) = (self.books.clone().ok_or("no books")?, self.owner.clone().ok_or("no owner")?);
+                let depreciation = match form.field(Text::Method).get() {
+                    "straight_line" => {
+                        let months =
+                            form.field(Text::Months).value.trim().parse().map_err(|_| self.t(Text::Invalid))?;
+                        librotenado::Depreciation::StraightLine { months }
+                    }
+                    "immediate" => librotenado::Depreciation::Immediate,
+                    "pool" => librotenado::Depreciation::Pool,
+                    _ => librotenado::Depreciation::None,
+                };
+                let new = spezado_app::NewAsset {
+                    owner,
+                    name: form.field(Text::Name).value.trim().to_owned(),
+                    account: self.account(&form.field(Text::Account).value)?,
+                    acquired: self.date(form, Text::Date)?,
+                    cost: self.amount(&form.field(Text::CostNet).value)?,
+                    depreciation,
+                };
+                self.workspace.register_asset(&books, new).map_err(|e| e.to_string())?;
+                self.say(self.t(Text::Saved));
+                Ok(())
+            }
             Purpose::Invoice => self.submit_invoice(form),
             Purpose::ReadStatement => {
                 let (books, owner) = (self.books.clone().ok_or("no books")?, self.owner.clone().ok_or("no owner")?);
@@ -1180,6 +1221,7 @@ impl App<'_> {
         let (books, owner) = (self.books.clone().ok_or("no books")?, self.owner.clone().ok_or("no owner")?);
         let tax = form.field(Text::TaxCode).get();
         let entry = SimpleEntry {
+            attributed: None,
             owner,
             date: self.date(form, Text::Date)?,
             text: form.field(Text::Text_).value.trim().to_owned(),
@@ -1223,6 +1265,7 @@ impl App<'_> {
             });
         }
         let booking = Booking {
+            attributed: None,
             date: self.date(form, Text::Date)?,
             text: form.field(Text::Text_).value.trim().to_owned(),
             postings,

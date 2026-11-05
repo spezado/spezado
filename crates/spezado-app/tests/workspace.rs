@@ -52,6 +52,7 @@ fn configuration(owner: &PartyId, accounting: Option<&str>, vat: bool) -> Config
 fn booking(owner: &PartyId, date: &str, text: &str, lines: &[(&str, i128, Option<&str>)]) -> Booking {
     let skr03 = ChartTranslation::de_skr03();
     Booking {
+        attributed: None,
         date: date.parse().unwrap(),
         text: text.into(),
         postings: lines
@@ -103,7 +104,12 @@ fn books_are_set_up_booked_and_found_again() {
     let (from, to) = ("2026-01-01".parse().unwrap(), "2026-03-31".parse().unwrap());
     assert_eq!(
         workspace.reports(&books, &ada, from, to).unwrap(),
-        [("de-ustva", "Umsatzsteuer-Voranmeldung"), ("de-zm", "Zusammenfassende Meldung"), ("de-euer", "Anlage EÜR")]
+        [
+            ("de-ustva", "Umsatzsteuer-Voranmeldung"),
+            ("de-zm", "Zusammenfassende Meldung"),
+            ("de-euer", "Anlage EÜR"),
+            ("de-aveuer", "Anlage AVEÜR")
+        ]
     );
     let vat = workspace.report(&books, &ada, "de-ustva", from, to).unwrap();
     // Kennzahl 81 takes the base at 19 %; the form computes the tax from it.

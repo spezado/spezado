@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **Fixed assets** after librotenado 0011: register an asset with its cost and how it is depreciated – on a straight
+  line by month, at once, in a pool, or not at all –, book the depreciation of a year once, and book an asset out at
+  its book value when it leaves; the report **Anlage AVEÜR**. In the terminal (*Accounts*: `a`, `f`), the web app
+  (*Assets*) and the API.
+- **The annual VAT return** (`de-ust`, Umsatzsteuererklärung 2026) as a report and a filing over the calendar year.
+- **Business entertainment** booked from a gross amount is split: 70 % on the account of entertainment, 30 % on the
+  one not deductible, the VAT in full (§ 4 Abs. 5 Satz 1 Nr. 2 EStG, § 15 Abs. 1a UStG).
+- **Ten days around the turn of the year:** a regularly recurring payment – the VAT of the last quarter, paid on
+  8 January – can count in the year it belongs to (§ 11 EStG); in the web app and the API.
+- The tax codes for the exempt letting of land (§ 4 Nr. 12 UStG) and for new vehicles supplied to buyers without a VAT
+  identification number, in bookings and – letting – invoices.
 - **Contacts – customers and suppliers** after librotenado 0008 (0.13): with a number (customers from 10001,
   suppliers from 70001), address, e-mail and phone, VAT identification and tax number, bank account and contact
   persons; in the terminal (tab 9), the web app (*Contacts*) and the API. The customers of the invoice form are the
@@ -20,7 +31,7 @@
   runs the relay unless told otherwise; `deploy/compose.yaml` starts one behind a reverse proxy.
 - The documentation at spezado.dev is built with Jekyll and Just the Docs, as falkOSS projects build theirs; the
   addresses stay, the old introduction forwards.
-- Data follows librotenado 0.13.0, from crates.io instead of its repository.
+- Data follows librotenado 0.14.0, from crates.io instead of its repository.
 - **Short financial years:** a configuration that changes the start of the financial year ends the current one
   early (librotenado 0008); the review list names a change on a day that does not begin the new year.
 - The review list names a reopening of something that is not a closing, and a closing reopened twice (librotenado

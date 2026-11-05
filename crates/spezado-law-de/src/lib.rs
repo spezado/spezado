@@ -83,6 +83,16 @@ impl LawModule for Germany {
                 mapping,
                 filing: Some(FilingKind::VatReturn),
             });
+            // The annual return over the calendar year (§ 18 Abs. 3 UStG), also filed when advance returns were.
+            if from == Date::new(2026, 1, 1).expect("a date") && to == Date::new(2026, 12, 31).expect("a date") {
+                reports.push(Report {
+                    id: "de-ust",
+                    name: "Umsatzsteuererklärung",
+                    basis: ReportBasis::Period,
+                    mapping: ReportMapping::de_ust_2026(),
+                    filing: Some(FilingKind::VatReturn),
+                });
+            }
             // Supplies to businesses in other member states, per customer (§ 18a UStG); none for small businesses
             // (Abs. 4). Which period applies – month, quarter or year (Abs. 1, 2 and 9) – is the filer's.
             reports.push(Report {
@@ -104,6 +114,16 @@ impl LawModule for Germany {
                     mapping,
                     filing: Some(FilingKind::CashBasisStatement),
                 });
+                // The register of fixed assets, part of the Anlage EÜR. OPEN: filed together with it.
+                if year == Some(2026) {
+                    reports.push(Report {
+                        id: "de-aveuer",
+                        name: "Anlage AVEÜR",
+                        basis: ReportBasis::Assets,
+                        mapping: ReportMapping::de_aveuer_2026(),
+                        filing: None,
+                    });
+                }
             }
             Some("de-double-entry") if year == Some(2026) => {
                 reports.push(Report {
@@ -182,6 +202,34 @@ impl LawModule for Germany {
         periods
     }
 
+    fn asset_accounts(
+        &self,
+        national: &ChartTranslation,
+        asset: &librotenado::Asset,
+    ) -> Option<(Option<AccountId>, AccountId)> {
+        use librotenado::Depreciation;
+        // The asset's account as SKR 03 numbers it – both charts translate the same harmonised accounts.
+        let number: u16 = ChartTranslation::de_skr03().national(&asset.account)?.parse().ok()?;
+        let (depreciation, disposal) = match (asset.depreciation, number) {
+            (Depreciation::Immediate, _) => (Some("4855"), "2310"),
+            (Depreciation::Pool, _) => (Some("4862"), "2310"),
+            (Depreciation::None, 500..=599) => (None, "2312"),
+            (Depreciation::None, _) => (None, "2310"),
+            (_, 10..=48) => (Some("4822"), "2311"),
+            (_, 149) => (Some("4833"), "2310"),
+            (_, 80..=199) => (Some("4831"), "2310"),
+            (_, 320 | 350) => (Some("4832"), "2310"),
+            (_, 500..=599) => (None, "2312"),
+            _ => (Some("4830"), "2310"),
+        };
+        let in_chart = |skr03: &str| -> Option<AccountId> {
+            let number =
+                if national.chart == "de-skr04" { SKR04_OF.iter().find(|(a, _)| *a == skr03)?.1 } else { skr03 };
+            national.accounts.get(number).cloned()
+        };
+        Some((depreciation.and_then(in_chart), in_chart(disposal)?))
+    }
+
     fn standard_accounts(&self, national: &ChartTranslation) -> Option<StandardAccounts> {
         let column = match national.chart.as_str() {
             "de-skr03" => 1,
@@ -208,6 +256,9 @@ impl LawModule for Germany {
             vat: vat?,
             vat_reverse_charge: account("reverse-charge")?,
             vat_reverse_charge_input: account("reverse-charge-input")?,
+            // 70 per cent of business entertainment is deductible (§ 4 Abs. 5 Satz 1 Nr. 2 EStG); the VAT on it in
+            // full (§ 15 Abs. 1a Satz 2 UStG).
+            partly_deductible: [(account("entertainment")?, (account("entertainment-not-deductible")?, 70))].into(),
         })
     }
 
@@ -243,6 +294,8 @@ const STANDARD: &[(&str, &str, &str)] = &[
     ("de-in-7", "1571", "1401"),
     ("reverse-charge", "1787", "3837"),
     ("reverse-charge-input", "1577", "1407"),
+    ("entertainment", "4650", "6640"),
+    ("entertainment-not-deductible", "4654", "6644"),
 ];
 
 /// A calendar quarter, counted from the first of `year` (0) – earlier ones negative.
@@ -264,6 +317,20 @@ fn statement_deadline(end: Date, state: Option<&str>) -> Date {
     }
     day
 }
+
+/// The accounts of depreciation and disposal in SKR 03 and SKR 04, as DATEV numbers them.
+const SKR04_OF: &[(&str, &str)] = &[
+    ("4822", "6200"),
+    ("4830", "6220"),
+    ("4831", "6221"),
+    ("4832", "6222"),
+    ("4833", "6223"),
+    ("4855", "6260"),
+    ("4862", "6264"),
+    ("2310", "6895"),
+    ("2311", "6896"),
+    ("2312", "6897"),
+];
 
 /// The last day of a month.
 fn last_day(year: u16, month: u8) -> Option<Date> {
@@ -307,7 +374,8 @@ mod tests {
         let ids = |from, to| -> Vec<&str> {
             Germany.reports(&facts, date(from), date(to)).iter().map(|report| report.id).collect()
         };
-        assert_eq!(ids("2026-01-01", "2026-03-31"), ["de-ustva", "de-zm", "de-euer"]);
+        assert_eq!(ids("2026-01-01", "2026-03-31"), ["de-ustva", "de-zm", "de-euer", "de-aveuer"]);
+        assert_eq!(ids("2026-01-01", "2026-12-31"), ["de-ustva", "de-ust", "de-zm", "de-euer", "de-aveuer"]);
         assert_eq!(ids("2025-01-01", "2025-12-31"), ["de-euer"]);
         assert!(ids("2025-12-01", "2026-01-31").is_empty());
         let quarters = Germany.vat_periods(&facts, 2026);
@@ -322,7 +390,7 @@ mod tests {
         assert!(Germany.vat_periods(&facts, 2026).is_empty());
         // No VAT return, but the Anlage EÜR all the same.
         let reports = Germany.reports(&facts, date("2026-01-01"), date("2026-12-31"));
-        assert_eq!(reports.iter().map(|report| report.id).collect::<Vec<_>>(), ["de-euer"]);
+        assert_eq!(reports.iter().map(|report| report.id).collect::<Vec<_>>(), ["de-euer", "de-aveuer"]);
         let monthly = configuration("de-double-entry", Some(("de-regular", "month")));
         let months = Germany.vat_periods(&Facts::new(&monthly, None, None), 2028);
         assert_eq!(months.len(), 12);

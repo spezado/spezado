@@ -241,6 +241,10 @@ pub struct SimpleBooking {
     /// The documents it rests on: identities of documents recorded.
     #[serde(default)]
     pub documents: Vec<String>,
+    /// `YYYY-MM-DD`: the day it counts on where profit is determined by receipts and payments, if not its date – a
+    /// regularly recurring payment within ten days of the turn of the year (§ 11 EStG).
+    #[serde(default)]
+    pub attributed: Option<String>,
 }
 
 /// A line of a booking to write.
@@ -805,6 +809,64 @@ pub struct ContactSuggestion {
     pub name: String,
     /// What matched: `vat_id`, `tax_number`, `bank_account` or `name`.
     pub by: String,
+}
+
+/// A fixed asset as the register shows it.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct AssetView {
+    /// Its identity.
+    pub id: String,
+    /// What it is.
+    pub name: String,
+    /// The account it is kept on: its national number.
+    pub account: String,
+    /// `YYYY-MM-DD`.
+    pub acquired: String,
+    /// Its cost, without deductible VAT.
+    pub cost: Amount,
+    /// `straight_line`, `immediate`, `pool` or `none`.
+    pub method: String,
+    /// The useful life in months, on a straight line.
+    pub months: Option<u16>,
+    /// `YYYY-MM-DD`: the day it left, if it did.
+    pub disposed: Option<String>,
+    /// The book value at the day asked for.
+    pub book_value: Amount,
+}
+
+/// A fixed asset to register.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct NewAsset {
+    /// What it is.
+    pub name: String,
+    /// The account of fixed assets: its national number or identity.
+    pub account: String,
+    /// `YYYY-MM-DD`.
+    pub acquired: String,
+    /// Its cost without deductible VAT, with a decimal point.
+    pub cost: String,
+    /// `straight_line`, `immediate`, `pool` or `none`.
+    pub method: String,
+    /// The useful life in months, for `straight_line`.
+    #[serde(default)]
+    pub months: Option<u16>,
+}
+
+/// A fixed asset leaving the business.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct AssetDisposal {
+    /// `YYYY-MM-DD`.
+    pub date: String,
+    /// What it was sold for, without VAT, with a decimal point; absent when not sold.
+    #[serde(default)]
+    pub proceeds: Option<String>,
+}
+
+/// The year whose depreciation to book.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct DepreciationYear {
+    /// The calendar year.
+    pub year: u16,
 }
 
 /// A customer kept.

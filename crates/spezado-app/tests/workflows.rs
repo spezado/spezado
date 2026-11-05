@@ -66,6 +66,7 @@ fn gross_amounts_are_split_by_their_tax_code() {
     let skr03 = ChartTranslation::de_skr03();
     let standard = workspace.standard_accounts(&books, &ada, "2026-03-01".parse().unwrap()).unwrap();
     let entry = |number: &str, gross: i128, tax: Option<&str>| SimpleEntry {
+        attributed: None,
         owner: ada.clone(),
         date: "2026-03-01".parse().unwrap(),
         text: "test".into(),
@@ -97,6 +98,46 @@ fn gross_amounts_are_split_by_their_tax_code() {
     assert_eq!(vat.fields.get("66"), Some(&1_900), "input VAT: {:?}", vat.fields);
 }
 
+/// Business entertainment: 70 per cent deductible, the rest on an account of its own, the VAT in full; a payment of
+/// VAT on 8 January counts in the year before in the Anlage EÜR (§ 11 EStG).
+#[test]
+fn entertainment_is_split_and_a_payment_counts_in_its_year() {
+    let scratch = Scratch::new("entertainment");
+    let (mut workspace, books, ada) = freelancer(&scratch, "de-skr03");
+    let skr03 = ChartTranslation::de_skr03();
+    let standard = workspace.standard_accounts(&books, &ada, "2026-03-01".parse().unwrap()).unwrap();
+    let entry = |number: &str, date: &str, gross: i128, tax: Option<&str>| SimpleEntry {
+        attributed: None,
+        owner: ada.clone(),
+        date: date.parse().unwrap(),
+        text: "test".into(),
+        account: skr03.accounts[number].clone(),
+        gross: eur(gross),
+        tax: tax.map(|t| t.parse().unwrap()),
+        payment: standard.bank.clone(),
+        documents: vec![],
+    };
+    // A dinner with a customer for 119.00: 70.00 and 30.00, VAT 19.00 in full.
+    let dinner = workspace.simple_booking(&books, &entry("4650", "2026-03-01", 11_900, Some("de-in-19"))).unwrap();
+    assert_eq!(
+        lines(&dinner, "de-skr03"),
+        [("4650".into(), 7_000), ("4654".into(), 3_000), ("1576".into(), 1_900), ("1200".into(), -11_900)]
+    );
+    workspace.execute(&books, Command::Book(dinner)).unwrap();
+    // The VAT of the fourth quarter, paid on 8 January 2027, counts in 2026.
+    let mut payment = entry("1780", "2027-01-08", 1_900, None);
+    payment.attributed = Some("2026-12-31".parse().unwrap());
+    let payment = workspace.simple_booking(&books, &payment).unwrap();
+    assert_eq!(payment.attributed, Some("2026-12-31".parse().unwrap()));
+    workspace.execute(&books, Command::Book(payment)).unwrap();
+    assert!(workspace.review(&books).unwrap().is_empty(), "{:?}", workspace.review(&books).unwrap());
+    let year = ("2026-01-01".parse().unwrap(), "2026-12-31".parse().unwrap());
+    let euer = workspace.report(&books, &ada, "de-euer", year.0, year.1).unwrap();
+    let field = |kz: &str| euer.fields.get(kz).copied();
+    assert_eq!((field("2.175"), field("2.165")), (Some(7_000), Some(3_000)), "{:?}", euer.fields);
+    assert_eq!(field("2.186"), Some(1_900), "{:?}", euer.fields);
+}
+
 #[test]
 fn skr_04_has_its_own_numbers() {
     let scratch = Scratch::new("skr04");
@@ -104,6 +145,7 @@ fn skr_04_has_its_own_numbers() {
     let skr04 = ChartTranslation::de_skr04();
     let standard = workspace.standard_accounts(&books, &ada, "2026-03-01".parse().unwrap()).unwrap();
     let entry = SimpleEntry {
+        attributed: None,
         owner: ada.clone(),
         date: "2026-03-01".parse().unwrap(),
         text: "telephone".into(),
@@ -186,6 +228,7 @@ fn the_data_transfer_is_written_into_a_directory() {
     let skr03 = ChartTranslation::de_skr03();
     let standard = workspace.standard_accounts(&books, &ada, "2026-03-01".parse().unwrap()).unwrap();
     let entry = SimpleEntry {
+        attributed: None,
         owner: ada.clone(),
         date: "2026-03-01".parse().unwrap(),
         text: "paper".into(),

@@ -132,6 +132,7 @@ fn freelancer(scratch: &Scratch) -> (Workspace, BooksId, PartyId) {
 fn sell(workspace: &mut Workspace, books: &BooksId, ada: &PartyId, gross: i128) {
     let standard = workspace.standard_accounts(books, ada, "2026-02-01".parse().unwrap()).unwrap();
     let entry = SimpleEntry {
+        attributed: None,
         owner: ada.clone(),
         date: "2026-02-01".parse().unwrap(),
         text: "a sale".into(),

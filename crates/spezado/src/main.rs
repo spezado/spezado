@@ -809,7 +809,7 @@ fn parse_booking(
             })
         })
         .collect::<Result<Vec<_>>>()?;
-    Ok(Booking { date, text, postings, documents: vec![], entries: vec![], transaction: None })
+    Ok(Booking { attributed: None, date, text, postings, documents: vec![], entries: vec![], transaction: None })
 }
 
 /// The national chart of each owner, as last configured – read once per owner.

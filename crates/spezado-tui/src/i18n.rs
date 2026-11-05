@@ -133,6 +133,8 @@ texts! {
     KeyMouseOn => "m mouse on", "m Maus an";
     KeyRecordOnly => "a file only", "a nur ablegen";
     KeyOpening => "o opening balances", "o Anfangsbestände";
+    KeyAsset => "a fixed asset", "a Anlagegut";
+    KeyDepreciation => "f depreciation of the year", "f AfA des Jahres";
     KeyDeadlines => "d deadlines", "d Fristen";
     KeySync => "y synchronise", "y synchronisieren";
     KeySyncStart => "y set up synchronisation", "y Synchronisation einrichten";
@@ -251,6 +253,16 @@ texts! {
     // Reports
     VatReturn => "Advance VAT return", "Umsatzsteuer-Voranmeldung";
     Counterparty => "Contact", "Kontakt";
+    NewAsset => "New fixed asset", "Neues Anlagegut";
+    CostNet => "Cost without VAT", "Kosten ohne USt";
+    Method => "Depreciation", "Abschreibung";
+    Months => "Months", "Monate";
+    StraightLine => "straight line", "linear";
+    Immediate => "at once (low-value)", "sofort (GWG)";
+    Pool => "pool (five years)", "Sammelposten (fünf Jahre)";
+    NotDepreciated => "not depreciated", "keine";
+    DepreciationBooked => "Depreciation booked for", "AfA gebucht für";
+    NothingToDepreciate => "Nothing to depreciate in this year", "In diesem Jahr gibt es nichts abzuschreiben";
     Supplier => "Supplier", "Lieferant";
     CustomerAndSupplier => "Customer and supplier", "Kunde und Lieferant";
     BankAccount => "IBAN", "IBAN";

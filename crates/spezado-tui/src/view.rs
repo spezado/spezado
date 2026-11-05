@@ -190,7 +190,12 @@ fn keys(app: &App) -> Vec<(Text, KeyCode)> {
             }
             keys
         }
-        (Mode::Normal, Tab::Accounts) => vec![(Text::KeyOpen, KeyCode::Enter), (Text::KeyOpening, char('o'))],
+        (Mode::Normal, Tab::Accounts) => vec![
+            (Text::KeyOpen, KeyCode::Enter),
+            (Text::KeyOpening, char('o')),
+            (Text::KeyAsset, char('a')),
+            (Text::KeyDepreciation, char('f')),
+        ],
         (Mode::Normal, Tab::Reports) => vec![(Text::KeyOpen, KeyCode::Enter)],
         (Mode::Normal, Tab::Contacts) => vec![(Text::KeyNewContact, char('k')), (Text::KeyOpen, KeyCode::Enter)],
         (Mode::Normal, Tab::Closing) => {

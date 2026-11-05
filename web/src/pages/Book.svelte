@@ -11,7 +11,14 @@
   let failure = $state<string | null>(null);
   let message = $state<string | null>(null);
 
-  let simple = $state({ date: today(), text: "", account: "", gross: "", tax: "", payment: "bank", taxTouched: false });
+  let simple = $state({ date: today(), text: "", account: "", gross: "", tax: "", payment: "bank", taxTouched: false, otherYear: false });
+  // Within ten days of the turn of the year a regularly recurring payment may count in the year it belongs to.
+  const turn = $derived.by(() => {
+    const [y = 0, m = 0, d = 0] = simple.date.split("-").map(Number);
+    if (m === 1 && d <= 10) return `${y - 1}-12-31`;
+    if (m === 12 && d >= 22) return `${y + 1}-01-01`;
+    return null;
+  });
   let lines = $state({ date: today(), text: "", rows: [{ account: "", amount: "", tax: "" }, { account: "", amount: "", tax: "" }] });
 
   $effect(() => {
@@ -39,7 +46,7 @@
       if (gross === null) return void (failure = `${t("gross")}?`);
       result = await api.POST("/api/v1/books/{books}/bookings/simple", {
         params: { path: { books } },
-        body: { date: simple.date, text: simple.text, account: simple.account, gross, tax: simple.tax || null, payment: simple.payment },
+        body: { date: simple.date, text: simple.text, account: simple.account, gross, tax: simple.tax || null, payment: simple.payment, attributed: turn && simple.otherYear ? turn : null },
       });
     } else {
       const rows = lines.rows.map((row) => ({ ...row, amount: parseAmount(row.amount, app.lang) }));
@@ -51,7 +58,7 @@
     }
     if (!result.response.ok) return void (failure = problem(result.error, result.response));
     message = t("booked");
-    simple = { ...simple, text: "", account: "", gross: "", taxTouched: false };
+    simple = { ...simple, text: "", account: "", gross: "", taxTouched: false, otherYear: false };
     lines = { date: lines.date, text: "", rows: [{ account: "", amount: "", tax: "" }, { account: "", amount: "", tax: "" }] };
   }
 </script>
@@ -80,6 +87,9 @@
           <option value="cash">{t("cash")}</option>
         </select>
       </label>
+      {#if turn}
+        <label class="check"><input type="checkbox" bind:checked={simple.otherYear} /> {t("countsInOtherYear")} {turn.slice(0, 4)}</label>
+      {/if}
     {:else}
       <label>{t("date")} <input type="date" bind:value={lines.date} required /></label>
       <label>{t("text")} <input bind:value={lines.text} required /></label>
