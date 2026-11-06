@@ -220,9 +220,9 @@ impl LawModule for Germany {
                     shortened: None,
                 });
             }
-            // The income tax of a person running the business, over a calendar year from 2026 (§ 25 EStG).
+            // The income tax of a person running the business, over a calendar year from 2025 (§ 25 EStG).
             let calendar_year = from.month() == 1 && from.day() == 1 && to.month() == 12 && to.day() == 31;
-            if subject == TaxSubject::Individual && calendar_year && year.is_some_and(|y| y >= 2026) {
+            if subject == TaxSubject::Individual && calendar_year && year.is_some_and(|y| y >= 2025) {
                 reports.push(Report {
                     id: "de-est",
                     name: "Einkommensteuer",
@@ -379,6 +379,62 @@ impl LawModule for Germany {
         })
     }
 
+    fn wage_tax_periods(&self, facts: &Facts, year: u16, previous: i128) -> Vec<(Date, Date, Date)> {
+        // A month where the wage tax of the year before was above 5,000 euros, a quarter above 1,080 euros, else the
+        // year (§ 41a Abs. 2 EStG); due on the tenth day after it, on a weekend or holiday the next working day
+        // (§ 41a Abs. 1, § 108 Abs. 3 AO).
+        let months: u8 = if previous > 500_000 {
+            1
+        } else if previous > 108_000 {
+            3
+        } else {
+            12
+        };
+        let state = facts.configuration.region.as_ref().map(|region| region.as_str());
+        (1..=12)
+            .step_by(usize::from(months))
+            .filter_map(|first: u8| {
+                let last = first + months - 1;
+                let end = last_day(year, last)?;
+                Some((Date::new(year, first, 1)?, end, working_day(after(end, 10)?, state)))
+            })
+            .collect()
+    }
+
+    fn contribution_deadlines(&self, facts: &Facts, year: u16, month: u8) -> Option<(Date, Date)> {
+        // The contributions are due on the third last banking day of the month (§ 23 Abs. 1 Satz 2 SGB IV); their
+        // statement must have arrived two working days before, by the beginning of the fifth last banking day
+        // (§ 28f Abs. 3 SGB IV; Gemeinsame Grundsätze, Ziffer 11). Banking days: Monday to Friday but public holidays
+        // of the employer's state and 24 and 31 December (OPEN: the holidays the insurers count).
+        let state = facts.configuration.region.as_ref().map(|region| region.as_str());
+        let banking = |day: Date| {
+            weekday(day) < 5
+                && !holidays::is_holiday(day, state)
+                && !(day.month() == 12 && matches!(day.day(), 24 | 31))
+        };
+        let mut days = Vec::new();
+        let mut day = last_day(year, month)?;
+        while days.len() < 5 {
+            if banking(day) {
+                days.push(day);
+            }
+            day = day.previous()?;
+        }
+        Some((days[4], days[2]))
+    }
+
+    fn annual_deadline(&self, facts: &Facts, report: &str, year: u16) -> Option<Date> {
+        let state = facts.configuration.region.as_ref().map(|region| region.as_str());
+        match report {
+            // Returns of a year: seven months after it (§ 149 Abs. 2 AO); with a tax adviser later (Abs. 3, OPEN).
+            "de-ust" | "de-euer" | "de-est" | "de-kst" | "de-gewst" | "de-anlage-g" | "de-anlage-s" | "de-hgb-266"
+            | "de-hgb-275-gkv" | "de-ebilanz-kke" => Some(working_day(Date::new(year + 1, 7, 31)?, state)),
+            // The certificate of wage tax: by the last day of February (§ 41b Abs. 1 Satz 2 EStG).
+            "de-lstb" => Some(working_day(last_day(year + 1, 2)?, state)),
+            _ => None,
+        }
+    }
+
     fn vat_periods(&self, facts: &Facts, year: u16) -> Vec<(Date, Date)> {
         let Some(vat) = &facts.configuration.vat else { return Vec::new() };
         let months = match vat.period {
@@ -450,11 +506,11 @@ const SKR04_OF: &[(&str, &str)] = &[
     ("2312", "6897"),
 ];
 
-/// The legal forms of corporations and of partnerships without a natural person fully liable, which the shortened
-/// balance sheets of § 266 Abs. 1 HGB apply to (§ 264a HGB).
 /// The legal forms of partnerships with capital accounts per partner.
 const PARTNERSHIPS: [&str; 5] = ["de-gbr", "de-ohg", "de-kg", "de-gmbh-co-kg", "de-partg"];
 
+/// The legal forms of corporations and of partnerships without a natural person fully liable, which the shortened
+/// balance sheets of § 266 Abs. 1 HGB apply to (§ 264a HGB).
 const CORPORATIONS: [&str; 5] = ["de-gmbh", "de-ug", "de-ag", "de-kgaa", "de-gmbh-co-kg"];
 
 /// The mapping of a report computed rather than mapped – the taxes on profit –: only its name, which names its fields.
@@ -464,6 +520,23 @@ fn computed(report: &str) -> ReportMapping {
         "into": "librotenado/0.1", "status": "draft",
     }))
     .expect("a mapping without accounts")
+}
+
+/// The day `days` after `day`.
+fn after(day: Date, days: u16) -> Option<Date> {
+    let mut day = day;
+    for _ in 0..days {
+        day = next_day(day);
+    }
+    Some(day)
+}
+
+/// The day itself, or on a weekend or a public holiday of the state the next working day (§ 108 Abs. 3 AO).
+fn working_day(mut day: Date, state: Option<&str>) -> Date {
+    while weekday(day) >= 5 || holidays::is_holiday(day, state) {
+        day = next_day(day);
+    }
+    day
 }
 
 /// The last day of a month.
@@ -513,7 +586,7 @@ mod tests {
             ids("2026-01-01", "2026-12-31"),
             ["de-ustva", "de-ust", "de-zm", "de-euer", "de-aveuer", "de-est", "de-anlage-s"]
         );
-        assert_eq!(ids("2025-01-01", "2025-12-31"), ["de-euer", "de-anlage-s"]);
+        assert_eq!(ids("2025-01-01", "2025-12-31"), ["de-euer", "de-est", "de-anlage-s"]);
         assert!(ids("2025-12-01", "2026-01-31").is_empty());
         let quarters = Germany.vat_periods(&facts, 2026);
         assert_eq!(quarters.len(), 4);

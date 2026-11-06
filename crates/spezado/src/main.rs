@@ -273,6 +273,15 @@ enum Commands {
         #[arg(long)]
         record: bool,
     },
+    /// Lists what the owner has to file or pay in a calendar year, and when.
+    Obligations {
+        /// The calendar year; default this one.
+        #[arg(long)]
+        year: Option<u16>,
+        /// The owner; may be left out while the books have one.
+        #[arg(long)]
+        owner: Option<PartyId>,
+    },
     /// Shows the Lohnsteuerbescheinigung of an employment for a calendar year.
     WageTaxCertificate {
         /// The employment.
@@ -996,6 +1005,14 @@ fn run(workspace: &mut Workspace, books: &BooksId, command: Commands) -> Result<
             if record {
                 workspace.record_payslip(books, payslip)?;
                 println!("recorded and booked");
+            }
+        }
+        Commands::Obligations { year, owner } => {
+            let owner = choose_owner(workspace, books, owner)?;
+            let year = year.unwrap_or_else(|| spezado_app::today().year());
+            for o in workspace.obligations(books, &owner, year)? {
+                let due = o.due.map(|d| d.to_string()).unwrap_or_else(|| "–".into());
+                println!("{due:<12} {:<10} {} – {}  {}", o.id, o.from, o.to, o.name);
             }
         }
         Commands::WageTaxCertificate { employment, year } => {

@@ -13,7 +13,7 @@ your terminal; `m` switches the mouse off.
 
 | Key | |
 |---|---|
-| `1` … `9`, `Tab`, `Shift-Tab` | the tabs: Overview, Journal, Bank, Documents, Accounts, Reports, Review, Closing, Contacts |
+| `1` … `9`, `0`, `Tab`, `Shift-Tab` | the tabs: Overview, Journal, Bank, Documents, Accounts, Reports, Review, Closing, Contacts, Payroll |
 | `↑` `↓` | the rows of a tab |
 | `↵` | open the row: a bank entry to book, an account's ledger, a report |
 | `[` `]` | the year before, the year after |
@@ -41,6 +41,7 @@ IBAN.
 | Review | | what needs review, in words |
 | Closing | `c` close a period, `u` reopen the latest closing, `g` GoBD data transfer | |
 | Contacts | `k` new contact, `↵` change one | customers and suppliers with their numbers ([Contacts](contacts.md)) |
+| Payroll | `b` new employee, `a` payslip, `↵` its figures | the payslips of the year ([Payroll and taxes](payroll.md)) |
 
 **A new booking** (`n`) is date, text, account, gross amount, tax code and payment from the bank or the cash:
 spezado books the net amount, the VAT and the payment. **A booking in lines** (`z`) takes lines of `account=amount[@code]`,

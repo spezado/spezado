@@ -2,6 +2,7 @@
 <script lang="ts">
   import { api, problem, type Schemas } from "../lib/api";
   import Deadlines from "../lib/Deadlines.svelte";
+  import Obligations from "../lib/Obligations.svelte";
   import Sync from "../lib/Sync.svelte";
   import { amount, date } from "../lib/format";
   import { app, t } from "../lib/state.svelte";
@@ -48,6 +49,7 @@
     {:else}
       <p class="muted">{t("noVatReturns")}</p>
     {/if}
+    <Obligations />
     <Deadlines />
     <p>{t("openEntries")}: {overview.open_entries} · {t("issues")}: {overview.issues} · {t("closedUntil")}:
       {overview.closed_until ? date(overview.closed_until, app.lang) : t("nothingClosed")}</p>

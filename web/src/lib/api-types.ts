@@ -631,6 +631,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/books/{books}/obligations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What the owner has to file or pay for a calendar year, by the day it is due. */
+        get: operations["obligations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/books/{books}/opening": {
         parameters: {
             query?: never;
@@ -666,7 +683,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/books/{books}/payslips": {
+    "/api/v1/books/{books}/partners": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The partners of the owner, a partnership, and whether their capital accounts are opened. */
+        get: operations["partners"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/books/{books}/partners/{partner}/capital-accounts": {
         parameters: {
             query?: never;
             header?: never;
@@ -674,6 +708,24 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        put?: never;
+        /** Opens the capital accounts of a partner for the Kapitalkontenentwicklung of the E-Bilanz; returns their identities. */
+        post: operations["partner_accounts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/books/{books}/payslips": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The payslips that apply for periods ending in a calendar year – corrections in place of what they replace. */
+        get: operations["payslips"];
         put?: never;
         /** Computes the payslip of an employment for a month; with `record` records it and books it. */
         post: operations["payslip"];
@@ -1628,6 +1680,19 @@ export interface components {
             /** @description `RE-2026-004`. */
             number: string;
         };
+        /** @description Something to file or to pay, for a period, by a day. */
+        Obligation: {
+            /** @description The day it is due; none where the law sets none. */
+            due?: string | null;
+            /** @description The first day of its period, `YYYY-MM-DD`. */
+            from: string;
+            /** @description The report or what it is: `de-ustva`, `de-zm`, `de-lsta`, `de-bn`, `de-lstb`, an annual report. */
+            id: string;
+            /** @description Its name. */
+            name: string;
+            /** @description The last day of its period. */
+            to: string;
+        };
         /** @description An entry of a bank statement not booked yet. */
         OpenEntry: {
             /** @description Positive money in, negative money out. */
@@ -1713,6 +1778,20 @@ export interface components {
             device: string;
             /** @description The token; shown once, stored only as its hash. */
             token: string;
+        };
+        /** @description A partner of the owner: a person with the role `partner` in it. */
+        Partner: {
+            /** @description Whether capital accounts are opened for them. */
+            accounts: boolean;
+            /** @description The person. */
+            id: string;
+            /** @description Their name. */
+            name: string;
+        };
+        /** @description How a partner is liable: `unlimited` or `limited`. */
+        PartnerAccounts: {
+            /** @description `unlimited` (Vollhafter) or `limited` (Teilhafter). */
+            liability: string;
         };
         /** @description A part of the wages. */
         PayItem: {
@@ -3447,6 +3526,32 @@ export interface operations {
             };
         };
     };
+    obligations: {
+        parameters: {
+            query?: {
+                /** @description The calendar year. */
+                year?: number | null;
+                /** @description The language of names: `de` or `en`. */
+                lang?: string | null;
+            };
+            header?: never;
+            path: {
+                books: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Obligation"][];
+                };
+            };
+        };
+    };
     opening: {
         parameters: {
             query?: {
@@ -3534,6 +3639,85 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    partners: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                books: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Partner"][];
+                };
+            };
+        };
+    };
+    partner_accounts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                books: string;
+                partner: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartnerAccounts"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    payslips: {
+        parameters: {
+            query?: {
+                /** @description The calendar year; default this one. */
+                year?: number | null;
+            };
+            header?: never;
+            path: {
+                books: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayslipView"][];
                 };
             };
         };

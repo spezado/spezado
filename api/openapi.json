@@ -2182,6 +2182,63 @@
         }
       }
     },
+    "/api/v1/books/{books}/obligations": {
+      "get": {
+        "tags": [],
+        "summary": "What the owner has to file or pay for a calendar year, by the day it is due.",
+        "operationId": "obligations",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "description": "The calendar year.",
+            "required": false,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "The language of names: `de` or `en`.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Obligation"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/books/{books}/opening": {
       "get": {
         "tags": [],
@@ -2330,7 +2387,145 @@
         }
       }
     },
+    "/api/v1/books/{books}/partners": {
+      "get": {
+        "tags": [
+          "crate::payroll"
+        ],
+        "summary": "The partners of the owner, a partnership, and whether their capital accounts are opened.",
+        "operationId": "partners",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Partner"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/partners/{partner}/capital-accounts": {
+      "post": {
+        "tags": [
+          "crate::payroll"
+        ],
+        "summary": "Opens the capital accounts of a partner for the Kapitalkontenentwicklung of the E-Bilanz; returns their identities.",
+        "operationId": "partner_accounts",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "partner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PartnerAccounts"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/books/{books}/payslips": {
+      "get": {
+        "tags": [
+          "crate::payroll"
+        ],
+        "summary": "The payslips that apply for periods ending in a calendar year – corrections in place of what they replace.",
+        "operationId": "payslips",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "description": "The calendar year; default this one.",
+            "required": false,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PayslipView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "tags": [
           "crate::payroll"
@@ -4913,6 +5108,41 @@
           }
         }
       },
+      "Obligation": {
+        "type": "object",
+        "description": "Something to file or to pay, for a period, by a day.",
+        "required": [
+          "id",
+          "name",
+          "from",
+          "to"
+        ],
+        "properties": {
+          "due": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The day it is due; none where the law sets none."
+          },
+          "from": {
+            "type": "string",
+            "description": "The first day of its period, `YYYY-MM-DD`."
+          },
+          "id": {
+            "type": "string",
+            "description": "The report or what it is: `de-ustva`, `de-zm`, `de-lsta`, `de-bn`, `de-lstb`, an annual report."
+          },
+          "name": {
+            "type": "string",
+            "description": "Its name."
+          },
+          "to": {
+            "type": "string",
+            "description": "The last day of its period."
+          }
+        }
+      },
       "OpenEntry": {
         "type": "object",
         "description": "An entry of a bank statement not booked yet.",
@@ -5187,6 +5417,42 @@
           "token": {
             "type": "string",
             "description": "The token; shown once, stored only as its hash."
+          }
+        }
+      },
+      "Partner": {
+        "type": "object",
+        "description": "A partner of the owner: a person with the role `partner` in it.",
+        "required": [
+          "id",
+          "name",
+          "accounts"
+        ],
+        "properties": {
+          "accounts": {
+            "type": "boolean",
+            "description": "Whether capital accounts are opened for them."
+          },
+          "id": {
+            "type": "string",
+            "description": "The person."
+          },
+          "name": {
+            "type": "string",
+            "description": "Their name."
+          }
+        }
+      },
+      "PartnerAccounts": {
+        "type": "object",
+        "description": "How a partner is liable: `unlimited` or `limited`.",
+        "required": [
+          "liability"
+        ],
+        "properties": {
+          "liability": {
+            "type": "string",
+            "description": "`unlimited` (Vollhafter) or `limited` (Teilhafter)."
           }
         }
       },

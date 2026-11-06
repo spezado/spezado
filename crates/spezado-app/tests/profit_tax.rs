@@ -192,3 +192,38 @@ fn a_sole_proprietor_pays_income_tax() {
     let quarter = workspace.reports(&books, &ada, from, "2026-03-31".parse().unwrap()).unwrap();
     assert!(quarter.iter().all(|(id, _)| *id != "de-est"));
 }
+
+#[test]
+fn a_partnership_shows_the_capital_accounts_of_its_partners() {
+    let scratch = Scratch::new("kg");
+    let organisation = |id: PartyId| {
+        Party::Organisation(
+            serde_json::from_value::<Organisation>(serde_json::json!({
+                "id": id.as_str(), "name": "Beispiel KG", "legal_form": "de-kg", "country": "DE",
+            }))
+            .unwrap(),
+        )
+    };
+    let (mut workspace, books, owner) = set_up(&scratch, organisation, "de-double-entry");
+    let mut partner = |name: &str| -> PartyId {
+        let id: PartyId = new_id();
+        let person: Person = serde_json::from_value(serde_json::json!({
+            "id": id.as_str(), "name": name,
+            "roles": [{"organisation": owner.as_str(), "kind": "partner",
+                       "shares": {"count": 1, "nominal": {"currency": "EUR", "base_units": "1000000"}}}],
+        }))
+        .unwrap();
+        workspace.execute(&books, spezado_core::Command::DescribePerson(person)).unwrap();
+        id
+    };
+    let (general, limited) = (partner("Komplementär"), partner("Kommanditist"));
+    let a = workspace.open_partner_accounts(&books, &general, librotenado::Liability::Unlimited).unwrap();
+    let b = workspace.open_partner_accounts(&books, &limited, librotenado::Liability::Limited).unwrap();
+    assert_eq!((a.len(), b.len()), (3, 4));
+    // Sales of 10,000: half of the result to each partner's variable capital.
+    pay(&mut workspace, &books, &owner, "8400", 1_190_000, Some("de-out-19"));
+    let (from, to) = ("2026-01-01".parse().unwrap(), "2026-12-31".parse().unwrap());
+    let kke = workspace.report(&books, &owner, "de-ebilanz-kke", from, to).unwrap().fields;
+    assert_eq!(kke[&format!("{general}/unlimitedPartners.VK/incomeShare")], 500_000);
+    assert_eq!(kke[&format!("{limited}/limitedPartners.VK/incomeShare")], 500_000);
+}

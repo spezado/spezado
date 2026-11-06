@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **Payroll and taxes in the web app and the terminal:** the pages *Payroll* (employees, payslips computed and booked,
+  corrections, Beitragsnachweis, Lohnsteuerbescheinigung) and *Taxes* (what the books do not hold of the taxes on
+  profit and income tax; the capital accounts of partners, opened for the E-Bilanz), the terminal's tab `0`
+  *Payroll*. API: `GET /payslips`, `/partners`, `/partners/{partner}/capital-accounts`.
+- **What is due:** wage tax returns by the wage tax of the year before, the Beitragsnachweis by the banking days, the
+  certificates by the end of February, the annual returns by 31 July – `/obligations`, `spezado obligations`, the
+  overview of the web app and the reports tab of the terminal.
+- Income tax and the Anlage G/S from 2025 (librotenado 0.24).
+
 - **The gaps of German law closed** after librotenado 0.22: the interest barrier, hidden profit distributions and
   contributions, tax groups (`spezado profit-tax --hidden-distributions … --group member|parent …
   --interest-carryforward … --interest-exception true`); children with the test against the child benefit, single

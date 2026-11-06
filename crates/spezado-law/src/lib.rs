@@ -155,6 +155,28 @@ pub trait LawModule: std::fmt::Debug + Send + Sync {
         Vec::new()
     }
 
+    /// The periods of the wage tax returns of the calendar year `year` – `(first day, last day, due)` – given the
+    /// wage tax withheld in the year before, or for an employer new in the year the wage tax of its first month for a
+    /// whole year; none where the owner files none.
+    fn wage_tax_periods(&self, facts: &Facts, year: u16, previous: i128) -> Vec<(Date, Date, Date)> {
+        let _ = (facts, year, previous);
+        Vec::new()
+    }
+
+    /// For the contributions to social insurance of a month: the day the statement of them must have arrived, and
+    /// the day they are due; none where the law knows neither.
+    fn contribution_deadlines(&self, facts: &Facts, year: u16, month: u8) -> Option<(Date, Date)> {
+        let _ = (facts, year, month);
+        None
+    }
+
+    /// The day a report filed once a year for the year `year` is due – an annual return, the certificate of wage
+    /// tax (`de-lstb`) –; none where the law sets none.
+    fn annual_deadline(&self, facts: &Facts, report: &str, year: u16) -> Option<Date> {
+        let _ = (facts, report, year);
+        None
+    }
+
     /// For a fixed asset in a national chart: the account of expense its depreciation goes to – none where it is not
     /// depreciated – and the account its book value goes to when it leaves.
     fn asset_accounts(

@@ -145,3 +145,38 @@ fn figures_id(workspace: &Workspace, books: &BooksId, owner: &PartyId) -> librot
     let (from, to) = ("2026-01-01".parse().unwrap(), "2026-01-31".parse().unwrap());
     workspace.payslips(books, owner, from, to).unwrap().remove(0).id
 }
+
+#[test]
+fn an_employer_has_wage_tax_returns_and_statements_due() {
+    let scratch = Scratch::new("obligations");
+    let (mut workspace, books, owner, employee) = set_up(&scratch);
+    let new = NewEmployment {
+        owner: owner.clone(),
+        employee,
+        start: "2026-03-01".parse().unwrap(),
+        end: None,
+        number: None,
+        born: None,
+        de: german("1111", "101"),
+    };
+    let employment = workspace.add_employment(&books, new).unwrap();
+    let march = workspace.payslip(&books, &employment, 2026, 3, vec![item(PayItemKind::Wage, 400_000)]).unwrap();
+    workspace.record_payslip(&books, march).unwrap();
+    let due = workspace.obligations(&books, &owner, 2026).unwrap();
+    let ids = |id: &str| due.iter().filter(|o| o.id == id).count();
+    // New in 2026: the wage tax of March for a whole year is above 5,000 euros – monthly returns, due on the 10th.
+    assert_eq!(ids("de-lsta"), 12);
+    let april = due.iter().find(|o| o.id == "de-lsta" && o.from.month() == 3).unwrap();
+    assert_eq!(april.due, Some("2026-04-10".parse().unwrap()));
+    // Statements of contributions from March, the certificates by the end of February 2027 (a Sunday: 1 March).
+    assert_eq!(ids("de-bn"), 10);
+    // May 2026: banking days from the end 29, 28, 27 (contributions due), 26, then Whit Monday – the statement by the
+    // 22nd.
+    let may = due.iter().find(|o| o.id == "de-bn" && o.from.month() == 5).unwrap();
+    assert_eq!(may.due, Some("2026-05-22".parse().unwrap()));
+    let lstb = due.iter().find(|o| o.id == "de-lstb").unwrap();
+    assert_eq!(lstb.due, Some("2027-03-01".parse().unwrap()));
+    // The annual returns of a GmbH by 31 July 2027 (a Saturday: 2 August).
+    let kst = due.iter().find(|o| o.id == "de-kst").unwrap();
+    assert_eq!(kst.due, Some("2027-08-02".parse().unwrap()));
+}

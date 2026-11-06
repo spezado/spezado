@@ -62,6 +62,8 @@ the token it receives; another browser needs a code of its own.
 | Contacts | customers and suppliers with numbers, contact persons and bank account ([Contacts](contacts.md)) |
 | Accounts | balances, ledgers, opening balances |
 | Assets | the fixed assets with their book values, a new one, a disposal, the depreciation of the year ([Fixed assets](assets.md)) |
+| Payroll | employees, payslips with corrections, the Beitragsnachweis, the Lohnsteuerbescheinigung ([Payroll and taxes](payroll.md)) |
+| Taxes | what the books do not hold of the taxes of a year; the capital accounts of partners ([Payroll and taxes](payroll.md)) |
 | Reports | the reports of the year, as CSV, too; the filings prepared from them ([Filings](filings.md)) |
 | Review | what needs review, in words |
 | Closing | closing periods and reopening the latest, the GoBD data transfer |

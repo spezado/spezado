@@ -41,11 +41,13 @@ pub enum Tab {
     Closing,
     /// Customers and suppliers.
     Contacts,
+    /// Employees and their payslips.
+    Payroll,
 }
 
 impl Tab {
     /// All tabs.
-    pub const ALL: [Tab; 9] = [
+    pub const ALL: [Tab; 10] = [
         Tab::Overview,
         Tab::Journal,
         Tab::Bank,
@@ -55,6 +57,7 @@ impl Tab {
         Tab::Review,
         Tab::Closing,
         Tab::Contacts,
+        Tab::Payroll,
     ];
 
     /// Its title.
@@ -69,6 +72,7 @@ impl Tab {
             Tab::Review => Text::Review,
             Tab::Closing => Text::Closing,
             Tab::Contacts => Text::Contacts,
+            Tab::Payroll => Text::Payroll,
         }
     }
 
@@ -110,6 +114,10 @@ pub enum Purpose {
     Customer,
     /// A fixed asset registered.
     Asset,
+    /// A new employment.
+    Employment,
+    /// A payslip computed, recorded and booked.
+    Payslip,
     /// A contact kept: new when the identity is empty.
     Contact(String),
     /// Writing an invoice.
@@ -193,6 +201,9 @@ pub struct View {
     pub documents: Vec<(EventHash, Document)>,
     /// The customers and suppliers of the owner.
     pub contacts: Vec<spezado_app::ContactCard>,
+    /// The employments of the owner, and the payslips of the year with the name of the employee.
+    pub employments: Vec<(librotenado::payroll::EmploymentId, String)>,
+    pub payslips: Vec<(String, librotenado::payroll::Payslip)>,
     /// Number, name and balance of every account with one.
     pub balances: Vec<(AccountId, String, String, Money)>,
     /// The reports of the year.
@@ -322,6 +333,24 @@ impl<'w> App<'w> {
         self.view.relay = self.workspace.sync_relay(&books).ok().flatten();
         self.view.documents = self.workspace.documents(&books).unwrap_or_default();
         self.view.contacts = self.workspace.contacts(&books, &owner).unwrap_or_default();
+        let names: BTreeMap<PartyId, String> =
+            set.events().parties().1.iter().map(|(id, p)| ((*id).clone(), p.name.clone())).collect();
+        let employments = self.workspace.employments(&books, &owner, last).unwrap_or_default();
+        let name_of = |id: &PartyId| names.get(id).cloned().unwrap_or_else(|| id.to_string());
+        self.view.employments = employments.iter().map(|e| (e.id.clone(), name_of(&e.employee))).collect();
+        self.view.payslips = self
+            .workspace
+            .payslips(&books, &owner, first, last)
+            .unwrap_or_default()
+            .into_iter()
+            .map(|p| {
+                let who = employments
+                    .iter()
+                    .find(|e| e.id == p.employment)
+                    .map_or_else(String::new, |e| name_of(&e.employee));
+                (who, p)
+            })
+            .collect();
         self.view.accounts = self.workspace.account_choices(&books, &owner, date, self.lang.code()).unwrap_or_default();
         let by_id: BTreeMap<&AccountId, &AccountChoice> = self.view.accounts.iter().map(|a| (&a.id, a)).collect();
         let balances = events.functional_balances(Some(last)).unwrap_or_default();
@@ -343,34 +372,23 @@ impl<'w> App<'w> {
             let bank = self.workspace.bank_holdings(&books, &owner, last).unwrap_or_else(|_| balance(&standard.bank));
             (money(bank), money(balance(&standard.cash)), money(income), money(expenses))
         });
-        let returns = self.workspace.vat_returns(&books, &owner, self.year).unwrap_or_default();
-        let mut reports: Vec<ReportItem> = returns
+        // Everything to file or pay in the year, by the day it is due: VAT, statements per customer, wage tax,
+        // contributions, certificates, the annual returns.
+        let obligations = self.workspace.obligations(&books, &owner, self.year).unwrap_or_default();
+        let reports: Vec<ReportItem> = obligations
             .iter()
-            .map(|r| ReportItem {
-                id: "de-ustva",
-                name: self.t(Text::VatReturn),
-                from: r.from,
-                to: r.to,
-                due: Some(r.due),
+            .map(|o| ReportItem {
+                id: o.id,
+                name: match o.id {
+                    "de-ustva" => self.t(Text::VatReturn),
+                    "de-zm" => self.t(Text::RecapitulativeStatement),
+                    _ => o.name,
+                },
+                from: o.from,
+                to: o.to,
+                due: o.due,
             })
             .collect();
-        let statements = self.workspace.customer_statements(&books, &owner, self.year).unwrap_or_default();
-        reports.extend(statements.iter().map(|r| ReportItem {
-            id: "de-zm",
-            name: self.t(Text::RecapitulativeStatement),
-            from: r.from,
-            to: r.to,
-            due: Some(r.due),
-        }));
-        let annual = self.workspace.reports(&books, &owner, first, last).unwrap_or_default();
-        let periodic = ["de-ustva", "de-zm"];
-        reports.extend(annual.into_iter().filter(|(id, _)| !periodic.contains(id)).map(|(id, name)| ReportItem {
-            id,
-            name,
-            from: first,
-            to: last,
-            due: None,
-        }));
         self.view.reports = reports;
         self.view.filings = self.workspace.filings(&books).unwrap_or_default();
         let mut upcoming = self.workspace.vat_returns(&books, &owner, today().year()).unwrap_or_default();
@@ -449,6 +467,7 @@ impl App<'_> {
             Tab::Reports => self.view.reports.len() + self.view.filings.len(),
             Tab::Review => self.view.issues.len(),
             Tab::Contacts => self.view.contacts.len(),
+            Tab::Payroll => self.view.payslips.len(),
             Tab::Overview | Tab::Closing => 0,
         }
     }
@@ -459,6 +478,7 @@ impl App<'_> {
         match key.code {
             KeyCode::Char('q') => self.quit = true,
             KeyCode::Char(c @ '1'..='9') => self.tab = Tab::ALL[c as usize - '1' as usize],
+            KeyCode::Char('0') => self.tab = Tab::Payroll,
             KeyCode::Tab => self.tab = Tab::ALL[(self.tab.index() + 1) % Tab::ALL.len()],
             KeyCode::BackTab => self.tab = Tab::ALL[(self.tab.index() + Tab::ALL.len() - 1) % Tab::ALL.len()],
             KeyCode::Char('[') => {
@@ -645,6 +665,29 @@ impl App<'_> {
                 form.help = Some(Text::OpeningHelp);
                 self.mode = Mode::Form(Purpose::Opening, form);
             }
+            KeyCode::Char('b') if self.tab == Tab::Payroll => {
+                let fields = vec![
+                    Field::text(Text::Name, ""),
+                    Field::text(Text::Date, self.lang.date(today())),
+                    Field::text(Text::TaxClass, "1"),
+                    Field::text(Text::ChurchCode, ""),
+                    Field::text(Text::Insurer, ""),
+                    Field::text(Text::ContributionGroups, "1111"),
+                    Field::text(Text::PersonGroup, "101"),
+                    Field::text(Text::AdditionalRate, "2.9"),
+                ];
+                self.mode = Mode::Form(Purpose::Employment, Form::new(Text::NewEmployment, fields));
+            }
+            KeyCode::Char('a') if self.tab == Tab::Payroll && !self.view.employments.is_empty() => {
+                let people = self.view.employments.iter().map(|(id, name)| (name.clone(), id.to_string())).collect();
+                let fields = vec![
+                    Field::choice(Text::Employee, people, 0),
+                    Field::text(Text::Month, today().to_string()[..7].to_owned()),
+                    Field::text(Text::Wage, ""),
+                    Field::text(Text::OneOff, ""),
+                ];
+                self.mode = Mode::Form(Purpose::Payslip, Form::new(Text::PayslipTitle, fields));
+            }
             KeyCode::Char('a') if self.tab == Tab::Accounts => {
                 let methods = vec![
                     (self.t(Text::StraightLine).to_owned(), "straight_line".to_owned()),
@@ -697,6 +740,22 @@ impl App<'_> {
 
     fn open(&mut self, selected: usize) {
         match self.tab {
+            Tab::Payroll => {
+                let Some((who, payslip)) = self.view.payslips.get(selected).cloned() else { return };
+                let names = Names::v0_1("de");
+                let rows = payslip
+                    .figures
+                    .iter()
+                    .map(|(field, money)| {
+                        let name =
+                            names.as_ref().and_then(|n| n.get(&format!("payroll/{field}"))).unwrap_or("").to_owned();
+                        (field.clone(), name, money.clone())
+                    })
+                    .collect();
+                let title = format!("{who} {} – {}", self.lang.date(payslip.from), self.lang.date(payslip.to));
+                let file = format!("payslip-{}-{}", payslip.from, payslip.employment);
+                self.mode = Mode::Figures(Figures { title, law: "de".into(), rows, file, filing: None });
+            }
             Tab::Contacts => {
                 let Some(card) = self.view.contacts.get(selected).cloned() else { return };
                 let form = self.contact_form(&card);
@@ -807,6 +866,10 @@ impl App<'_> {
 
     fn open_report(&mut self, item: &ReportItem) {
         let (Some(books), Some(owner)) = (self.books.clone(), self.owner.clone()) else { return };
+        if matches!(item.id, "de-bn" | "de-lstb") {
+            self.open_payroll_statement(&books, &owner, item);
+            return;
+        }
         match self.workspace.report(&books, &owner, item.id, item.from, item.to) {
             Ok(figures) => {
                 let names = Names::v0_1(self.lang.code());
@@ -835,6 +898,56 @@ impl App<'_> {
             }
             Err(error) => self.fail(error.to_string()),
         }
+    }
+
+    /// The Beitragsnachweis of a month – per insurer – or the certificates of wage tax of a year – per employee –,
+    /// to be entered where they are filed (SV-Meldeportal, ELSTER).
+    fn open_payroll_statement(&mut self, books: &BooksId, owner: &PartyId, item: &ReportItem) {
+        let names = Names::v0_1("de");
+        let name = |key: String| names.as_ref().and_then(|n| n.get(&key)).unwrap_or("").to_owned();
+        let employments = self.workspace.employments(books, owner, item.to).unwrap_or_default();
+        let (_, persons) = match self.workspace.get(books) {
+            Ok(set) => set.events().parties(),
+            Err(error) => return self.fail(error.to_string()),
+        };
+        let mut rows = Vec::new();
+        if item.id == "de-bn" {
+            let mut insurers: Vec<String> =
+                employments.iter().filter_map(|e| e.de.as_ref().map(|de| de.insurance.insurer.clone())).collect();
+            insurers.sort();
+            insurers.dedup();
+            for insurer in insurers {
+                let fields = self
+                    .workspace
+                    .contribution_statement(books, owner, &insurer, item.from, item.to)
+                    .unwrap_or_default();
+                for (field, units) in fields {
+                    rows.push((
+                        format!("{insurer}/{field}"),
+                        name(format!("de-bn/{field}")),
+                        Money::new(units, eur()).expect("an amount"),
+                    ));
+                }
+            }
+        } else {
+            for employment in &employments {
+                let who = persons
+                    .get(&employment.employee)
+                    .map_or_else(|| employment.employee.to_string(), |p| p.name.clone());
+                let lines =
+                    self.workspace.wage_tax_certificate(books, &employment.id, item.to.year()).unwrap_or_default();
+                for (line, units) in lines.unwrap_or_default() {
+                    rows.push((
+                        format!("{who}/{line}"),
+                        name(format!("de-lstb/{line}")),
+                        Money::new(units, eur()).expect("an amount"),
+                    ));
+                }
+            }
+        }
+        let title = format!("{} {} – {}", item.name, self.lang.date(item.from), self.lang.date(item.to));
+        let file = format!("{}-{}-{}", item.id, item.from, item.to);
+        self.mode = Mode::Figures(Figures { title, law: "de".into(), rows, file, filing: None });
     }
 
     fn in_form(&mut self, purpose: Purpose, mut form: Form, key: KeyEvent) {
@@ -1044,6 +1157,77 @@ impl App<'_> {
                 };
                 self.workspace.save_contact(&books, &owner, card).map_err(|e| e.to_string())?;
                 self.say(self.t(Text::Saved));
+                Ok(())
+            }
+            Purpose::Employment => {
+                let (books, owner) = (self.books.clone().ok_or("no books")?, self.owner.clone().ok_or("no owner")?);
+                let name = form.field(Text::Name).value.trim().to_owned();
+                if name.is_empty() {
+                    return Err(self.t(Text::Invalid).to_owned());
+                }
+                let employee: PartyId = spezado_app::new_id();
+                let person: librotenado::Person =
+                    serde_json::from_value(serde_json::json!({"id": employee.as_str(), "name": name}))
+                        .map_err(|e| e.to_string())?;
+                self.workspace.execute(&books, Command::DescribePerson(person)).map_err(|e| e.to_string())?;
+                let value = |label| form.field(label).value.trim().to_owned();
+                let church = Some(value(Text::ChurchCode)).filter(|c| !c.is_empty());
+                let class = value(Text::TaxClass).parse::<u8>().map_err(|_| self.t(Text::Invalid))?;
+                let mut tax = serde_json::json!({ "class": class });
+                if let Some(church) = church {
+                    tax["church"] = church.into();
+                }
+                let mut insurance = serde_json::json!({
+                    "insurer": value(Text::Insurer),
+                    "contribution_group": value(Text::ContributionGroups),
+                    "person_group": value(Text::PersonGroup),
+                });
+                if !value(Text::AdditionalRate).is_empty() {
+                    insurance["additional_rate"] = value(Text::AdditionalRate).into();
+                }
+                let de: librotenado::payroll::GermanEmployment =
+                    serde_json::from_value(serde_json::json!({ "tax": tax, "insurance": insurance }))
+                        .map_err(|e| e.to_string())?;
+                let new = spezado_app::NewEmployment {
+                    owner,
+                    employee,
+                    start: self.date(form, Text::Date)?,
+                    end: None,
+                    number: None,
+                    born: None,
+                    de,
+                };
+                self.workspace.add_employment(&books, new).map_err(|e| e.to_string())?;
+                self.say(self.t(Text::Saved));
+                Ok(())
+            }
+            Purpose::Payslip => {
+                let books = self.books.clone().ok_or("no books")?;
+                let employment: librotenado::payroll::EmploymentId =
+                    form.field(Text::Employee).get().parse().map_err(|_| self.t(Text::Invalid))?;
+                let month = form.field(Text::Month).value.trim().to_owned();
+                let (year, number) = month
+                    .split_once('-')
+                    .and_then(|(y, m)| Some((y.parse::<u16>().ok()?, m.parse::<u8>().ok()?)))
+                    .ok_or_else(|| self.t(Text::Invalid).to_owned())?;
+                let mut items = Vec::new();
+                for (label, kind, name) in [
+                    (Text::Wage, librotenado::payroll::PayItemKind::Wage, "Lohn/Gehalt"),
+                    (Text::OneOff, librotenado::payroll::PayItemKind::OneOff, "Einmalzahlung"),
+                ] {
+                    let text = form.field(label).value.trim().to_owned();
+                    if !text.is_empty() {
+                        items.push(librotenado::payroll::PayItem {
+                            kind,
+                            name: name.into(),
+                            amount: self.amount(&text)?,
+                        });
+                    }
+                }
+                let payslip =
+                    self.workspace.payslip(&books, &employment, year, number, items).map_err(|e| e.to_string())?;
+                self.workspace.record_payslip(&books, payslip).map_err(|e| e.to_string())?;
+                self.say(self.t(Text::PayslipRecorded));
                 Ok(())
             }
             Purpose::Asset => {

@@ -21,7 +21,9 @@ use crate::{Api, ApiError, dto};
 pub fn routes() -> Router<Api> {
     Router::new()
         .route("/books/{books}/employments", get(employments).post(add_employment))
-        .route("/books/{books}/payslips", post(payslip))
+        .route("/books/{books}/payslips", get(payslips).post(payslip))
+        .route("/books/{books}/partners", get(partners))
+        .route("/books/{books}/partners/{partner}/capital-accounts", post(partner_accounts))
         .route("/books/{books}/contributions", get(contributions))
         .route("/books/{books}/employments/{employment}/certificate", get(certificate))
 }
@@ -313,6 +315,114 @@ pub(crate) async fn certificate(
             lines
                 .into_iter()
                 .map(|(line, units)| (line, format_amount(&Money::new(units, eur()).expect("an amount"))))
+                .collect(),
+        ))
+    })
+    .await
+}
+
+/// The calendar year of the payslips.
+#[derive(Debug, Deserialize, IntoParams)]
+pub(crate) struct YearQuery {
+    /// The calendar year; default this one.
+    year: Option<u16>,
+}
+
+/// The payslips that apply for periods ending in a calendar year – corrections in place of what they replace.
+#[utoipa::path(get, path = "/api/v1/books/{books}/payslips", params(("books" = String, Path), YearQuery),
+    responses((status = 200, body = Vec<dto::PayslipView>)))]
+pub(crate) async fn payslips(
+    State(api): State<Api>,
+    Path(books): Path<String>,
+    Query(query): Query<YearQuery>,
+) -> Result<Json<Vec<dto::PayslipView>>, ApiError> {
+    api.run(move |workspace| {
+        let books = books_id(&books)?;
+        let owner = owner(workspace, &books)?;
+        let year = query.year.unwrap_or_else(|| today().year());
+        let (from, to) = (Date::new(year, 1, 1).expect("a date"), Date::new(year, 12, 31).expect("a date"));
+        Ok(Json(workspace.payslips(&books, &owner, from, to)?.iter().map(|p| view(p, true)).collect()))
+    })
+    .await
+}
+
+/// How a partner is liable: `unlimited` or `limited`.
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
+pub(crate) struct PartnerAccounts {
+    /// `unlimited` (Vollhafter) or `limited` (Teilhafter).
+    liability: String,
+}
+
+/// Opens the capital accounts of a partner for the Kapitalkontenentwicklung of the E-Bilanz; returns their identities.
+#[utoipa::path(post, path = "/api/v1/books/{books}/partners/{partner}/capital-accounts",
+    params(("books" = String, Path), ("partner" = String, Path)),
+    request_body = PartnerAccounts, responses((status = 200, body = Vec<String>), (status = 422, body = dto::Problem)))]
+pub(crate) async fn partner_accounts(
+    State(api): State<Api>,
+    Path((books, partner)): Path<(String, String)>,
+    Json(request): Json<PartnerAccounts>,
+) -> Result<Json<Vec<String>>, ApiError> {
+    let id = books.clone();
+    let opened = api
+        .run(move |workspace| {
+            let books = books_id(&books)?;
+            let partner: PartyId = partner.parse().map_err(|_| ApiError::bad("not the identity of a party"))?;
+            let liability = match request.liability.as_str() {
+                "unlimited" => librotenado::Liability::Unlimited,
+                "limited" => librotenado::Liability::Limited,
+                other => return Err(ApiError::bad(format!("not a liability: {other:?}"))),
+            };
+            Ok(workspace
+                .open_partner_accounts(&books, &partner, liability)?
+                .into_iter()
+                .map(|(account, _)| account.to_string())
+                .collect())
+        })
+        .await?;
+    api.changed(&id);
+    Ok(Json(opened))
+}
+
+/// A partner of the owner: a person with the role `partner` in it.
+#[derive(Debug, serde::Serialize, utoipa::ToSchema)]
+pub(crate) struct Partner {
+    /// The person.
+    id: String,
+    /// Their name.
+    name: String,
+    /// Whether capital accounts are opened for them.
+    accounts: bool,
+}
+
+/// The partners of the owner, a partnership, and whether their capital accounts are opened.
+#[utoipa::path(get, path = "/api/v1/books/{books}/partners", params(("books" = String, Path)),
+    responses((status = 200, body = Vec<Partner>)))]
+pub(crate) async fn partners(
+    State(api): State<Api>,
+    Path(books): Path<String>,
+) -> Result<Json<Vec<Partner>>, ApiError> {
+    api.run(move |workspace| {
+        let books = books_id(&books)?;
+        let owner = owner(workspace, &books)?;
+        let events = workspace.get(&books)?.events();
+        let (_, persons) = events.parties();
+        let opened: Vec<String> = events
+            .ordered()
+            .into_iter()
+            .filter_map(|(_, e)| match &e.payload {
+                librotenado::Payload::AccountOpened { account } => account.attributes.get("partner").cloned(),
+                _ => None,
+            })
+            .collect();
+        Ok(Json(
+            persons
+                .values()
+                .filter(|p| p.roles.iter().any(|r| r.organisation == owner && r.kind == librotenado::RoleKind::Partner))
+                .map(|p| Partner {
+                    id: p.id.to_string(),
+                    name: p.name.clone(),
+                    accounts: opened.contains(&p.id.to_string()),
+                })
                 .collect(),
         ))
     })

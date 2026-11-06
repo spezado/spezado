@@ -51,6 +51,7 @@ use crate::{Api, ApiError, dto};
         reverse,
         reports,
         report,
+        obligations,
         review,
         close,
         reopen,
@@ -89,6 +90,9 @@ use crate::{Api, ApiError, dto};
         crate::payroll::employments,
         crate::payroll::add_employment,
         crate::payroll::payslip,
+        crate::payroll::payslips,
+        crate::payroll::partner_accounts,
+        crate::payroll::partners,
         crate::payroll::contributions,
         crate::payroll::certificate,
         crate::filings::filings,
@@ -129,6 +133,7 @@ pub fn protected() -> Router<Api> {
         .route("/books/{books}/profit-tax", get(profit_tax).put(change_profit_tax))
         .route("/books/{books}/reversals", post(reverse))
         .route("/books/{books}/reports", get(reports))
+        .route("/books/{books}/obligations", get(obligations))
         .route("/books/{books}/reports/{report}", get(report))
         .route("/books/{books}/review", get(review))
         .route("/books/{books}/closings", post(close))
@@ -838,6 +843,35 @@ async fn deadlines(State(api): State<Api>, Path(books): Path<String>) -> Result<
             region: configuration.and_then(|c| c.region.as_ref()).map(ToString::to_string),
             vat_extended: configuration.and_then(|c| c.vat.as_ref()).is_some_and(|v| v.extended),
         }))
+    })
+    .await
+}
+
+/// What the owner has to file or pay for a calendar year, by the day it is due.
+#[utoipa::path(get, path = "/api/v1/books/{books}/obligations", params(("books" = String, Path), YearQuery),
+    responses((status = 200, body = Vec<dto::Obligation>)))]
+async fn obligations(
+    State(api): State<Api>,
+    Path(books): Path<String>,
+    Query(query): Query<YearQuery>,
+) -> Result<Json<Vec<dto::Obligation>>, ApiError> {
+    api.run(move |workspace| {
+        let books = books_id(&books)?;
+        let owner = owner(workspace, &books)?;
+        let year = query.year.unwrap_or_else(|| today().year());
+        Ok(Json(
+            workspace
+                .obligations(&books, &owner, year)?
+                .into_iter()
+                .map(|o| dto::Obligation {
+                    id: o.id.to_owned(),
+                    name: o.name.to_owned(),
+                    from: o.from.to_string(),
+                    to: o.to.to_string(),
+                    due: o.due.map(|d| d.to_string()),
+                })
+                .collect(),
+        ))
     })
     .await
 }

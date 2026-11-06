@@ -114,7 +114,7 @@ fn draw_head(frame: &mut Frame, app: &App, area: Rect, hits: &mut Hits) {
         .iter()
         .enumerate()
         .map(|(i, tab)| {
-            let mut label = format!("{} {}", i + 1, t(tab.title()));
+            let mut label = format!("{} {}", (i + 1) % 10, t(tab.title()));
             if *tab == Tab::Review && !app.view.issues.is_empty() {
                 label.push_str(&format!(" ({})", app.view.issues.len()));
             }
@@ -198,6 +198,9 @@ fn keys(app: &App) -> Vec<(Text, KeyCode)> {
         ],
         (Mode::Normal, Tab::Reports) => vec![(Text::KeyOpen, KeyCode::Enter)],
         (Mode::Normal, Tab::Contacts) => vec![(Text::KeyNewContact, char('k')), (Text::KeyOpen, KeyCode::Enter)],
+        (Mode::Normal, Tab::Payroll) => {
+            vec![(Text::KeyNewEmployment, char('b')), (Text::KeyPayslip, char('a')), (Text::KeyOpen, KeyCode::Enter)]
+        }
         (Mode::Normal, Tab::Closing) => {
             vec![(Text::KeyClose, char('c')), (Text::KeyReopen, char('u')), (Text::KeyGobd, char('g'))]
         }
@@ -310,6 +313,46 @@ fn draw_tab(frame: &mut Frame, app: &App, area: Rect, hits: &mut Hits) {
             let mut state = TableState::new().with_selected(Some(selected_row));
             frame.render_stateful_widget(table, inner, &mut state);
             row_hits(hits, inner, 1, state.offset(), app.view.documents.len());
+        }
+        Tab::Payroll => {
+            if app.view.payslips.is_empty() {
+                frame.render_widget(Paragraph::new(t(Text::NoPayslips)).style(dim()), inner);
+                return;
+            }
+            let figure = |p: &librotenado::payroll::Payslip, name: &str| {
+                p.figures.get(name).map(|m| app.lang.amount(m)).unwrap_or_default()
+            };
+            let rows = app.view.payslips.iter().map(|(who, p)| {
+                Row::new(vec![
+                    who.clone(),
+                    app.lang.date(p.from),
+                    app.lang.date(p.to),
+                    figure(p, "gross"),
+                    figure(p, "net"),
+                    figure(p, "payout"),
+                ])
+            });
+            let header = Row::new(vec![
+                t(Text::Employee),
+                t(Text::From),
+                t(Text::To),
+                t(Text::Gross),
+                t(Text::Net),
+                t(Text::Payout),
+            ])
+            .style(accent());
+            let widths = [
+                Constraint::Min(20),
+                Constraint::Length(10),
+                Constraint::Length(10),
+                Constraint::Length(14),
+                Constraint::Length(14),
+                Constraint::Length(14),
+            ];
+            let table = Table::new(rows, widths).header(header).row_highlight_style(selected());
+            let mut state = TableState::new().with_selected(Some(selected_row));
+            frame.render_stateful_widget(table, inner, &mut state);
+            row_hits(hits, inner, 1, state.offset(), app.view.payslips.len());
         }
         Tab::Contacts => {
             if app.view.contacts.is_empty() {

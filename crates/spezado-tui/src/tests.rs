@@ -224,6 +224,40 @@ fn contacts_are_kept_and_changed() {
 }
 
 #[test]
+fn an_employee_is_hired_and_paid_in_the_terminal() {
+    let scratch = Scratch::new("payroll");
+    let mut workspace = Workspace::create(&scratch.0, "laptop".parse().unwrap()).unwrap();
+    let mut app = App::new(&mut workspace, Lang::De);
+    set_up(&mut app);
+    press(&mut app, KeyCode::Char('0'));
+    assert!(screen(&app).contains("Keine Lohnabrechnungen"), "{}", screen(&app));
+    // A new employee: name, start, class, church, insurer, groups, person group, additional rate.
+    press(&mut app, KeyCode::Char('b'));
+    type_in(&mut app, "Erika Muster");
+    for _ in 0..4 {
+        press(&mut app, KeyCode::Enter);
+    }
+    type_in(&mut app, "12345678");
+    for _ in 0..4 {
+        press(&mut app, KeyCode::Enter);
+    }
+    assert!(matches!(app.mode, Mode::Normal), "{:?}", app.status);
+    assert_eq!(app.view.employments.len(), 1);
+    // A payslip of this month with 3,000: recorded and booked, shown with its figures.
+    press(&mut app, KeyCode::Char('a'));
+    press(&mut app, KeyCode::Enter);
+    press(&mut app, KeyCode::Enter);
+    type_in(&mut app, "3000");
+    press(&mut app, KeyCode::Enter);
+    press(&mut app, KeyCode::Enter);
+    assert!(matches!(app.mode, Mode::Normal), "{:?}", app.status);
+    assert_eq!(app.view.payslips.len(), 1, "{:?}", app.status);
+    assert!(screen(&app).contains("Erika Muster"));
+    press(&mut app, KeyCode::Enter);
+    assert!(screen(&app).contains("wage_tax"), "{}", screen(&app));
+}
+
+#[test]
 fn a_period_is_closed_and_the_data_transfer_written() {
     let scratch = Scratch::new("close");
     let mut workspace = Workspace::create(&scratch.0, "laptop".parse().unwrap()).unwrap();

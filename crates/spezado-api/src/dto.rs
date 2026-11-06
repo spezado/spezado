@@ -1410,3 +1410,18 @@ pub struct ProfitTaxFacts {
     #[serde(default)]
     pub interest_exception: bool,
 }
+
+/// Something to file or to pay, for a period, by a day.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct Obligation {
+    /// The report or what it is: `de-ustva`, `de-zm`, `de-lsta`, `de-bn`, `de-lstb`, an annual report.
+    pub id: String,
+    /// Its name.
+    pub name: String,
+    /// The first day of its period, `YYYY-MM-DD`.
+    pub from: String,
+    /// The last day of its period.
+    pub to: String,
+    /// The day it is due; none where the law sets none.
+    pub due: Option<String>,
+}

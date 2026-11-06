@@ -220,3 +220,55 @@ impl Workspace {
             .collect())
     }
 }
+
+/// The capital accounts a partner gets: the kind of the Kapitalkontenentwicklung and the account of SKR 03 – the same
+/// harmonised account in SKR 04 – it is opened below.
+fn partner_accounts(liability: librotenado::Liability) -> &'static [(&'static str, &'static str)] {
+    match liability {
+        // Festkapital, variables Kapital, Privatkonto.
+        librotenado::Liability::Unlimited => &[("FK", "0870"), ("VK", "0880"), ("VK", "1800")],
+        // Kommandit-Kapital as fixed capital (KK is closed since 2022), variables Kapital, Verlustausgleichskonto,
+        // Privatkonto.
+        librotenado::Liability::Limited => &[("FK", "0900"), ("VK", "0880"), ("VVK", "0910"), ("VK", "1800")],
+    }
+}
+
+impl Workspace {
+    /// Opens the capital accounts of a partner of a partnership – fixed and variable capital, losses carried for a
+    /// limited partner, a private account –, with the attributes the Kapitalkontenentwicklung of the E-Bilanz reads
+    /// (`partner`, `liability`, `capital`, librotenado 0009). Returns the accounts opened with their kind.
+    pub fn open_partner_accounts(
+        &mut self,
+        books: &BooksId,
+        partner: &PartyId,
+        liability: librotenado::Liability,
+    ) -> Result<Vec<(librotenado::AccountId, &'static str)>, AppError> {
+        let skr03 = librotenado::ChartTranslation::de_skr03();
+        let mut opened = Vec::new();
+        for (kind, number) in partner_accounts(liability) {
+            let parent =
+                skr03.accounts.get(*number).cloned().ok_or_else(|| AppError::UnknownChart(number.to_string()))?;
+            let attributes = std::collections::BTreeMap::from([
+                ("partner".to_owned(), partner.to_string()),
+                (
+                    "liability".to_owned(),
+                    match liability {
+                        librotenado::Liability::Unlimited => "unlimited".to_owned(),
+                        librotenado::Liability::Limited => "limited".to_owned(),
+                    },
+                ),
+                ("capital".to_owned(), (*kind).to_owned()),
+            ]);
+            let account = librotenado::Account {
+                id: new_id(),
+                kind: librotenado::AccountKind::Equity,
+                parent: Some(parent),
+                attributes,
+            };
+            let id = account.id.clone();
+            self.execute(books, Command::OpenAccount(account))?;
+            opened.push((id, *kind));
+        }
+        Ok(opened)
+    }
+}

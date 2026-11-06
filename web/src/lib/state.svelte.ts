@@ -4,7 +4,7 @@
 
 import { catalog, type Key, type Lang } from "./i18n";
 
-export const pages = ["overview", "journal", "bank", "documents", "invoices", "accounts", "reports", "review", "closing", "contacts", "assets", "book"] as const;
+export const pages = ["overview", "journal", "bank", "documents", "invoices", "accounts", "reports", "review", "closing", "contacts", "assets", "payroll", "taxes", "book"] as const;
 export type Page = (typeof pages)[number];
 export type Theme = "auto" | "light" | "dark";
 

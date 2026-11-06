@@ -30,6 +30,7 @@ mod filing;
 mod income;
 mod invoice_pdf;
 mod invoicing;
+mod obligations;
 mod opening;
 mod payroll;
 mod review;
@@ -44,6 +45,7 @@ pub use income::{IncomeFacts, ProfitFacts};
 pub use invoicing::{
     BOOKING_TAX_CODES, Customer, INVOICE_TAX_CODES, InvoiceFormat, InvoiceProfile, NewInvoice, NewLine, WrittenInvoice,
 };
+pub use obligations::Obligation;
 pub use payroll::NewEmployment;
 pub use spezado_law_de::STATES as GERMAN_STATES;
 pub use sync::{SyncMember, SyncReport, parse_invitation};

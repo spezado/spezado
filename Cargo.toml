@@ -15,7 +15,7 @@ publish = false
 # Each crate names its other dependencies with exact versions, each the newest that is at least 14 days old
 # (scripts/check-age.py); a fix for a security advisory may be younger.
 # The protocol (MIT, its reference data CC BY 4.0).
-librotenado = "=0.23.0"
+librotenado = "=0.24.0"
 spezado-api = { path = "crates/spezado-api" }
 spezado-app = { path = "crates/spezado-app" }
 spezado-core = { path = "crates/spezado-core" }
