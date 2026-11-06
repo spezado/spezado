@@ -4,7 +4,7 @@
 
 use std::collections::BTreeMap;
 
-use librotenado::payroll::{Employment, EmploymentId, GermanEmployment, PayItem, Payslip};
+use librotenado::payroll::{Employment, EmploymentId, GermanEmployment, PayItem, Payslip, PayslipId};
 use librotenado::{Booking, Date, PartyId};
 use spezado_core::Command;
 
@@ -97,7 +97,65 @@ impl Workspace {
         }
         let figures =
             events.payslip_figures(employment, from, to, &items).map_err(|e| AppError::Payroll(e.to_string()))?;
-        Ok(Payslip { id: new_id(), employment: employment.clone(), from, to, paid: last, items, figures })
+        Ok(Payslip {
+            id: new_id(),
+            employment: employment.clone(),
+            from,
+            to,
+            paid: last,
+            replaces: None,
+            items,
+            figures,
+        })
+    }
+
+    /// A correction of a recorded payslip (Rückrechnung): the same employment and period with other items, paid on
+    /// `paid`, with the figures the rules give now. Nothing is recorded.
+    pub fn correction(
+        &self,
+        books: &BooksId,
+        replaced: &PayslipId,
+        items: Vec<PayItem>,
+        paid: Date,
+    ) -> Result<Payslip, AppError> {
+        let events = self.get(books)?.events();
+        let old = events
+            .owners()
+            .into_iter()
+            .flat_map(|owner| events.payslips(owner))
+            .find(|p| p.id == *replaced)
+            .ok_or_else(|| AppError::Payroll(format!("payslip {replaced} is not one that applies")))?;
+        if items.is_empty() {
+            return Err(AppError::Payroll("a payslip needs at least one item".into()));
+        }
+        let figures = events
+            .payslip_figures(&old.employment, old.from, old.to, &items)
+            .map_err(|e| AppError::Payroll(e.to_string()))?;
+        Ok(Payslip {
+            id: new_id(),
+            employment: old.employment,
+            from: old.from,
+            to: old.to,
+            paid,
+            replaces: Some(old.id),
+            items,
+            figures,
+        })
+    }
+
+    /// The Lohnsteuerbescheinigung of an employment for a year: its lines in cents; none for wages taxed at a flat
+    /// rate or a year without payslips.
+    pub fn wage_tax_certificate(
+        &self,
+        books: &BooksId,
+        employment: &EmploymentId,
+        year: u16,
+    ) -> Result<Option<BTreeMap<String, i128>>, AppError> {
+        Ok(self
+            .get(books)?
+            .events()
+            .wage_tax_certificate(employment, year)
+            .map(|lines| lines.into_iter().map(|(line, units)| (line.to_owned(), units)).collect()))
     }
 
     /// Records a payslip and books it: the wages and what the employer pays as expenses against the liabilities, on
@@ -111,12 +169,24 @@ impl Workspace {
         let name =
             persons.get(&employment.employee).map_or_else(|| employment.employee.to_string(), |p| p.name.clone());
         let minor = employment.de.as_ref().is_some_and(|de| de.insurance.person_group == "109");
+        let postings = match &payslip.replaces {
+            None => payslip.postings(&employment.owner, minor),
+            Some(id) => {
+                let replaced = events
+                    .recorded_payslips(&employment.owner)
+                    .into_iter()
+                    .find(|p| p.id == *id)
+                    .ok_or_else(|| AppError::Payroll(format!("payslip {id} is not recorded")))?;
+                payslip.correction_postings(&replaced, &employment.owner, minor)
+            }
+        };
+        let correction = if payslip.replaces.is_some() { "Korrektur " } else { "" };
         let booking = Booking {
             basis: None,
             attributed: None,
             date: payslip.paid,
-            text: format!("Lohn {:02}/{} {name}", payslip.to.month(), payslip.to.year()),
-            postings: payslip.postings(&employment.owner, minor),
+            text: format!("{correction}Lohn {:02}/{} {name}", payslip.to.month(), payslip.to.year()),
+            postings,
             documents: vec![],
             entries: vec![],
             transaction: None,

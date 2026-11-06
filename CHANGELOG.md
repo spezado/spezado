@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **Payroll completed** after librotenado 0.21: corrections of a recorded payslip (`spezado payslip --corrects …
+  --wage … --record`, `corrects` in `/payslips`) booked as the difference; the Lohnsteuerbescheinigung
+  (`spezado wage-tax-certificate --employment … --year 2026`, `/employments/{id}/certificate`); short-term
+  employment (`--short-term --person-group 110 --groups 0000`) and minor employment in a private household
+  (`--household`); the Märzklausel, the church taxes of all communities in `de-lsta`. Beitragsnachweis and DEÜV
+  notifications are computed but not transmitted: that needs a program approved by the GKV-Spitzenverband
+  (§ 95b SGB IV) – enter them in the SV-Meldeportal.
+- **Taxes on profit:** what the books do not hold – losses carried forward, trade losses, a reduction for land beside
+  the land tax booked, turnover and wages, the share held – `spezado profit-tax --year …`, `/profit-tax`; the
+  reports `de-anlage-g` and `de-anlage-s` with the lines of the income tax forms (Kennzahlen of 2025).
+
 - **Payroll** after librotenado 0013: employments (`spezado employment add --name … --start … --class 1 --insurer
   … --groups 1111 --person-group 101 --additional-rate 2.9`, `/employments` in the API) and a payslip per month
   (`spezado payslip --employment … --month 2026-01 --wage 4000.00 [--one-off …] [--record]`, `/payslips`): the wage

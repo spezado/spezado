@@ -61,6 +61,9 @@ pub enum ReportBasis {
     IncomeTax,
     /// From the payslips for periods ending within the period – a wage tax return (librotenado spec part 0013).
     Payroll,
+    /// The lines of a person's profit in the forms of the income tax return – Anlage G or Anlage S (librotenado spec
+    /// part 0012).
+    IncomeTaxForm,
 }
 
 /// A report that applies to an owner for a period.

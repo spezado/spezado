@@ -1507,6 +1507,61 @@
         }
       }
     },
+    "/api/v1/books/{books}/employments/{employment}/certificate": {
+      "get": {
+        "tags": [
+          "crate::payroll"
+        ],
+        "summary": "The Lohnsteuerbescheinigung of an employment for a year: its numbered lines in euros (names `de-lstb/<line>`);\nempty for wages taxed at a flat rate or a year without payslips.",
+        "operationId": "certificate",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "employment",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "description": "The calendar year.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "propertyNames": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/books/{books}/filings": {
       "get": {
         "tags": [
@@ -2308,6 +2363,131 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PayslipView"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/books/{books}/profit-tax": {
+      "get": {
+        "tags": [],
+        "summary": "What the owner stated for the taxes on profit of a year beside the books (shown in de-kst, de-gewst, de-est).",
+        "operationId": "profit_tax",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "description": "The calendar year.",
+            "required": false,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "The language of names: `de` or `en`.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfitTaxFacts"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [],
+        "summary": "Stores what the owner states for the taxes on profit of a year – on this device, not in the books' events.",
+        "operationId": "change_profit_tax",
+        "parameters": [
+          {
+            "name": "books",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "description": "The calendar year.",
+            "required": false,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "The language of names: `de` or `en`.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfitTaxFacts"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfitTaxFacts"
                 }
               }
             }
@@ -4538,6 +4718,10 @@
             "type": "boolean",
             "description": "Taxed at the flat rate of 2 % (minor employment)."
           },
+          "household": {
+            "type": "boolean",
+            "description": "A minor employment in a private household."
+          },
           "insurer": {
             "type": "string",
             "description": "The company number of the health insurer – for a minor employment the Minijob-Zentrale."
@@ -4563,6 +4747,10 @@
           "saxony": {
             "type": "boolean",
             "description": "The employee works in Saxony."
+          },
+          "short_term": {
+            "type": "boolean",
+            "description": "Taxed at the flat rate of 25 % (short-term employment, person group 110)."
           },
           "start": {
             "type": "string",
@@ -4960,6 +5148,13 @@
           "items"
         ],
         "properties": {
+          "corrects": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The payslip this one corrects (Rückrechnung): its employment and month are taken; `employment` and `month`\nare then ignored."
+          },
           "employment": {
             "type": "string",
             "description": "The employment."
@@ -4974,6 +5169,13 @@
           "month": {
             "type": "string",
             "description": "The month, `YYYY-MM`."
+          },
+          "paid": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "For a correction, the day the difference is paid, `YYYY-MM-DD`; default today."
           },
           "record": {
             "type": "boolean",
@@ -5031,6 +5233,13 @@
           "recorded": {
             "type": "boolean",
             "description": "Whether it was recorded and booked."
+          },
+          "replaces": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The payslip it corrects, if it is a correction."
           },
           "to": {
             "type": "string",
@@ -5108,6 +5317,47 @@
           "error": {
             "type": "string",
             "description": "What happened, in English."
+          }
+        }
+      },
+      "ProfitTaxFacts": {
+        "type": "object",
+        "description": "What the books do not hold of the taxes on profit of a year (librotenado spec part 0012).",
+        "properties": {
+          "holding": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The share held in corporations: `at_least_15`, `10_to_15`, `below_10`."
+          },
+          "income_losses": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Losses carried forward for corporation or income tax, in euros."
+          },
+          "land_reduction": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The reduction for land (§ 9 Nr. 1 GewStG)."
+          },
+          "trade_losses": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Trade losses carried forward."
+          },
+          "turnover_and_wages": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Turnover and wages of the year, for the cap of donations; none if not stated."
           }
         }
       },

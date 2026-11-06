@@ -23,6 +23,7 @@ pub fn routes() -> Router<Api> {
         .route("/books/{books}/employments", get(employments).post(add_employment))
         .route("/books/{books}/payslips", post(payslip))
         .route("/books/{books}/contributions", get(contributions))
+        .route("/books/{books}/employments/{employment}/certificate", get(certificate))
 }
 
 fn books_id(text: &str) -> Result<BooksId, ApiError> {
@@ -78,6 +79,7 @@ fn view(payslip: &Payslip, recorded: bool) -> dto::PayslipView {
             .collect(),
         figures: payslip.figures.iter().map(|(n, m)| (n.clone(), format_amount(m))).collect(),
         recorded,
+        replaces: payslip.replaces.as_ref().map(ToString::to_string),
     }
 }
 
@@ -144,6 +146,7 @@ pub(crate) async fn add_employment(
                     allowance: None,
                     addition: None,
                     flat: request.flat,
+                    short_term: request.short_term,
                 },
                 insurance: GermanInsurance {
                     insurer: request.insurer.clone(),
@@ -156,6 +159,7 @@ pub(crate) async fn add_employment(
                     saxony: request.saxony,
                     u1: decimal(&request.u1)?,
                     u2: decimal(&request.u2)?,
+                    household: request.household,
                 },
             };
             let new = NewEmployment {
@@ -190,13 +194,21 @@ pub(crate) async fn payslip(
     let result = api
         .run(move |workspace| {
             let books = books_id(&books)?;
-            let employment =
-                request.employment.parse().map_err(|_| ApiError::bad("not the identity of an employment"))?;
-            let (year, month) = request
+            let correction = request.corrects.is_some();
+            let employment = match request.employment.parse() {
+                Ok(id) => id,
+                Err(_) if correction => new_id(),
+                Err(_) => return Err(ApiError::bad("not the identity of an employment")),
+            };
+            let (year, month) = match request
                 .month
                 .split_once('-')
                 .and_then(|(y, m)| Some((y.parse::<u16>().ok()?, m.parse::<u8>().ok()?)))
-                .ok_or_else(|| ApiError::bad("a month is written YYYY-MM"))?;
+            {
+                Some(month) => month,
+                None if correction => (0, 0),
+                None => return Err(ApiError::bad("a month is written YYYY-MM")),
+            };
             let mut items = Vec::new();
             for item in &request.items {
                 let kind = match item.kind.as_str() {
@@ -211,7 +223,14 @@ pub(crate) async fn payslip(
                 let amount: Money = parse_amount(&item.amount, &eur()).map_err(|e| ApiError::bad(e.to_string()))?;
                 items.push(PayItem { kind, name: item.name.clone(), amount });
             }
-            let payslip = workspace.payslip(&books, &employment, year, month, items)?;
+            let payslip = match &request.corrects {
+                Some(replaced) => {
+                    let replaced = replaced.parse().map_err(|_| ApiError::bad("not the identity of a payslip"))?;
+                    let paid = request.paid.as_deref().map(date).transpose()?.unwrap_or_else(today);
+                    workspace.correction(&books, &replaced, items, paid)?
+                }
+                None => workspace.payslip(&books, &employment, year, month, items)?,
+            };
             let view = view(&payslip, record);
             if record {
                 workspace.record_payslip(&books, payslip)?;
@@ -253,6 +272,37 @@ pub(crate) async fn contributions(
             fields
                 .into_iter()
                 .map(|(field, units)| (field, format_amount(&Money::new(units, eur()).expect("an amount"))))
+                .collect(),
+        ))
+    })
+    .await
+}
+
+/// The calendar year of a certificate.
+#[derive(Debug, Deserialize, IntoParams)]
+pub(crate) struct CertificateQuery {
+    /// The calendar year.
+    year: u16,
+}
+
+/// The Lohnsteuerbescheinigung of an employment for a year: its numbered lines in euros (names `de-lstb/<line>`);
+/// empty for wages taxed at a flat rate or a year without payslips.
+#[utoipa::path(get, path = "/api/v1/books/{books}/employments/{employment}/certificate",
+    params(("books" = String, Path), ("employment" = String, Path), CertificateQuery),
+    responses((status = 200, body = BTreeMap<String, String>)))]
+pub(crate) async fn certificate(
+    State(api): State<Api>,
+    Path((books, employment)): Path<(String, String)>,
+    Query(query): Query<CertificateQuery>,
+) -> Result<Json<BTreeMap<String, String>>, ApiError> {
+    api.run(move |workspace| {
+        let books = books_id(&books)?;
+        let employment = employment.parse().map_err(|_| ApiError::bad("not the identity of an employment"))?;
+        let lines = workspace.wage_tax_certificate(&books, &employment, query.year)?.unwrap_or_default();
+        Ok(Json(
+            lines
+                .into_iter()
+                .map(|(line, units)| (line, format_amount(&Money::new(units, eur()).expect("an amount"))))
                 .collect(),
         ))
     })

@@ -254,7 +254,10 @@ impl Workspace {
             // names them.
             ReportBasis::Customers => Derivation::Customers,
             ReportBasis::Payroll => Derivation::Payroll,
-            ReportBasis::Assets | ReportBasis::ProfitTax { .. } | ReportBasis::IncomeTax => {
+            ReportBasis::Assets
+            | ReportBasis::ProfitTax { .. }
+            | ReportBasis::IncomeTax
+            | ReportBasis::IncomeTaxForm => {
                 return Err(AppError::Adapter(format!("{report} is not filed on its own")));
             }
         };

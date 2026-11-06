@@ -1236,6 +1236,12 @@ pub struct NewEmployment {
     /// Taxed at the flat rate of 2 % (minor employment).
     #[serde(default)]
     pub flat: bool,
+    /// Taxed at the flat rate of 25 % (short-term employment, person group 110).
+    #[serde(default)]
+    pub short_term: bool,
+    /// A minor employment in a private household.
+    #[serde(default)]
+    pub household: bool,
     /// The number of child allowances, e.g. `"1.5"`.
     #[serde(default)]
     pub children: Option<String>,
@@ -1293,6 +1299,13 @@ pub struct PayslipRequest {
     /// Records the payslip and books it; otherwise it is only computed.
     #[serde(default)]
     pub record: bool,
+    /// The payslip this one corrects (Rückrechnung): its employment and month are taken; `employment` and `month`
+    /// are then ignored.
+    #[serde(default)]
+    pub corrects: Option<String>,
+    /// For a correction, the day the difference is paid, `YYYY-MM-DD`; default today.
+    #[serde(default)]
+    pub paid: Option<String>,
 }
 
 /// A payslip with its figures.
@@ -1314,4 +1327,26 @@ pub struct PayslipView {
     pub figures: std::collections::BTreeMap<String, String>,
     /// Whether it was recorded and booked.
     pub recorded: bool,
+    /// The payslip it corrects, if it is a correction.
+    pub replaces: Option<String>,
+}
+
+/// What the books do not hold of the taxes on profit of a year (librotenado spec part 0012).
+#[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
+pub struct ProfitTaxFacts {
+    /// Losses carried forward for corporation or income tax, in euros.
+    #[serde(default)]
+    pub income_losses: Option<String>,
+    /// Trade losses carried forward.
+    #[serde(default)]
+    pub trade_losses: Option<String>,
+    /// The reduction for land (§ 9 Nr. 1 GewStG).
+    #[serde(default)]
+    pub land_reduction: Option<String>,
+    /// Turnover and wages of the year, for the cap of donations; none if not stated.
+    #[serde(default)]
+    pub turnover_and_wages: Option<String>,
+    /// The share held in corporations: `at_least_15`, `10_to_15`, `below_10`.
+    #[serde(default)]
+    pub holding: Option<String>,
 }

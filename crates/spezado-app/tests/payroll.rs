@@ -125,4 +125,23 @@ fn an_employee_is_paid_and_reported() {
     let journal = workspace.get(&books).unwrap().journal(Some(&owner), None, None);
     assert_eq!(journal.iter().filter(|e| e.booking.text.starts_with("Lohn ")).count(), 2);
     assert!(workspace.get(&books).unwrap().events().review_payroll().is_empty());
+
+    // January was 2,000, corrected in March: the difference is booked, the certificate counts the correction.
+    let correction = workspace
+        .correction(&books, &figures_id(&workspace, &books, &owner), vec![item(PayItemKind::Wage, 200_000)], mar)
+        .unwrap();
+    workspace.record_payslip(&books, correction.clone()).unwrap();
+    let journal = workspace.get(&books).unwrap().journal(Some(&owner), None, None);
+    assert!(journal.iter().any(|e| e.booking.text.starts_with("Korrektur Lohn 01/2026")));
+    let certificate = workspace.wage_tax_certificate(&books, &employment, 2026).unwrap().unwrap();
+    assert_eq!(certificate["3"], 200_000 + 600_000);
+    // February was computed from the January replaced: it is to be corrected too.
+    let review = workspace.get(&books).unwrap().events().review_payroll();
+    assert!(review.iter().any(|p| matches!(p, librotenado::payroll::PayrollProblem::Figures { .. })), "{review:?}");
+}
+
+/// The identity of the January payslip.
+fn figures_id(workspace: &Workspace, books: &BooksId, owner: &PartyId) -> librotenado::payroll::PayslipId {
+    let (from, to) = ("2026-01-01".parse().unwrap(), "2026-01-31".parse().unwrap());
+    workspace.payslips(books, owner, from, to).unwrap().remove(0).id
 }

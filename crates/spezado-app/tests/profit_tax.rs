@@ -94,6 +94,28 @@ fn a_gmbh_pays_corporation_tax_and_trade_tax() {
     assert!(!gewst.contains_key("financing_addition"));
     assert_eq!(gewst["rounded"], 17_600_000);
     assert_eq!(gewst["tax"], 2_464_000);
+    // Losses carried forward and the reduction for land, as stated: both taxes fall.
+    let facts = spezado_app::ProfitFacts {
+        income_losses: 5_000_000,
+        trade_losses: 5_000_000,
+        land_reduction: 1_000_000,
+        ..Default::default()
+    };
+    workspace.set_profit_facts(&books, &owner, 2026, &facts).unwrap();
+    let kst = workspace.report(&books, &owner, "de-kst", from, to).unwrap().fields;
+    assert_eq!(kst["corporation_tax"], (17_600_000 - 5_000_000) * 15 / 100);
+    let gewst = workspace.report(&books, &owner, "de-gewst", from, to).unwrap().fields;
+    assert_eq!(gewst["rounded"], 17_600_000 - 1_000_000 - 5_000_000);
+    assert!(
+        workspace
+            .set_profit_facts(
+                &books,
+                &owner,
+                2026,
+                &spezado_app::ProfitFacts { holding: Some("half".into()), ..Default::default() }
+            )
+            .is_err()
+    );
 }
 
 #[test]

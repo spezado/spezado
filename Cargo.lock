@@ -2563,9 +2563,9 @@ dependencies = [
 
 [[package]]
 name = "librotenado"
-version = "0.20.0"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1189fec21e95d340477d2770d75de8eabece75940a38d798bf0d3be932252228"
+checksum = "44b6e6d4467d883cc9c549a865cd492277e980b168b4e421f75660bb838d683d"
 dependencies = [
  "base64 0.23.1",
  "chacha20poly1305",

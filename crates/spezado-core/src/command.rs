@@ -410,14 +410,27 @@ impl Books {
                     .ok_or_else(|| CommandError::UnknownEmployment(payslip.employment.clone()))?;
                 self.owner_open(&employment.owner, payslip.paid)?;
                 let invalid = |why: &str| CommandError::InvalidPayslip(payslip.id.clone(), why.to_owned());
-                let recorded = events.payslips(&employment.owner);
-                if recorded.iter().any(|p| p.id == payslip.id) {
+                if events.recorded_payslips(&employment.owner).iter().any(|p| p.id == payslip.id) {
                     return Err(invalid("recorded already"));
                 }
-                if recorded
-                    .iter()
-                    .any(|p| p.employment == payslip.employment && payslip.from <= p.to && p.from <= payslip.to)
-                {
+                let applying = events.payslips(&employment.owner);
+                // A correction replaces a payslip that applies, of the same employment and period.
+                if let Some(replaced) = &payslip.replaces {
+                    let same = applying.iter().any(|p| {
+                        p.id == *replaced
+                            && p.employment == payslip.employment
+                            && (p.from, p.to) == (payslip.from, payslip.to)
+                    });
+                    if !same {
+                        return Err(invalid("it corrects no payslip of its employment and period that applies"));
+                    }
+                }
+                if applying.iter().any(|p| {
+                    Some(&p.id) != payslip.replaces.as_ref()
+                        && p.employment == payslip.employment
+                        && payslip.from <= p.to
+                        && p.from <= payslip.to
+                }) {
                     return Err(invalid("it overlaps another payslip"));
                 }
                 let within = payslip.from >= employment.start && employment.end.is_none_or(|end| payslip.to <= end);

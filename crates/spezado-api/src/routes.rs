@@ -46,6 +46,8 @@ use crate::{Api, ApiError, dto};
         change_trade_tax,
         income_tax,
         change_income_tax,
+        profit_tax,
+        change_profit_tax,
         reverse,
         reports,
         report,
@@ -88,6 +90,7 @@ use crate::{Api, ApiError, dto};
         crate::payroll::add_employment,
         crate::payroll::payslip,
         crate::payroll::contributions,
+        crate::payroll::certificate,
         crate::filings::filings,
         crate::filings::prepare,
         crate::filings::submit,
@@ -123,6 +126,7 @@ pub fn protected() -> Router<Api> {
         .route("/books/{books}/deadlines", get(deadlines).put(change_deadlines))
         .route("/books/{books}/trade-tax", get(trade_tax).put(change_trade_tax))
         .route("/books/{books}/income-tax", get(income_tax).put(change_income_tax))
+        .route("/books/{books}/profit-tax", get(profit_tax).put(change_profit_tax))
         .route("/books/{books}/reversals", post(reverse))
         .route("/books/{books}/reports", get(reports))
         .route("/books/{books}/reports/{report}", get(report))
@@ -892,6 +896,67 @@ async fn change_income_tax(
                 church_rate: request.church_rate,
             };
             workspace.set_income_facts(&books, &owner, query.year.unwrap_or_else(|| today().year()), &facts)?;
+            Ok(request)
+        })
+        .await?;
+    api.changed(&id);
+    Ok(Json(changed))
+}
+
+/// What the owner stated for the taxes on profit of a year beside the books (shown in de-kst, de-gewst, de-est).
+#[utoipa::path(get, path = "/api/v1/books/{books}/profit-tax", params(("books" = String, Path), YearQuery),
+    responses((status = 200, body = dto::ProfitTaxFacts)))]
+async fn profit_tax(
+    State(api): State<Api>,
+    Path(books): Path<String>,
+    Query(query): Query<YearQuery>,
+) -> Result<Json<dto::ProfitTaxFacts>, ApiError> {
+    api.run(move |workspace| {
+        let books = books_id(&books)?;
+        let owner = owner(workspace, &books)?;
+        let facts = workspace.profit_facts(&books, &owner, query.year.unwrap_or_else(|| today().year()))?;
+        let euros = |units: i128| dto::Amount::from(&Money::new(units, eur()).expect("an amount")).value;
+        Ok(Json(dto::ProfitTaxFacts {
+            income_losses: Some(euros(facts.income_losses)),
+            trade_losses: Some(euros(facts.trade_losses)),
+            land_reduction: Some(euros(facts.land_reduction)),
+            turnover_and_wages: facts.turnover_and_wages.map(euros),
+            holding: facts.holding,
+        }))
+    })
+    .await
+}
+
+/// Stores what the owner states for the taxes on profit of a year – on this device, not in the books' events.
+#[utoipa::path(put, path = "/api/v1/books/{books}/profit-tax", params(("books" = String, Path), YearQuery),
+    request_body = dto::ProfitTaxFacts, responses((status = 200, body = dto::ProfitTaxFacts), (status = 422, body = dto::Problem)))]
+async fn change_profit_tax(
+    State(api): State<Api>,
+    Path(books): Path<String>,
+    Query(query): Query<YearQuery>,
+    Json(request): Json<dto::ProfitTaxFacts>,
+) -> Result<Json<dto::ProfitTaxFacts>, ApiError> {
+    let id = books.clone();
+    let changed = api
+        .run(move |workspace| {
+            let books = books_id(&books)?;
+            let owner = owner(workspace, &books)?;
+            let units = |text: &Option<String>| -> Result<Option<i128>, ApiError> {
+                match text.as_deref().filter(|t| !t.is_empty()) {
+                    Some(text) => {
+                        Ok(Some(parse_amount(text, &eur()).map_err(|e| ApiError::bad(e.to_string()))?.base_units()))
+                    }
+                    None => Ok(None),
+                }
+            };
+            let facts = spezado_app::ProfitFacts {
+                income_losses: units(&request.income_losses)?.unwrap_or(0),
+                trade_losses: units(&request.trade_losses)?.unwrap_or(0),
+                land_reduction: units(&request.land_reduction)?.unwrap_or(0),
+                turnover_and_wages: units(&request.turnover_and_wages)?,
+                holding: request.holding.clone().filter(|h| !h.is_empty()),
+            };
+            workspace.set_profit_facts(&books, &owner, query.year.unwrap_or_else(|| today().year()), &facts)?;
             Ok(request)
         })
         .await?;

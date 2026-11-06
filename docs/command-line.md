@@ -65,7 +65,10 @@ yet (librotenado 0012, OPEN).
 
 For a person running a business, `de-est` is the income tax over a calendar year: the profit of the books with what
 the person states beside them – `spezado income-tax --year 2026 --other-income 12000.00 --deductions 4000.00
---losses 0 --joint false --church 9`; without options it shows what is stated. It stays on this device.
+--losses 0 --joint false --church 9`; without options it shows what is stated. It stays on this device. What the books
+do not hold of the taxes on profit – losses carried forward, a reduction for land, the share held in corporations –
+is stated with `spezado profit-tax --year 2026 --income-losses … --trade-losses … --holding at_least_15`.
+`de-anlage-g` and `de-anlage-s` give the lines of the profit in the income tax return.
 
 ## Payroll
 
@@ -81,6 +84,11 @@ spezado payslip --employment <id> --month 2026-02 --wage 4000.00 --one-off 2000.
 spezado contributions --insurer 87654321 --from 2026-02-01 --to 2026-02-28
 ```
 
-A minor employment: `--flat --groups 6500 --person-group 109` with the Minijob-Zentrale as insurer. `--record`
+A minor employment: `--flat --groups 6500 --person-group 109` with the Minijob-Zentrale as insurer, in a private
+household with `--household`; a short-term one: `--short-term --groups 0000 --person-group 110 --end …`. A payslip
+recorded wrongly is corrected with `spezado payslip --corrects <payslip> --wage … --record`; the difference is
+booked on the day given with `--paid`. `spezado wage-tax-certificate --employment <id> --year 2026` shows the lines
+of the Lohnsteuerbescheinigung. Beitragsnachweise and notifications to the social insurance are transmitted only from
+approved programs (§ 95b SGB IV): enter what `spezado contributions` shows in the SV-Meldeportal. `--record`
 records the payslip and books it on the day it is paid, the last of the month. The Lohnsteuer-Anmeldung is the
 report `de-lsta` of the period; the Beitragsnachweis is per insurer and month.

@@ -153,6 +153,31 @@ enum Commands {
         #[arg(long)]
         owner: Option<PartyId>,
     },
+    /// Shows or states what the books do not hold of the taxes on profit of a year: losses carried forward, the
+    /// reduction for land, turnover and wages, the share held in corporations.
+    ProfitTax {
+        /// The year the financial year ends in.
+        #[arg(long)]
+        year: u16,
+        /// Losses carried forward for corporation or income tax (§ 10d EStG).
+        #[arg(long)]
+        income_losses: Option<String>,
+        /// Trade losses carried forward (§ 10a GewStG).
+        #[arg(long)]
+        trade_losses: Option<String>,
+        /// The reduction for land (§ 9 Nr. 1 GewStG), 1.2 % of the Einheitswert.
+        #[arg(long)]
+        land_reduction: Option<String>,
+        /// Turnover and wages of the year, for the cap of donations.
+        #[arg(long)]
+        turnover_and_wages: Option<String>,
+        /// The share held in corporations: at_least_15, 10_to_15, below_10.
+        #[arg(long)]
+        holding: Option<String>,
+        /// The owner; may be left out while the books have one.
+        #[arg(long)]
+        owner: Option<PartyId>,
+    },
     /// Lists the employments of an owner, or adds one (librotenado 0013).
     Employment {
         #[command(subcommand)]
@@ -160,12 +185,18 @@ enum Commands {
     },
     /// Computes the payslip of an employment for a month; with --record records and books it.
     Payslip {
-        /// The employment.
+        /// The employment; left out for a correction.
+        #[arg(long, required_unless_present = "corrects")]
+        employment: Option<librotenado::payroll::EmploymentId>,
+        /// The month, e.g. 2026-01; left out for a correction.
+        #[arg(long, required_unless_present = "corrects")]
+        month: Option<String>,
+        /// Corrects a recorded payslip (Rückrechnung): the same employment and month with these items.
         #[arg(long)]
-        employment: librotenado::payroll::EmploymentId,
-        /// The month, e.g. 2026-01.
+        corrects: Option<librotenado::payroll::PayslipId>,
+        /// For a correction, the day the difference is paid; default today.
         #[arg(long)]
-        month: String,
+        paid: Option<Date>,
         /// Current wages of the month, e.g. 4000.00.
         #[arg(long)]
         wage: Option<String>,
@@ -187,6 +218,15 @@ enum Commands {
         /// Records the payslip and books it.
         #[arg(long)]
         record: bool,
+    },
+    /// Shows the Lohnsteuerbescheinigung of an employment for a calendar year.
+    WageTaxCertificate {
+        /// The employment.
+        #[arg(long)]
+        employment: librotenado::payroll::EmploymentId,
+        /// The calendar year.
+        #[arg(long)]
+        year: u16,
     },
     /// Shows the Beitragsnachweis of an owner to one health insurer for the months of a period.
     Contributions {
@@ -363,6 +403,12 @@ enum EmploymentAction {
         /// Taxed at the flat rate of 2 % (minor employment).
         #[arg(long)]
         flat: bool,
+        /// Taxed at the flat rate of 25 % (short-term employment, --person-group 110 --groups 0000).
+        #[arg(long)]
+        short_term: bool,
+        /// A minor employment in a private household.
+        #[arg(long)]
+        household: bool,
         /// The number of child allowances, e.g. 1.5.
         #[arg(long)]
         children: Option<String>,
@@ -722,13 +768,66 @@ fn run(workspace: &mut Workspace, books: &BooksId, command: Commands) -> Result<
             println!("losses carried     {:>16}", eur(facts.losses));
             println!("church tax         {}", facts.church_rate.map_or("none".into(), |r| format!("{r} %")));
         }
+        Commands::ProfitTax {
+            year,
+            income_losses,
+            trade_losses,
+            land_reduction,
+            turnover_and_wages,
+            holding,
+            owner,
+        } => {
+            let owner = choose_owner(workspace, books, owner)?;
+            let mut facts = workspace.profit_facts(books, &owner, year)?;
+            let euros =
+                |text: &str| -> Result<i128> { Ok(parse_amount(text, &"EUR".parse().expect("EUR"))?.base_units()) };
+            let changed = income_losses.is_some()
+                || trade_losses.is_some()
+                || land_reduction.is_some()
+                || turnover_and_wages.is_some()
+                || holding.is_some();
+            if let Some(text) = income_losses {
+                facts.income_losses = euros(&text)?;
+            }
+            if let Some(text) = trade_losses {
+                facts.trade_losses = euros(&text)?;
+            }
+            if let Some(text) = land_reduction {
+                facts.land_reduction = euros(&text)?;
+            }
+            if let Some(text) = turnover_and_wages {
+                facts.turnover_and_wages = (!text.is_empty()).then(|| euros(&text)).transpose()?;
+            }
+            if let Some(text) = holding {
+                facts.holding = Some(text);
+            }
+            if changed {
+                workspace.set_profit_facts(books, &owner, year, &facts)?;
+            }
+            let eur = |units: i128| {
+                format_amount(&librotenado::Money::new(units, "EUR".parse().expect("EUR")).expect("an amount"))
+            };
+            println!("losses (§ 10d)     {:>16}", eur(facts.income_losses));
+            println!("trade losses       {:>16}", eur(facts.trade_losses));
+            println!("land reduction     {:>16}", eur(facts.land_reduction));
+            println!("turnover and wages {:>16}", facts.turnover_and_wages.map(eur).unwrap_or_else(|| "–".into()));
+            println!("holding            {}", facts.holding.as_deref().unwrap_or("at_least_15"));
+        }
         Commands::Employment { action } => employment(workspace, books, action)?,
-        Commands::Payslip { employment, month, wage, one_off, compensation, in_kind, tax_free, deduction, record } => {
+        Commands::Payslip {
+            employment,
+            month,
+            corrects,
+            paid,
+            wage,
+            one_off,
+            compensation,
+            in_kind,
+            tax_free,
+            deduction,
+            record,
+        } => {
             use librotenado::payroll::{PayItem, PayItemKind};
-            let (year, number) = month
-                .split_once('-')
-                .and_then(|(y, m)| Some((y.parse::<u16>().ok()?, m.parse::<u8>().ok()?)))
-                .ok_or_else(|| anyhow!("a month is written 2026-01"))?;
             let eur: Currency = "EUR".parse().expect("EUR");
             let mut items = Vec::new();
             for (kind, name, text) in [
@@ -743,14 +842,39 @@ fn run(workspace: &mut Workspace, books: &BooksId, command: Commands) -> Result<
                     items.push(PayItem { kind, name: name.into(), amount: parse_amount(&text, &eur)? });
                 }
             }
-            let payslip = workspace.payslip(books, &employment, year, number, items)?;
-            println!("{} to {}, paid {}", payslip.from, payslip.to, payslip.paid);
+            let payslip = match corrects {
+                Some(replaced) => {
+                    workspace.correction(books, &replaced, items, paid.unwrap_or_else(spezado_app::today))?
+                }
+                None => {
+                    let month = month.ok_or_else(|| anyhow!("a payslip needs --month"))?;
+                    let (year, number) = month
+                        .split_once('-')
+                        .and_then(|(y, m)| Some((y.parse::<u16>().ok()?, m.parse::<u8>().ok()?)))
+                        .ok_or_else(|| anyhow!("a month is written 2026-01"))?;
+                    let employment = employment.ok_or_else(|| anyhow!("a payslip needs --employment"))?;
+                    workspace.payslip(books, &employment, year, number, items)?
+                }
+            };
+            println!("{} {} to {}, paid {}", payslip.id, payslip.from, payslip.to, payslip.paid);
             for (name, amount) in &payslip.figures {
                 println!("{name:<28} {:>16}", format_amount(amount));
             }
             if record {
                 workspace.record_payslip(books, payslip)?;
                 println!("recorded and booked");
+            }
+        }
+        Commands::WageTaxCertificate { employment, year } => {
+            let eur: Currency = "EUR".parse().expect("EUR");
+            match workspace.wage_tax_certificate(books, &employment, year)? {
+                None => println!("none: wages taxed at a flat rate, or no payslips in {year}"),
+                Some(lines) => {
+                    for (line, units) in lines {
+                        let amount = librotenado::Money::new(units, eur.clone()).expect("an amount");
+                        println!("{line:<6} {:>16}", format_amount(&amount));
+                    }
+                }
             }
         }
         Commands::Contributions { insurer, from, to, owner } => {
@@ -948,6 +1072,8 @@ fn employment(workspace: &mut Workspace, books: &BooksId, action: Option<Employm
             born,
             class,
             flat,
+            short_term,
+            household,
             children,
             church,
             insurer,
@@ -978,6 +1104,7 @@ fn employment(workspace: &mut Workspace, books: &BooksId, action: Option<Employm
                     allowance: None,
                     addition: None,
                     flat,
+                    short_term,
                 },
                 insurance: GermanInsurance {
                     insurer,
@@ -990,6 +1117,7 @@ fn employment(workspace: &mut Workspace, books: &BooksId, action: Option<Employm
                     saxony,
                     u1: decimal(u1)?,
                     u2: decimal(u2)?,
+                    household,
                 },
             };
             let new = spezado_app::NewEmployment { owner, employee, start, end, number, born, de };

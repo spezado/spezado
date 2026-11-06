@@ -449,6 +449,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/books/{books}/employments/{employment}/certificate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The Lohnsteuerbescheinigung of an employment for a year: its numbered lines in euros (names `de-lstb/<line>`);
+         *     empty for wages taxed at a flat rate or a year without payslips.
+         */
+        get: operations["certificate"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/books/{books}/filings": {
         parameters: {
             query?: never;
@@ -657,6 +677,24 @@ export interface paths {
         put?: never;
         /** Computes the payslip of an employment for a month; with `record` records it and books it. */
         post: operations["payslip"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/books/{books}/profit-tax": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What the owner stated for the taxes on profit of a year beside the books (shown in de-kst, de-gewst, de-est). */
+        get: operations["profit_tax"];
+        /** Stores what the owner states for the taxes on profit of a year – on this device, not in the books' events. */
+        put: operations["change_profit_tax"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1516,6 +1554,8 @@ export interface components {
             end?: string | null;
             /** @description Taxed at the flat rate of 2 % (minor employment). */
             flat?: boolean;
+            /** @description A minor employment in a private household. */
+            household?: boolean;
             /** @description The company number of the health insurer – for a minor employment the Minijob-Zentrale. */
             insurer: string;
             /** @description The employee's name. */
@@ -1526,6 +1566,8 @@ export interface components {
             person_group?: string | null;
             /** @description The employee works in Saxony. */
             saxony?: boolean;
+            /** @description Taxed at the flat rate of 25 % (short-term employment, person group 110). */
+            short_term?: boolean;
             /** @description The first day, `YYYY-MM-DD`. */
             start: string;
             /** @description The rate of the levy U1 in percent. */
@@ -1652,12 +1694,19 @@ export interface components {
         };
         /** @description The payslip of an employment for a month, to compute or to record. */
         PayslipRequest: {
+            /**
+             * @description The payslip this one corrects (Rückrechnung): its employment and month are taken; `employment` and `month`
+             *     are then ignored.
+             */
+            corrects?: string | null;
             /** @description The employment. */
             employment: string;
             /** @description What the wages are made of. */
             items: components["schemas"]["PayItem"][];
             /** @description The month, `YYYY-MM`. */
             month: string;
+            /** @description For a correction, the day the difference is paid, `YYYY-MM-DD`; default today. */
+            paid?: string | null;
             /** @description Records the payslip and books it; otherwise it is only computed. */
             record?: boolean;
         };
@@ -1679,6 +1728,8 @@ export interface components {
             paid: string;
             /** @description Whether it was recorded and booked. */
             recorded: boolean;
+            /** @description The payslip it corrects, if it is a correction. */
+            replaces?: string | null;
             /** @description The last day. */
             to: string;
         };
@@ -1708,6 +1759,19 @@ export interface components {
         Problem: {
             /** @description What happened, in English. */
             error: string;
+        };
+        /** @description What the books do not hold of the taxes on profit of a year (librotenado spec part 0012). */
+        ProfitTaxFacts: {
+            /** @description The share held in corporations: `at_least_15`, `10_to_15`, `below_10`. */
+            holding?: string | null;
+            /** @description Losses carried forward for corporation or income tax, in euros. */
+            income_losses?: string | null;
+            /** @description The reduction for land (§ 9 Nr. 1 GewStG). */
+            land_reduction?: string | null;
+            /** @description Trade losses carried forward. */
+            trade_losses?: string | null;
+            /** @description Turnover and wages of the year, for the cap of donations; none if not stated. */
+            turnover_and_wages?: string | null;
         };
         /** @description A file read as a document: waiting to be recorded, with a proposal if it is an e-invoice. */
         ReadDocument: {
@@ -2948,6 +3012,33 @@ export interface operations {
             };
         };
     };
+    certificate: {
+        parameters: {
+            query: {
+                /** @description The calendar year. */
+                year: number;
+            };
+            header?: never;
+            path: {
+                books: string;
+                employment: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+    };
     filings: {
         parameters: {
             query?: {
@@ -3419,6 +3510,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PayslipView"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    profit_tax: {
+        parameters: {
+            query?: {
+                /** @description The calendar year. */
+                year?: number | null;
+                /** @description The language of names: `de` or `en`. */
+                lang?: string | null;
+            };
+            header?: never;
+            path: {
+                books: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfitTaxFacts"];
+                };
+            };
+        };
+    };
+    change_profit_tax: {
+        parameters: {
+            query?: {
+                /** @description The calendar year. */
+                year?: number | null;
+                /** @description The language of names: `de` or `en`. */
+                lang?: string | null;
+            };
+            header?: never;
+            path: {
+                books: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfitTaxFacts"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfitTaxFacts"];
                 };
             };
             422: {
