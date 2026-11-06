@@ -149,6 +149,30 @@ enum Commands {
         /// The rate of church tax in percent, 8 or 9; 0 for none.
         #[arg(long)]
         church: Option<u8>,
+        /// The child benefit received for the year.
+        #[arg(long)]
+        child_benefit: Option<String>,
+        /// Extraordinary income taxed by the fifth (§ 34 EStG).
+        #[arg(long)]
+        extraordinary: Option<String>,
+        /// Shares of profits of partnerships.
+        #[arg(long)]
+        partnership_income: Option<String>,
+        /// The share of their trade tax base amounts (§ 35 Abs. 2 EStG).
+        #[arg(long)]
+        partnership_trade_base: Option<String>,
+        /// The share of their trade tax.
+        #[arg(long)]
+        partnership_trade_tax: Option<String>,
+        /// Capital income not taxed at source (§ 32d EStG).
+        #[arg(long)]
+        capital_income: Option<String>,
+        /// The allowances for children in tenths: 10 a child in full.
+        #[arg(long)]
+        child_allowances: Option<u32>,
+        /// Children of a single parent (§ 24b EStG).
+        #[arg(long)]
+        single_parent_children: Option<u8>,
         /// The owner; may be left out while the books have one.
         #[arg(long)]
         owner: Option<PartyId>,
@@ -174,6 +198,33 @@ enum Commands {
         /// The share held in corporations: at_least_15, 10_to_15, below_10.
         #[arg(long)]
         holding: Option<String>,
+        /// Hidden profit distributions (§ 8 Abs. 3 KStG).
+        #[arg(long)]
+        hidden_distributions: Option<String>,
+        /// Hidden contributions booked as income.
+        #[arg(long)]
+        hidden_contributions: Option<String>,
+        /// In a tax group as member: the compensation paid to outside shareholders.
+        #[arg(long)]
+        group_compensation: Option<String>,
+        /// In a tax group as parent: the income attributed from the members.
+        #[arg(long)]
+        group_income: Option<String>,
+        /// In a tax group as parent: their trade income.
+        #[arg(long)]
+        group_trade_income: Option<String>,
+        /// Interest carried forward by the interest barrier.
+        #[arg(long)]
+        interest_carryforward: Option<String>,
+        /// EBITDA carried forward.
+        #[arg(long)]
+        ebitda_carryforward: Option<String>,
+        /// The part in a tax group: member or parent; empty for none.
+        #[arg(long)]
+        group: Option<String>,
+        /// An exception of the interest barrier applies (§ 4h Abs. 2 EStG).
+        #[arg(long)]
+        interest_exception: Option<bool>,
         /// The owner; may be left out while the books have one.
         #[arg(long)]
         owner: Option<PartyId>,
@@ -215,6 +266,9 @@ enum Commands {
         /// Deducted from the net pay.
         #[arg(long)]
         deduction: Option<String>,
+        /// A pension paid by the employer (Versorgungsbezug).
+        #[arg(long)]
+        pension: Option<String>,
         /// Records the payslip and books it.
         #[arg(long)]
         record: bool,
@@ -409,6 +463,15 @@ enum EmploymentAction {
         /// A minor employment in a private household.
         #[arg(long)]
         household: bool,
+        /// Work after the standard retirement age, with the employer's pension contributions (Aktivrente).
+        #[arg(long)]
+        active_pension: bool,
+        /// For pensions paid: the year they began.
+        #[arg(long, requires = "pension_start_monthly")]
+        pension_start_year: Option<u16>,
+        /// For pensions paid: the pension of the first whole month.
+        #[arg(long, requires = "pension_start_year")]
+        pension_start_monthly: Option<String>,
         /// The number of child allowances, e.g. 1.5.
         #[arg(long)]
         children: Option<String>,
@@ -729,18 +792,55 @@ fn run(workspace: &mut Workspace, books: &BooksId, command: Commands) -> Result<
                 None => println!("no trade tax from {from}"),
             }
         }
-        Commands::IncomeTax { year, joint, other_income, deductions, losses, church, owner } => {
+        Commands::IncomeTax {
+            year,
+            joint,
+            other_income,
+            deductions,
+            losses,
+            church,
+            child_benefit,
+            extraordinary,
+            partnership_income,
+            partnership_trade_base,
+            partnership_trade_tax,
+            capital_income,
+            child_allowances,
+            single_parent_children,
+            owner,
+        } => {
             let owner = choose_owner(workspace, books, owner)?;
             let mut facts = workspace.income_facts(books, &owner, year)?;
             let euros = |text: &str| -> Result<i128> {
                 let money = parse_amount(text, &"EUR".parse().expect("EUR"))?;
                 Ok(money.base_units())
             };
-            let changed = joint.is_some()
+            let mut changed = joint.is_some()
                 || other_income.is_some()
                 || deductions.is_some()
                 || losses.is_some()
                 || church.is_some();
+            for (field, text) in [
+                (&mut facts.child_benefit, child_benefit),
+                (&mut facts.extraordinary, extraordinary),
+                (&mut facts.partnership_income, partnership_income),
+                (&mut facts.partnership_trade_base, partnership_trade_base),
+                (&mut facts.partnership_trade_tax, partnership_trade_tax),
+                (&mut facts.capital_income, capital_income),
+            ] {
+                if let Some(text) = text {
+                    *field = euros(&text)?;
+                    changed = true;
+                }
+            }
+            if let Some(n) = child_allowances {
+                facts.child_allowances = n;
+                changed = true;
+            }
+            if let Some(n) = single_parent_children {
+                facts.single_parent_children = n;
+                changed = true;
+            }
             if let Some(joint) = joint {
                 facts.joint = joint;
             }
@@ -775,17 +875,48 @@ fn run(workspace: &mut Workspace, books: &BooksId, command: Commands) -> Result<
             land_reduction,
             turnover_and_wages,
             holding,
+            hidden_distributions,
+            hidden_contributions,
+            group_compensation,
+            group_income,
+            group_trade_income,
+            interest_carryforward,
+            ebitda_carryforward,
+            group,
+            interest_exception,
             owner,
         } => {
             let owner = choose_owner(workspace, books, owner)?;
             let mut facts = workspace.profit_facts(books, &owner, year)?;
             let euros =
                 |text: &str| -> Result<i128> { Ok(parse_amount(text, &"EUR".parse().expect("EUR"))?.base_units()) };
-            let changed = income_losses.is_some()
+            let mut changed = income_losses.is_some()
                 || trade_losses.is_some()
                 || land_reduction.is_some()
                 || turnover_and_wages.is_some()
                 || holding.is_some();
+            for (field, text) in [
+                (&mut facts.hidden_distributions, hidden_distributions),
+                (&mut facts.hidden_contributions, hidden_contributions),
+                (&mut facts.group_compensation, group_compensation),
+                (&mut facts.group_income, group_income),
+                (&mut facts.group_trade_income, group_trade_income),
+                (&mut facts.interest_carryforward, interest_carryforward),
+                (&mut facts.ebitda_carryforward, ebitda_carryforward),
+            ] {
+                if let Some(text) = text {
+                    *field = euros(&text)?;
+                    changed = true;
+                }
+            }
+            if let Some(group) = group {
+                facts.group = (!group.is_empty()).then_some(group);
+                changed = true;
+            }
+            if let Some(exception) = interest_exception {
+                facts.interest_exception = exception;
+                changed = true;
+            }
             if let Some(text) = income_losses {
                 facts.income_losses = euros(&text)?;
             }
@@ -825,6 +956,7 @@ fn run(workspace: &mut Workspace, books: &BooksId, command: Commands) -> Result<
             in_kind,
             tax_free,
             deduction,
+            pension,
             record,
         } => {
             use librotenado::payroll::{PayItem, PayItemKind};
@@ -837,6 +969,7 @@ fn run(workspace: &mut Workspace, books: &BooksId, command: Commands) -> Result<
                 (PayItemKind::InKind, "Sachbezug", in_kind),
                 (PayItemKind::TaxFree, "Steuerfrei", tax_free),
                 (PayItemKind::Deduction, "Abzug", deduction),
+                (PayItemKind::Pension, "Versorgungsbezug", pension),
             ] {
                 if let Some(text) = text {
                     items.push(PayItem { kind, name: name.into(), amount: parse_amount(&text, &eur)? });
@@ -1074,6 +1207,9 @@ fn employment(workspace: &mut Workspace, books: &BooksId, action: Option<Employm
             flat,
             short_term,
             household,
+            active_pension,
+            pension_start_year,
+            pension_start_monthly,
             children,
             church,
             insurer,
@@ -1105,6 +1241,14 @@ fn employment(workspace: &mut Workspace, books: &BooksId, action: Option<Employm
                     addition: None,
                     flat,
                     short_term,
+                    pension_start: match (pension_start_year, pension_start_monthly) {
+                        (Some(year), Some(monthly)) => Some(librotenado::payroll::PensionStart {
+                            year,
+                            monthly: parse_amount(&monthly, &"EUR".parse().expect("EUR"))?,
+                        }),
+                        _ => None,
+                    },
+                    active_pension,
                 },
                 insurance: GermanInsurance {
                     insurer,

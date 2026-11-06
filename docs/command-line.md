@@ -68,7 +68,13 @@ the person states beside them – `spezado income-tax --year 2026 --other-income
 --losses 0 --joint false --church 9`; without options it shows what is stated. It stays on this device. What the books
 do not hold of the taxes on profit – losses carried forward, a reduction for land, the share held in corporations –
 is stated with `spezado profit-tax --year 2026 --income-losses … --trade-losses … --holding at_least_15`.
-`de-anlage-g` and `de-anlage-s` give the lines of the profit in the income tax return.
+`de-anlage-g` and `de-anlage-s` give the lines of the profit in the income tax return. Hidden profit distributions,
+tax groups and the interest barrier are stated with `profit-tax` as well (`--hidden-distributions`, `--group member
+--group-compensation …`, `--interest-carryforward …`); children, single parents, extraordinary income, partnership
+shares and capital income with `income-tax` (`--child-allowances 10 --child-benefit 3108.00`, `--single-parent-children
+1`, `--extraordinary …`, `--partnership-income …`, `--capital-income …`). A partnership opens one account per partner
+and kind of capital with the attributes `partner`, `liability` (`unlimited`, `limited`) and `capital` (`FK`, `VK`, …);
+the report `de-ebilanz-kke` shows how they developed.
 
 ## Payroll
 

@@ -136,6 +136,30 @@ pub struct IncomeTaxFacts {
     /// The rate of church tax in percent, 8 or 9; none without.
     #[serde(default)]
     pub church_rate: Option<u8>,
+    /// The allowances for children in tenths: 10 a child in full, 5 half of one.
+    #[serde(default)]
+    pub child_allowances: u32,
+    /// The child benefit received for the year.
+    #[serde(default)]
+    pub child_benefit: Option<String>,
+    /// Extraordinary income taxed by the fifth (§ 34 EStG).
+    #[serde(default)]
+    pub extraordinary: Option<String>,
+    /// Shares of profits of partnerships, and their trade tax base amounts and trade tax (§ 35 Abs. 2 EStG).
+    #[serde(default)]
+    pub partnership_income: Option<String>,
+    /// The share of the trade tax base amounts of those partnerships.
+    #[serde(default)]
+    pub partnership_trade_base: Option<String>,
+    /// The share of their trade tax.
+    #[serde(default)]
+    pub partnership_trade_tax: Option<String>,
+    /// Capital income not taxed at source (§ 32d EStG).
+    #[serde(default)]
+    pub capital_income: Option<String>,
+    /// Children of a single parent (§ 24b EStG); 0 for none.
+    #[serde(default)]
+    pub single_parent_children: u8,
 }
 
 /// The trade tax multiplier of the owner's municipality.
@@ -1242,6 +1266,15 @@ pub struct NewEmployment {
     /// A minor employment in a private household.
     #[serde(default)]
     pub household: bool,
+    /// For pensions paid: the year they began.
+    #[serde(default)]
+    pub pension_start_year: Option<u16>,
+    /// For pensions paid: the pension of the first whole month.
+    #[serde(default)]
+    pub pension_start_monthly: Option<String>,
+    /// Work after the standard retirement age with pension contributions of the employer (Aktivrente).
+    #[serde(default)]
+    pub active_pension: bool,
     /// The number of child allowances, e.g. `"1.5"`.
     #[serde(default)]
     pub children: Option<String>,
@@ -1349,4 +1382,31 @@ pub struct ProfitTaxFacts {
     /// The share held in corporations: `at_least_15`, `10_to_15`, `below_10`.
     #[serde(default)]
     pub holding: Option<String>,
+    /// Hidden profit distributions (§ 8 Abs. 3 KStG).
+    #[serde(default)]
+    pub hidden_distributions: Option<String>,
+    /// Hidden contributions booked as income.
+    #[serde(default)]
+    pub hidden_contributions: Option<String>,
+    /// The part in a tax group: `member` or `parent`; none outside one.
+    #[serde(default)]
+    pub group: Option<String>,
+    /// For a member: the compensation paid to outside shareholders.
+    #[serde(default)]
+    pub group_compensation: Option<String>,
+    /// For a parent: the income attributed from the members.
+    #[serde(default)]
+    pub group_income: Option<String>,
+    /// For a parent: their trade income.
+    #[serde(default)]
+    pub group_trade_income: Option<String>,
+    /// Interest carried forward by the interest barrier.
+    #[serde(default)]
+    pub interest_carryforward: Option<String>,
+    /// EBITDA carried forward.
+    #[serde(default)]
+    pub ebitda_carryforward: Option<String>,
+    /// An exception of the interest barrier applies (§ 4h Abs. 2 EStG).
+    #[serde(default)]
+    pub interest_exception: bool,
 }

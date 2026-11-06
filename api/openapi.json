@@ -4308,6 +4308,26 @@
         "type": "object",
         "description": "What a person states for income tax of a year beside the books.",
         "properties": {
+          "capital_income": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Capital income not taxed at source (§ 32d EStG)."
+          },
+          "child_allowances": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The allowances for children in tenths: 10 a child in full, 5 half of one.",
+            "minimum": 0
+          },
+          "child_benefit": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The child benefit received for the year."
+          },
           "church_rate": {
             "type": [
               "integer",
@@ -4323,6 +4343,13 @@
               "null"
             ],
             "description": "Special expenses, extraordinary burdens, allowances."
+          },
+          "extraordinary": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Extraordinary income taxed by the fifth (§ 34 EStG)."
           },
           "joint": {
             "type": "boolean",
@@ -4341,6 +4368,33 @@
               "null"
             ],
             "description": "Other positive income, with a decimal point."
+          },
+          "partnership_income": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Shares of profits of partnerships, and their trade tax base amounts and trade tax (§ 35 Abs. 2 EStG)."
+          },
+          "partnership_trade_base": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The share of the trade tax base amounts of those partnerships."
+          },
+          "partnership_trade_tax": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The share of their trade tax."
+          },
+          "single_parent_children": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Children of a single parent (§ 24b EStG); 0 for none.",
+            "minimum": 0
           }
         }
       },
@@ -4653,6 +4707,10 @@
           "insurer"
         ],
         "properties": {
+          "active_pension": {
+            "type": "boolean",
+            "description": "Work after the standard retirement age with pension contributions of the employer (Aktivrente)."
+          },
           "additional_rate": {
             "type": [
               "string",
@@ -4736,6 +4794,22 @@
               "null"
             ],
             "description": "The employer's number for the employee."
+          },
+          "pension_start_monthly": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "For pensions paid: the pension of the first whole month."
+          },
+          "pension_start_year": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "For pensions paid: the year they began.",
+            "minimum": 0
           },
           "person_group": {
             "type": [
@@ -5324,6 +5398,55 @@
         "type": "object",
         "description": "What the books do not hold of the taxes on profit of a year (librotenado spec part 0012).",
         "properties": {
+          "ebitda_carryforward": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "EBITDA carried forward."
+          },
+          "group": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The part in a tax group: `member` or `parent`; none outside one."
+          },
+          "group_compensation": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "For a member: the compensation paid to outside shareholders."
+          },
+          "group_income": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "For a parent: the income attributed from the members."
+          },
+          "group_trade_income": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "For a parent: their trade income."
+          },
+          "hidden_contributions": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Hidden contributions booked as income."
+          },
+          "hidden_distributions": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Hidden profit distributions (§ 8 Abs. 3 KStG)."
+          },
           "holding": {
             "type": [
               "string",
@@ -5337,6 +5460,17 @@
               "null"
             ],
             "description": "Losses carried forward for corporation or income tax, in euros."
+          },
+          "interest_carryforward": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Interest carried forward by the interest barrier."
+          },
+          "interest_exception": {
+            "type": "boolean",
+            "description": "An exception of the interest barrier applies (§ 4h Abs. 2 EStG)."
           },
           "land_reduction": {
             "type": [

@@ -1393,6 +1393,15 @@ export interface components {
         };
         /** @description What a person states for income tax of a year beside the books. */
         IncomeTaxFacts: {
+            /** @description Capital income not taxed at source (§ 32d EStG). */
+            capital_income?: string | null;
+            /**
+             * Format: int32
+             * @description The allowances for children in tenths: 10 a child in full, 5 half of one.
+             */
+            child_allowances?: number;
+            /** @description The child benefit received for the year. */
+            child_benefit?: string | null;
             /**
              * Format: int32
              * @description The rate of church tax in percent, 8 or 9; none without.
@@ -1400,12 +1409,25 @@ export interface components {
             church_rate?: number | null;
             /** @description Special expenses, extraordinary burdens, allowances. */
             deductions?: string | null;
+            /** @description Extraordinary income taxed by the fifth (§ 34 EStG). */
+            extraordinary?: string | null;
             /** @description Assessed jointly with a spouse (splitting). */
             joint?: boolean;
             /** @description Losses carried forward, not yet used. */
             losses?: string | null;
             /** @description Other positive income, with a decimal point. */
             other_income?: string | null;
+            /** @description Shares of profits of partnerships, and their trade tax base amounts and trade tax (§ 35 Abs. 2 EStG). */
+            partnership_income?: string | null;
+            /** @description The share of the trade tax base amounts of those partnerships. */
+            partnership_trade_base?: string | null;
+            /** @description The share of their trade tax. */
+            partnership_trade_tax?: string | null;
+            /**
+             * Format: int32
+             * @description Children of a single parent (§ 24b EStG); 0 for none.
+             */
+            single_parent_children?: number;
         };
         /** @description A line of a new invoice. */
         InvoiceLineInput: {
@@ -1528,6 +1550,8 @@ export interface components {
         };
         /** @description A new employment under German law; the employee is described as a person by name. */
         NewEmployment: {
+            /** @description Work after the standard retirement age with pension contributions of the employer (Aktivrente). */
+            active_pension?: boolean;
             /** @description The insurer's additional rate in percent, e.g. `"2.9"`. */
             additional_rate?: string | null;
             /** @description The employee's day of birth. */
@@ -1562,6 +1586,13 @@ export interface components {
             name: string;
             /** @description The employer's number for the employee. */
             number?: string | null;
+            /** @description For pensions paid: the pension of the first whole month. */
+            pension_start_monthly?: string | null;
+            /**
+             * Format: int32
+             * @description For pensions paid: the year they began.
+             */
+            pension_start_year?: number | null;
             /** @description The key of the group of persons; default `101`. */
             person_group?: string | null;
             /** @description The employee works in Saxony. */
@@ -1762,10 +1793,28 @@ export interface components {
         };
         /** @description What the books do not hold of the taxes on profit of a year (librotenado spec part 0012). */
         ProfitTaxFacts: {
+            /** @description EBITDA carried forward. */
+            ebitda_carryforward?: string | null;
+            /** @description The part in a tax group: `member` or `parent`; none outside one. */
+            group?: string | null;
+            /** @description For a member: the compensation paid to outside shareholders. */
+            group_compensation?: string | null;
+            /** @description For a parent: the income attributed from the members. */
+            group_income?: string | null;
+            /** @description For a parent: their trade income. */
+            group_trade_income?: string | null;
+            /** @description Hidden contributions booked as income. */
+            hidden_contributions?: string | null;
+            /** @description Hidden profit distributions (§ 8 Abs. 3 KStG). */
+            hidden_distributions?: string | null;
             /** @description The share held in corporations: `at_least_15`, `10_to_15`, `below_10`. */
             holding?: string | null;
             /** @description Losses carried forward for corporation or income tax, in euros. */
             income_losses?: string | null;
+            /** @description Interest carried forward by the interest barrier. */
+            interest_carryforward?: string | null;
+            /** @description An exception of the interest barrier applies (§ 4h Abs. 2 EStG). */
+            interest_exception?: boolean;
             /** @description The reduction for land (§ 9 Nr. 1 GewStG). */
             land_reduction?: string | null;
             /** @description Trade losses carried forward. */

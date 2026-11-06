@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **The gaps of German law closed** after librotenado 0.22: the interest barrier, hidden profit distributions and
+  contributions, tax groups (`spezado profit-tax --hidden-distributions … --group member|parent …
+  --interest-carryforward … --interest-exception true`); children with the test against the child benefit, single
+  parents, the fifth of § 34, shares of partnerships and capital income in `de-est` (`spezado income-tax
+  --child-allowances 10 --child-benefit … --capital-income …`); pensions paid by the employer (`--pension` on a
+  payslip, `--pension-start-year/-monthly` on the employment) with the pensioner's health and care contributions;
+  trainees with low pay (person group 121); the Aktivrente (`--active-pension`); the report `de-ebilanz-kke`, the
+  capital accounts of the partners of a partnership by the accounts opened with `partner`, `liability`, `capital`.
+
 - **Payroll completed** after librotenado 0.21: corrections of a recorded payslip (`spezado payslip --corrects …
   --wage … --record`, `corrects` in `/payslips`) booked as the difference; the Lohnsteuerbescheinigung
   (`spezado wage-tax-certificate --employment … --year 2026`, `/employments/{id}/certificate`); short-term

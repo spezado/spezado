@@ -179,6 +179,17 @@ impl LawModule for Germany {
                         });
                     }
                 }
+                // The capital accounts of the partners, part of the E-Bilanz of a partnership (taxonomy 6.10).
+                if facts.legal_form.is_some_and(|form| PARTNERSHIPS.contains(&form)) {
+                    reports.push(Report {
+                        id: "de-ebilanz-kke",
+                        name: "Kapitalkontenentwicklung",
+                        basis: ReportBasis::CapitalAccounts,
+                        mapping: ReportMapping { version: "6.10".into(), ..computed("de-ebilanz-kke") },
+                        filing: None,
+                        shortened: None,
+                    });
+                }
                 reports.push(Report {
                     id: "de-hgb-275-gkv",
                     name: "Gewinn- und Verlustrechnung (§ 275 Abs. 2 HGB)",
@@ -441,6 +452,9 @@ const SKR04_OF: &[(&str, &str)] = &[
 
 /// The legal forms of corporations and of partnerships without a natural person fully liable, which the shortened
 /// balance sheets of § 266 Abs. 1 HGB apply to (§ 264a HGB).
+/// The legal forms of partnerships with capital accounts per partner.
+const PARTNERSHIPS: [&str; 5] = ["de-gbr", "de-ohg", "de-kg", "de-gmbh-co-kg", "de-partg"];
+
 const CORPORATIONS: [&str; 5] = ["de-gmbh", "de-ug", "de-ag", "de-kgaa", "de-gmbh-co-kg"];
 
 /// The mapping of a report computed rather than mapped – the taxes on profit –: only its name, which names its fields.

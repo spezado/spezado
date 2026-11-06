@@ -64,6 +64,8 @@ pub enum ReportBasis {
     /// The lines of a person's profit in the forms of the income tax return – Anlage G or Anlage S (librotenado spec
     /// part 0012).
     IncomeTaxForm,
+    /// How the capital accounts of the partners of a partnership developed (librotenado spec part 0009).
+    CapitalAccounts,
 }
 
 /// A report that applies to an owner for a period.

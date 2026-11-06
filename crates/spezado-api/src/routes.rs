@@ -861,6 +861,14 @@ async fn income_tax(
             deductions: Some(euros(facts.deductions)),
             losses: Some(euros(facts.losses)),
             church_rate: facts.church_rate,
+            child_allowances: facts.child_allowances,
+            child_benefit: Some(euros(facts.child_benefit)),
+            extraordinary: Some(euros(facts.extraordinary)),
+            partnership_income: Some(euros(facts.partnership_income)),
+            partnership_trade_base: Some(euros(facts.partnership_trade_base)),
+            partnership_trade_tax: Some(euros(facts.partnership_trade_tax)),
+            capital_income: Some(euros(facts.capital_income)),
+            single_parent_children: facts.single_parent_children,
         }))
     })
     .await
@@ -894,6 +902,14 @@ async fn change_income_tax(
                 deductions: units(&request.deductions)?,
                 losses: units(&request.losses)?,
                 church_rate: request.church_rate,
+                child_allowances: request.child_allowances,
+                child_benefit: units(&request.child_benefit)?,
+                extraordinary: units(&request.extraordinary)?,
+                partnership_income: units(&request.partnership_income)?,
+                partnership_trade_base: units(&request.partnership_trade_base)?,
+                partnership_trade_tax: units(&request.partnership_trade_tax)?,
+                capital_income: units(&request.capital_income)?,
+                single_parent_children: request.single_parent_children,
             };
             workspace.set_income_facts(&books, &owner, query.year.unwrap_or_else(|| today().year()), &facts)?;
             Ok(request)
@@ -922,6 +938,15 @@ async fn profit_tax(
             land_reduction: Some(euros(facts.land_reduction)),
             turnover_and_wages: facts.turnover_and_wages.map(euros),
             holding: facts.holding,
+            hidden_distributions: Some(euros(facts.hidden_distributions)),
+            hidden_contributions: Some(euros(facts.hidden_contributions)),
+            group: facts.group,
+            group_compensation: Some(euros(facts.group_compensation)),
+            group_income: Some(euros(facts.group_income)),
+            group_trade_income: Some(euros(facts.group_trade_income)),
+            interest_carryforward: Some(euros(facts.interest_carryforward)),
+            ebitda_carryforward: Some(euros(facts.ebitda_carryforward)),
+            interest_exception: facts.interest_exception,
         }))
     })
     .await
@@ -955,6 +980,15 @@ async fn change_profit_tax(
                 land_reduction: units(&request.land_reduction)?.unwrap_or(0),
                 turnover_and_wages: units(&request.turnover_and_wages)?,
                 holding: request.holding.clone().filter(|h| !h.is_empty()),
+                hidden_distributions: units(&request.hidden_distributions)?.unwrap_or(0),
+                hidden_contributions: units(&request.hidden_contributions)?.unwrap_or(0),
+                group: request.group.clone().filter(|g| !g.is_empty()),
+                group_compensation: units(&request.group_compensation)?.unwrap_or(0),
+                group_income: units(&request.group_income)?.unwrap_or(0),
+                group_trade_income: units(&request.group_trade_income)?.unwrap_or(0),
+                interest_carryforward: units(&request.interest_carryforward)?.unwrap_or(0),
+                ebitda_carryforward: units(&request.ebitda_carryforward)?.unwrap_or(0),
+                interest_exception: request.interest_exception,
             };
             workspace.set_profit_facts(&books, &owner, query.year.unwrap_or_else(|| today().year()), &facts)?;
             Ok(request)

@@ -58,6 +58,7 @@ fn kind_name(kind: PayItemKind) -> &'static str {
         PayItemKind::InKind => "in_kind",
         PayItemKind::TaxFree => "tax_free",
         PayItemKind::Deduction => "deduction",
+        PayItemKind::Pension => "pension",
     }
 }
 
@@ -147,6 +148,14 @@ pub(crate) async fn add_employment(
                     addition: None,
                     flat: request.flat,
                     short_term: request.short_term,
+                    pension_start: match (request.pension_start_year, &request.pension_start_monthly) {
+                        (Some(year), Some(monthly)) => Some(librotenado::payroll::PensionStart {
+                            year,
+                            monthly: parse_amount(monthly, &eur()).map_err(|e| ApiError::bad(e.to_string()))?,
+                        }),
+                        _ => None,
+                    },
+                    active_pension: request.active_pension,
                 },
                 insurance: GermanInsurance {
                     insurer: request.insurer.clone(),
@@ -218,6 +227,7 @@ pub(crate) async fn payslip(
                     "in_kind" => PayItemKind::InKind,
                     "tax_free" => PayItemKind::TaxFree,
                     "deduction" => PayItemKind::Deduction,
+                    "pension" => PayItemKind::Pension,
                     other => return Err(ApiError::bad(format!("not a kind of item: {other:?}"))),
                 };
                 let amount: Money = parse_amount(&item.amount, &eur()).map_err(|e| ApiError::bad(e.to_string()))?;

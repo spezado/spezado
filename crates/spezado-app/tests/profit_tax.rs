@@ -116,6 +116,11 @@ fn a_gmbh_pays_corporation_tax_and_trade_tax() {
             )
             .is_err()
     );
+    // A hidden profit distribution of 10,000 adds 15 % corporation tax on it.
+    let facts = spezado_app::ProfitFacts { hidden_distributions: 1_000_000, ..Default::default() };
+    workspace.set_profit_facts(&books, &owner, 2026, &facts).unwrap();
+    let kst = workspace.report(&books, &owner, "de-kst", from, to).unwrap().fields;
+    assert_eq!(kst["corporation_tax"], (17_600_000 + 1_000_000) * 15 / 100);
 }
 
 #[test]

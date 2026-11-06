@@ -566,16 +566,12 @@ impl Workspace {
             ReportBasis::Assets => events.asset_report(&mapping, &self.chart, owner, from, to),
             ReportBasis::ProfitTax { subject, trade } => {
                 let stated = self.profit_facts(books, owner, to.year())?;
-                let facts = librotenado::ProfitTaxFacts {
+                let facts = stated.facts(
                     subject,
-                    multiplier: configuration.trade_tax_multiplier,
-                    income_losses: stated.income_losses,
-                    trade_losses: stated.trade_losses,
-                    land_reduction: stated.land_reduction,
-                    turnover_and_wages: stated.turnover_and_wages,
-                    holding: stated.holding()?,
-                    cash_basis: configuration.accounting.as_ref().is_some_and(|a| a.as_str() == "de-cash-basis"),
-                };
+                    configuration.trade_tax_multiplier,
+                    configuration.accounting.as_ref().is_some_and(|a| a.as_str() == "de-cash-basis"),
+                    true,
+                )?;
                 let tax = events
                     .profit_tax(&self.chart, owner, from, to, &facts)
                     .map_err(|e| AppError::UnknownReport(format!("{report}: {e}")))?;
@@ -586,18 +582,31 @@ impl Workspace {
                 }
             }
             ReportBasis::Payroll => events.payroll_report(&mapping, owner, from, to),
+            ReportBasis::CapitalAccounts => {
+                // The profit division by the shares the partners hold (their roles `partner`).
+                let (_, persons) = events.parties();
+                let mut shares = BTreeMap::new();
+                for person in persons.values() {
+                    for role in &person.roles {
+                        if role.organisation == *owner && role.kind == librotenado::RoleKind::Partner {
+                            let units =
+                                role.shares.as_ref().map_or(0, |s| i128::from(s.count) * s.nominal.base_units());
+                            *shares.entry(person.id.clone()).or_insert(0) += units;
+                        }
+                    }
+                }
+                let total: i128 = shares.values().sum();
+                let shares = shares.into_iter().map(|(p, units)| (p, (units, total))).collect();
+                librotenado::capital_account_fields(&events.capital_accounts(&self.chart, owner, from, to, &shares)?)
+            }
             ReportBasis::IncomeTaxForm => {
                 let stated = self.profit_facts(books, owner, to.year())?;
-                let facts = librotenado::ProfitTaxFacts {
-                    subject: librotenado::TaxSubject::Individual,
-                    multiplier: configuration.trade_tax_multiplier,
-                    income_losses: 0,
-                    trade_losses: stated.trade_losses,
-                    land_reduction: stated.land_reduction,
-                    turnover_and_wages: stated.turnover_and_wages,
-                    holding: stated.holding()?,
-                    cash_basis: configuration.accounting.as_ref().is_some_and(|a| a.as_str() == "de-cash-basis"),
-                };
+                let facts = stated.facts(
+                    librotenado::TaxSubject::Individual,
+                    configuration.trade_tax_multiplier,
+                    configuration.accounting.as_ref().is_some_and(|a| a.as_str() == "de-cash-basis"),
+                    false,
+                )?;
                 events
                     .profit_tax(&self.chart, owner, from, to, &facts)
                     .map_err(|e| AppError::UnknownReport(format!("{report}: {e}")))?
@@ -607,16 +616,12 @@ impl Workspace {
             ReportBasis::IncomeTax => {
                 let stated = self.profit_facts(books, owner, to.year())?;
                 // Losses of income tax are the person's (IncomeFacts); those of the business are trade losses.
-                let profit = librotenado::ProfitTaxFacts {
-                    subject: librotenado::TaxSubject::Individual,
-                    multiplier: configuration.trade_tax_multiplier,
-                    income_losses: 0,
-                    trade_losses: stated.trade_losses,
-                    land_reduction: stated.land_reduction,
-                    turnover_and_wages: stated.turnover_and_wages,
-                    holding: stated.holding()?,
-                    cash_basis: configuration.accounting.as_ref().is_some_and(|a| a.as_str() == "de-cash-basis"),
-                };
+                let profit = stated.facts(
+                    librotenado::TaxSubject::Individual,
+                    configuration.trade_tax_multiplier,
+                    configuration.accounting.as_ref().is_some_and(|a| a.as_str() == "de-cash-basis"),
+                    false,
+                )?;
                 let facts = librotenado::IncomeTaxFacts::from(&self.income_facts(books, owner, to.year())?);
                 events
                     .income_tax(&self.chart, owner, from, to, &profit, &facts)
